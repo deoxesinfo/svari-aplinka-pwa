@@ -6,7 +6,8 @@
 
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
-|---|---|---|---|
+|---|---|---|
+| 2026-10-18 | V2.0.7 | GPS patikra prie fotografavimo, 10 min galiojimas, užraktas; R2 debesijos įkėlimas vis dar išjungtas | Šiame etape |
 | 2026-10-18 | V2.0.6 | GPS apsauga adreso formoje, vietos patvirtinimas žemėlapyje, paveldėjimas darbams ir Google Maps vietos nuoroda | Šiame etape |
 | 2026-10-18 | V2.0.5 | Adreso GPS žymeklio parinkiklio modulis, Photon paieška pagal mygtuką, tikslus OSM žemėlapis ir patvirtinimo logika. Komponento integravimas tęsiamas. | Šiame etape |
 | 2026-10-18 | V2.0.4 | Adresų kortelių išdėstymas, Maps vietos ikona, formos padding, slaptažodžio rodymo akis | Šiame etape |

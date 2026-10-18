@@ -1,15 +1,18 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff, ChevronLeft, ChevronRight, MapPin, LockKeyhole, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode } from "@/lib/store";
+import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode,verifyJobGPS } from "@/lib/store";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
 import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Confirm } from "./ui-bits";
+import { gpsResult,validGpsForCompletion } from "@/lib/gps";
+import type { LocationResult } from "@/lib/gps";
+import { hasConfirmedPin } from "@/lib/address-gps";
 
 export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => void }) {
   const { url, missing } = usePhotoUrl(photo.id, "thumb");
@@ -118,12 +121,52 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const gal = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
   const [tag, setTag] = useState<PhotoTag>("po");
-  const { photos } = useAppState();
+  const [localProof,setLocalProof]=useState<LocationResult|undefined>();
+  const [checking,setChecking]=useState(false);
+  const [now,setNow]=useState(Date.now());
+  const { photos,addresses,jobs } = useAppState();
+  const address=addresses.find(a=>a.id===addressId);
+  const job=jobs.find(j=>j.id===jobId);
+  const protectedByGps=Boolean(address?.gpsProtectionEnabled||job?.gpsRequired);
+  const proof=jobId?job?.gpsVerification:localProof;
+  const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
+  const gpsAllowed=Boolean(address&&hasConfirmedPin(address)&&
+     ((jobId&&job?.gpsOverride)||validGpsForCompletion(proof,address,now)));
+  const locked=protectedByGps&&!gpsAllowed;
+  useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),10000);return()=>window.clearInterval(id)},[]);
+  useEffect(()=>{setLocalProof(undefined)},[addressId]);
+  const checkLocation=async()=>{
+    if(!address||!hasConfirmedPin(address)){toast.error("Pirma patvirtinkite tikslų namo žymeklį");return;}
+    setChecking(true);
+    try{
+      if(job){if(await verifyJobGPS(job.id))toast.success("Vieta patvirtinta");}
+      else{
+        const pos=await new Promise<GeolocationPosition>((resolve,reject)=>navigator.geolocation.getCurrentPosition(resolve,reject,{
+          enableHighAccuracy:true,timeout:15000,maximumAge:0
+        }));
+        const result=gpsResult({latitude:pos.coords.latitude,longitude:pos.coords.longitude,
+          accuracy:pos.coords.accuracy,targetLatitude:address.latitude!,targetLongitude:address.longitude!,radius});
+        setLocalProof(result);
+        if(result.passed)toast.success("Vieta patvirtinta");else toast.warning(result.reason||"GPS vieta netinka");
+      }
+    }catch{toast.error("GPS nepavyko nustatyti. Patikrinkite leidimus.")}
+    finally{setChecking(false);setNow(Date.now());}
+  };
+  const gpsPanel=protectedByGps?<div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50/30 p-3 text-sm">
+    <p className="flex items-center gap-2 font-semibold">{gpsAllowed?<ShieldCheck className="size-4 text-primary"/>:<LockKeyhole className="size-4 text-amber-700"/>}
+      {gpsAllowed?"GPS patvirtinta":"Fotografavimas užrakintas iki GPS patikros"}</p>
+    <p className="text-xs text-muted-foreground">Atstumas: {radius} m. Patikra galioja 10 min.; telefono koordinatės neišsaugomos.</p>
+    {!gpsAllowed&&<Button type="button" variant="outline" disabled={checking} onClick={()=>void checkLocation()}>
+      <MapPin className="size-4"/>{checking?"Tikrinama…":"Patikrinti mano vietą"}</Button>}
+    {proof&&!gpsAllowed&&<p className="text-xs text-destructive">{proof.reason||"Ankstesnė patikra nebegalioja"}</p>}
+  </div>:null;
   const count = photos.filter((photo) => photo.jobId === jobId && !!jobId).length;
   const remaining = jobId ? Math.max(0, 15 - count) : Infinity;
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
+    if(isCloudMode()){toast.error("Iki R2 integracijos įkėlimas neleidžiamas");return;}
+    if(locked){toast.error("Pirmiausia patvirtinkite buvimo vietą");return;}
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
     if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 15 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
@@ -151,19 +194,29 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (gal.current) gal.current.value = "";
   };
 
-  if(isCloudMode())return <p className="rounded-lg border p-3 text-sm text-muted-foreground">Nuotraukas saugiai įkelsime prijungę privačią Cloudflare R2 saugyklą. Dabar įkėlimas išjungtas, kad neliktų nuotraukų tik viename telefone.</p>;
+  if(isCloudMode())return <div className="space-y-3">
+    {gpsPanel}
+    <div className="grid grid-cols-2 gap-2">
+      <Button type="button" disabled className="min-h-14 whitespace-normal px-2 text-sm"><Camera className="size-4"/> Fotografuoti</Button>
+      <Button type="button" variant="outline" disabled className="min-h-14 whitespace-normal px-2 text-sm"><ImagePlus className="size-4"/> Įkelti</Button>
+    </div>
+    <p className="rounded-lg border p-3 text-xs text-muted-foreground">
+      Nuotraukų įkėlimas vis dar išjungtas, kol neprijungta privati Cloudflare R2 saugykla ir serverio autorizacija. GPS patikra vien to neatrakina.
+    </p>
+  </div>;
   return (
     <div className="space-y-3">
+      {gpsPanel}
       {jobId && <div className="flex items-center justify-between text-sm"><span className="font-medium">Darbo nuotraukos</span><span className="text-muted-foreground">{count}/15</span></div>}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">Naujų nuotraukų žyma:</span>
         {Object.entries(PHOTO_TAG_LABEL).map(([k, label]) => <button key={k} type="button" onClick={() => setTag(k as PhotoTag)} aria-pressed={tag === k} className={`rounded-lg border px-3 py-2 text-sm ${tag === k ? "border-primary bg-primary/10 text-primary font-semibold" : "border-input text-muted-foreground"}`}>{label}</button>)}
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" size="lg" className="h-14 text-base" onClick={() => cam.current?.click()} disabled={busy > 0 || remaining === 0}>
+        <Button type="button" size="lg" className="h-14 text-base" onClick={() => cam.current?.click()} disabled={busy > 0 || remaining === 0 || locked}>
           <Camera className="!size-5" /> Fotografuoti
         </Button>
-        <Button type="button" size="lg" variant="outline" className="h-14 text-base" onClick={() => gal.current?.click()} disabled={busy > 0 || remaining === 0}>
+        <Button type="button" size="lg" variant="outline" className="h-14 text-base" onClick={() => gal.current?.click()} disabled={busy > 0 || remaining === 0 || locked}>
           <ImagePlus className="!size-5" /> Įkelti nuotraukas
         </Button>
       </div>

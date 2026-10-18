@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.7",category:"funkcija",
+   title:"GPS apsauga fotografavimo ir įkėlimo mygtukams",
+   details:[
+    "Adresams su GPS apsauga nuotraukų mygtukai užrakinti, kol vienkartinė vietos patikra nepatvirtins atstumo ir GPS tikslumo.",
+    "Patikra galioja 10 minučių; darbų patikra susieta su darbu, o bendram objekto fotografavimui naudojama trumpalaikė naršyklės patikra.",
+    "Kol Cloudflare R2 neprijungta, debesijos nuotraukų mygtukai lieka išjungti net esant sėkmingam GPS rezultatui.",
+    "Serverio autorizacija ir realūs iOS/Android testai būtini prieš produkcinį nuotraukų įkėlimą.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.6",category:"funkcija",
    title:"GPS apsauga susieta su patvirtintu objekto adresu",
    details:[
