@@ -3,6 +3,7 @@ import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle } from "lucide-reac
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
+import { CloudReadStatus } from "@/components/app/CloudReadStatus";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
 type Account={email:string;membership:Member|null};
@@ -77,6 +78,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
        <p className="text-sm"><strong>El. paštas:</strong> {account.email}</p>
        <p className="text-sm"><strong>Rolė:</strong> {NAMES[account.membership.role]}</p>
        <p className="text-xs text-muted-foreground">Šiame etape paruošti saugūs prisijungimai ir RLS. DEMO duomenys dar nėra perkeliami į bendrą duomenų bazę; sinchronizacija bus įjungta atskirai.</p>
+       <CloudReadStatus organizationId={account.membership.organization_id}/>
        <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
      </div>
    </section>;

@@ -14,8 +14,10 @@ export const CHANGELOG: ChangeEntry[] = [
     details:[
       "Sukurtos 10 izoliuotų įmonės duomenų lentelių ir RLS politikos: paskyroms, adresams, darbams, darbuotojams, priskyrimams, nuotraukų metaduomenims, skelbimams, istorijai ir pranešimams.",
       "Apribotos viešos public.rls_auto_enable() vykdymo teisės nepanaikinant automatinio RLS įvykio trigerio; po pakeitimo Supabase Security Advisor pranešimų nėra.",
+      "Papildomai uždraustos kitai įmonei priklausančių darbuotojų, užduočių ir nuotraukų sąsajos. Pranešimo gavėjas gali keisti tik perskaitymo datą, o ne turinį.",
       "Paruoštas el. pašto ir slaptažodžio prisijungimas, atsijungimas bei slaptažodžio atkūrimas; paskyrai būtina patvirtinta narystė įmonėje.",
       "Prisijungimas dar neįjungtas kaip privalomas DEMO, nes administratoriaus paskyros ir bendro duomenų saugojimo migracijos dar nėra. Vietiniai duomenys išsaugoti.",
+      "Paruošta tik skaitymo Supabase įmonės duomenų peržiūra ir ilgesnių sąrašų puslapiavimas, kad visi duomenys nebūtų nukertami ties 1000 įrašų.",
       "Cloudflare R2 nuotraukų saugykla ir tikri push pranešimai dar neprijungti.",
     ],
     commits:[],
