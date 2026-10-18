@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.1",category:"infrastruktūra",
+   title:"GPS atstumo matematikos ir duomenų struktūros pagrindas",
+   details:[
+    "Pridėti neįjungtos GPS darbo patikros duomenų tipai: 30/50/100 m, atstumas, tikslumas, laikas, vietos koordinatės, galimas administratoriaus paaiškinimas.",
+    "Sukurti ir testuojami Haversine atstumo skaičiavimai, GPS tikslumo vertinimas, 10 minučių patikros galiojimas.",
+    "Saugomas tik matavimo rezultatas, o ne darbuotojo telefono koordinatės. Nuolatinio vietos sekimo nėra.",
+    "Darbo formos ir praktinis GPS įrenginių testas vykdomi kitu V2.0 etapu.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V1.9.1",category:"funkcija",
    title:"Paskyros pranešimų varpelis ir įvykių istorija",
    details:[

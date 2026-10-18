@@ -14,6 +14,7 @@ export const PERSON_POSITION_LABEL: Record<PersonPosition, string> = {
   vadybininkas: "Vadybininkas (-ė)",
   kita: "Kitos pareigos",
 };
+import type { LocationResult, GpsRadius } from "./gps";
 export type EmploymentPeriod = { startedAt?: string; endedAt?: string };
 export interface Person {
   id: string;
@@ -38,6 +39,8 @@ export const OBJECT_STATUS_LABEL: Record<ObjectStatus, string> = {
 
 export interface Address {
   id: string;
+  latitude?: number;
+  longitude?: number;
   street: string;
   city: string;
   status?: ObjectStatus;
@@ -69,6 +72,10 @@ export interface Comment {
 
 export interface Job {
   id: string;
+  gpsRequired?: boolean;
+  gpsRadiusMeters?: GpsRadius;
+  gpsVerification?: LocationResult;
+  gpsOverride?: {checkedAt:string;reason:string};
   addressId: string;
   type: JobType;
   worker: string;
