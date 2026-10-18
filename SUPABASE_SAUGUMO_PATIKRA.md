@@ -22,3 +22,12 @@ Data: 2026-10-18. Supabase konfigūracija ir duomenys nebuvo pakeisti.
 - https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable
 
 Kol nėra Auth/RLS, tikrų darbuotojų nuotraukų, asmens duomenų ir durų kodų į viešą DEMO nekelti.
+
+## 2026-10-18 – patvirtintos migracijos
+- `sa_pwa_auth_and_rls_scaffold_v17`: sukurta 10 SA lentelių, įjungtas RLS ir rolėmis apribotos prieigos politikos; pašalintas viešas `public.rls_auto_enable()` vykdymas. Event trigger nepanaikintas.
+- `sa_pwa_tenant_boundaries_and_notification_permissions_v17`: apriboti tarporganizaciniai ryšiai, pranešimų `UPDATE` leidimas tik `read_at` laukui; patikslinta nuotraukų matomumo politika.
+- Po pakeitimų Supabase Security Advisor **0 perspėjimų**. Lentelių skaičius 10, visoms įjungtas RLS.
+- Dar nėra administratoriaus Auth paskyros, organizacijos narystės ir bendrų įmonės duomenų. Iki galutinio perjungimo PWA demonstracijoje informacija saugoma naršyklėje.
+- Prieš tikrus prisijungimus būtina užblokuoti viešą Auth registraciją, pakviesti administratorių ir peržiūrėti el. pašto/URL nustatymus.
+
+Tolimesni žingsniai: [Supabase paruošimo instrukcija](./SUPABASE_PRISIJUNGIMU_PLANAS.md).

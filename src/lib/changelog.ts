@@ -20,7 +20,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Paruošta tik skaitymo Supabase įmonės duomenų peržiūra ir ilgesnių sąrašų puslapiavimas, kad visi duomenys nebūtų nukertami ties 1000 įrašų.",
       "Cloudflare R2 nuotraukų saugykla ir tikri push pranešimai dar neprijungti.",
     ],
-    commits:[],
+    commits:["b4757ad5","ac77a5c0"],
   },
   {
     date:"2026-10-18", version:"V1.6", category:"funkcija",
