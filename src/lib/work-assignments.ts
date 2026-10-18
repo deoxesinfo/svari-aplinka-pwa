@@ -22,7 +22,7 @@ export function validateDraft(d:AssignmentDraft,people:Person[],addresses:Addres
  const employee=people.find(p=>p.id===d.person_id);
  const address=addresses.find(a=>a.id===d.address_id);
  if(!employee||employee.role!=="darbuotojas"||employee.status!=="aktyvus")return "Pasirinkite aktyvų darbuotoją iš Personalo skilties";
- if(!address||address.status==="nebeaptarnaujamas"||address.status==="sustabdytas")return "Objektas neaktyvus";
+ if(!address||address.archivedAt||address.deletedAt||address.status==="nebeaptarnaujamas"||address.status==="sustabdytas")return "Objektas neaktyvus";
  if(!d.service_types.length)return "Pažymėkite bent vieną valymo tipą";
  if(d.service_types.some(t=>t!=="laiptine"&&t!=="teritorija"))return "Neteisingas valymo tipas";
  if(d.recurrence==="once"){

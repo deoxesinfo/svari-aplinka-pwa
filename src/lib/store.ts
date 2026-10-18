@@ -197,7 +197,13 @@ export function addAddress(input: AddressInput): Address {
   return a;
 }
 export function updateAddress(id: string, input: AddressInput) {
-  set((s) => ({ addresses: s.addresses.map((a) => (a.id === id ? { ...a, ...input } : a)) }));
+  const previous=state.addresses.find(a=>a.id===id);
+  if(previous?.deletedAt){toast.error("Ištrinto adreso redaguoti negalima");return}
+  set((s) => ({ addresses: s.addresses.map((a) => (a.id === id ? {
+    ...a,...input,
+    // Editing an archived address must not restart the recurring job generator.
+    ...(a.archivedAt?{status:"sustabdytas" as const,archivedAt:a.archivedAt,preArchiveStatus:a.preArchiveStatus}:{}),
+  } : a)) }));
 }
 /** Stop future schedules without losing linked jobs, assignments, or photos. */
 function suspendAddressJobs(jobs:Job[],addressId:string,at:string):Job[]{

@@ -11,6 +11,7 @@ import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink, MapPinLink } from "@/components/app/MapsLink";
 import { JobRow } from "@/components/app/JobRow";
 import { useAppState, deleteAddress } from "@/lib/store";
+import { currentAdminOrg } from "@/lib/work-assignments";
 import { ADDRESS_TYPE_LABEL } from "@/lib/types";
 import { sortJobs } from "@/lib/scheduling";
 import { todayISO } from "@/lib/dates";
@@ -21,7 +22,7 @@ function AddressDetail(){
   const {addresses,jobs,photos}=useAppState();
   const [edit,setEdit]=useState(false),[newJob,setNewJob]=useState(false),[remove,setRemove]=useState(false);
   const [assign,setAssign]=useState(false),[assignmentRefresh,setAssignmentRefresh]=useState(0);
-  const a=addresses.find(x=>x.id===addressId);
+  const a=addresses.find(x=>x.id===addressId&&!x.deletedAt);
   if(!a)return <div className="space-y-4"><Link to="/adresai" className="text-primary underline">← Atgal į adresus</Link><EmptyState title="Adresas nerastas"/></div>;
   const related=sortJobs(jobs.filter(j=>j.addressId===a.id&&!j.archivedAt&&!j.deletedAt),todayISO());
   const pictures=photos.filter(p=>p.addressId===a.id);
@@ -35,9 +36,9 @@ function AddressDetail(){
       <section className="card-surface space-y-4 p-5"><div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Nuotraukų istorija</h2><Pill>{pictures.length} nuotr.</Pill></div><PhotoUploader addressId={a.id}/><PhotoGrid photos={pictures} empty="Šiam adresui nuotraukų dar neįkelta."/></section>
     </div>
     <AssignedSchedules addressId={a.id} refreshToken={assignmentRefresh}/>
-    <section className="mt-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-bold">Darbų istorija</h2><div className="flex flex-wrap gap-2"><Button onClick={()=>setAssign(true)}><Plus/> Sukurti darbą</Button><Button variant="outline" onClick={()=>setNewJob(true)}>Vienas darbas (sena forma)</Button></div></div><div className="space-y-2">{related.length?related.map(j=><JobRow key={j.id} job={j} showDate/>):<EmptyState icon={<ClipboardList className="size-8"/>} title="Šiam adresui darbų dar nėra"/>}</div></section>
+    <section className="mt-5"><div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h2 className="text-xl font-bold">Darbų istorija</h2><div className="flex flex-wrap gap-2">{!a.archivedAt&&<><Button onClick={()=>setAssign(true)}><Plus/> Sukurti darbą</Button><Button variant="outline" onClick={()=>setNewJob(true)}>Vienas darbas (sena forma)</Button></>}</div></div><div className="space-y-2">{related.length?related.map(j=><JobRow key={j.id} job={j} showDate/>):<EmptyState icon={<ClipboardList className="size-8"/>} title="Šiam adresui darbų dar nėra"/>}</div></section>
     <WorkAssignmentDialog address={a} open={assign} onOpenChange={setAssign} onSaved={()=>setAssignmentRefresh(x=>x+1)}/>
     <AddressFormDialog open={edit} onOpenChange={setEdit} address={a}/><JobFormDialog open={newJob} onOpenChange={setNewJob} defaultAddressId={a.id}/>
-    <Confirm open={remove} onOpenChange={setRemove} title="Ištrinti visą objektą?" text="Prarasite šio adreso demonstracinius darbus, pastabas ir nuotraukas." onConfirm={()=>{deleteAddress(a.id);toast.success("Adresas ištrintas");navigate({to:"/adresai"})}}/>
+    <Confirm open={remove} onOpenChange={setRemove} title="Ištrinti visą objektą?" text="Tik administratoriui. Objektas bus paslėptas, tačiau jo darbai, grafikai, istorija ir nuotraukos liks išsaugoti. Būsimų darbų kūrimas bus sustabdytas." onConfirm={()=>{void currentAdminOrg().then(()=>{if(deleteAddress(a.id)){toast.info("Adresas pažymėtas ištrintu");navigate({to:"/adresai"})}}).catch(()=>toast.error("Tik administratorius gali ištrinti adresą"));}}/>
   </div>;
 }
