@@ -33,6 +33,19 @@ const job: Job = {
 describe("Universalus darbo kortelės atidarymas", () => {
   beforeEach(() => cleanup());
 
+  it("perbraukus kortelę į kairę atveria veiksmus, bet neatidaro darbo", () => {
+    render(<JobRow job={job} />);
+    const button=screen.getByRole("button",{name:/Atidaryti darbą.*Pavyzdžio g. 12/});
+    const surface=button.parentElement?.parentElement;
+    expect(surface).toBeTruthy();
+    fireEvent.touchStart(surface!,{changedTouches:[{clientX:260,clientY:200}]});
+    fireEvent.touchEnd(surface!,{changedTouches:[{clientX:75,clientY:206}]});
+    expect(screen.getByRole("button",{name:"Redaguoti darbą"})).toBeInTheDocument();
+    expect(screen.queryByRole("dialog",{name:"Darbo informacija"})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button",{name:"Uždaryti darbo veiksmus"}));
+    expect(screen.getByRole("button",{name:"Rodyti darbo veiksmus"})).toBeInTheDocument();
+  });
+
   it("atsidaro paspaudus kortelę net be naršyklės maršrutizatoriaus", () => {
     render(<JobRow job={job} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
