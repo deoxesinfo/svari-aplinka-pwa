@@ -6,7 +6,7 @@ import {
 } from "recharts";
 import { PageHeader } from "@/components/app/ui-bits";
 import { useAppState } from "@/lib/store";
-import { summaryAnalytics, workBuckets, objectChangeMonths } from "@/lib/analytics";
+import { summaryAnalytics, workBuckets, objectChangeMonths, personnelMovementMonths } from "@/lib/analytics";
 import { todayISO } from "@/lib/dates";
 
 export const Route=createFileRoute("/analitika")({ component: AnalyticsPage });
@@ -28,6 +28,7 @@ function AnalyticsPage(){
   const data=useMemo(()=>summaryAnalytics(addresses,selected,period,today),[addresses,selected,period,today]);
   const complete=useMemo(()=>workBuckets(selected,period,today),[selected,period,today]);
   const churn=useMemo(()=>objectChangeMonths(addresses,today),[addresses,today]);
+  const personnelChurn=useMemo(()=>personnelMovementMonths(people,today),[people,today]);
   const managed=people.filter(p=>p.role==="vadybininkas");
   const workerResults=people.filter(p=>p.role==="darbuotojas").map(p=>({
     name:p.name,
@@ -120,6 +121,17 @@ function AnalyticsPage(){
     </div>
 
     <h2 className="mb-3 mt-7 text-lg font-bold">Personalas</h2>
+    <section className="card-surface mb-4 p-4">
+      <h3 className="mb-2 font-bold">Darbuotojų kaita · 6 mėn.</h3>
+      <p className="mb-3 text-xs text-muted-foreground">Skaičiuojami darbo pradžios ir pabaigos įvykiai. Sugrįžus tam pačiam darbuotojui, atsiranda naujas laikotarpis, bet neišnyksta ankstesnis. Profilių sukūrimo datos nėra prilyginamos įdarbinimui.</p>
+      <div className="h-64 w-full"><ResponsiveContainer width="100%" height="100%">
+        <BarChart data={personnelChurn} margin={{top:8,right:8,left:-20,bottom:0}}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="month" tick={chartAxis}/><YAxis allowDecimals={false} tick={chartAxis}/><Tooltip/><Legend/>
+          <Bar dataKey="started" name="Pradėjo dirbti" fill={seriesColors.done} radius={[4,4,0,0]}/>
+          <Bar dataKey="left" name="Išėjo iš darbo" fill={seriesColors.loss} radius={[4,4,0,0]}/>
+        </BarChart>
+      </ResponsiveContainer></div>
+    </section>
     <div className="grid gap-4 lg:grid-cols-2">
       <section className="card-surface p-4"><h3 className="mb-3 font-semibold">Darbuotojų darbai</h3>
         {workerResults.length?workerResults.map(row=><div key={row.name} className="flex items-center justify-between border-b py-2 text-sm"><span>{row.name}</span><span className="tabular-nums text-muted-foreground">{row.completed} užbaigta · {row.planned} suplanuota</span></div>):<p className="text-sm text-muted-foreground">Darbuotojų nėra.</p>}

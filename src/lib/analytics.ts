@@ -1,4 +1,4 @@
-import type { Address, Job } from "./types";
+import type { Address, Job, Person } from "./types";
 
 const ms = (d:string) => Date.parse(d+"T00:00:00Z");
 const iso = (date:Date) => date.toISOString().slice(0,10);
@@ -59,4 +59,23 @@ export function objectChangeMonths(addresses:Address[],today:string) {
     result.push({month:label,added:addresses.filter(a=>created(a).slice(0,7)===month).length,left:addresses.filter(a=>ended(a)?.slice(0,7)===month).length});
   }
   return result;
+}
+
+/** Real start/end events are counted, not profile creation timestamps. */
+export function personnelMovementMonths(people:Person[],today:string) {
+  const d=new Date(ms(today));
+  const rows:{month:string,started:number,left:number}[]=[];
+  for(let i=5;i>=0;i--){
+    const date=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-i,1));
+    const prefix=iso(date).slice(0,7);
+    const month=date.toLocaleDateString("lt-LT",{month:"short",year:"2-digit",timeZone:"UTC"});
+    const entries=people.flatMap(p=>p.employmentPeriods?.length
+      ? p.employmentPeriods : p.startedAt?[{startedAt:p.startedAt,endedAt:p.endedAt}]:[]);
+    rows.push({
+      month,
+      started:entries.filter(p=>p.startedAt?.slice(0,7)===prefix).length,
+      left:entries.filter(p=>p.endedAt?.slice(0,7)===prefix).length
+    });
+  }
+  return rows;
 }
