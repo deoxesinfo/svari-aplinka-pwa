@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V2.0.2 | Objektų GPS koordinatės, darbo GPS jungiklis (OFF), 30/50/100 m, tikslumo skaičiavimas, užbaigimo apsauga, admin išimtis. Įrenginių testai dar laukia. | Šis etapas |
 | 2026-10-18 | V2.0.1 | GPS atstumo ir tikslumo algoritmas, pasirinktinio darbo GPS duomenų tipai, automatiniai testai; UI dar ruošiama | Šis etapas |
 | 2026-10-18 | V1.9.1 | Pranešimų varpelis, neperžiūrėtų skaičius, Supabase pranešimų istorija ir perskaitymo žyma. Push telefone dar neveikia. | Šis etapas |
 | 2026-10-18 | V1.8.1 | Duomenų pakeitimų istorija, filtrai pagal datas, 100 įrašų puslapiai, CSV eksportas; ilgalaikės kopijos dar neparuoštos | Šis etapas |

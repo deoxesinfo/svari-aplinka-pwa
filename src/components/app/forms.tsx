@@ -88,6 +88,13 @@ export function AddressFormDialog({
   </div>
   <p className="mt-2 text-xs text-muted-foreground">Tik informacinis dažnumas – automatinio darbų grafiko dar nesukuria.</p>
 </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="GPS platuma (neprivaloma)"><input className={inputCls} type="number" step="any" min={-90} max={90}
+              value={v.latitude??""} onChange={e=>up("latitude",e.target.value===""?undefined:Number(e.target.value))}/></Field>
+            <Field label="GPS ilguma (neprivaloma)"><input className={inputCls} type="number" step="any" min={-180} max={180}
+              value={v.longitude??""} onChange={e=>up("longitude",e.target.value===""?undefined:Number(e.target.value))}/></Field>
+          </div>
+          <p className="text-xs text-muted-foreground">GPS įjunkite tik jei reikės patikrinti darbuotojo atvykimą. Koordinates įveskite iš patikimo objekto žemėlapio.</p>
           <Field label="Valymo instrukcijos"><textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} /></Field>
           <Field label="Patekimo kodas" hint="Neskelbkite prieigos kodų neįgaliotiems darbuotojams.">
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
@@ -122,6 +129,8 @@ export function JobFormDialog({
     instructions: "",
     status: "laukia",
     notes: "",
+    gpsRequired:false,
+    gpsRadiusMeters:50
   });
   const [v, setV] = useState<JobInput>(blank);
   useEffect(() => {
@@ -134,6 +143,9 @@ export function JobFormDialog({
     e.preventDefault();
     if (!v.addressId) return toast.error("Pirmiausia sukurkite adresą");
     if (!v.date) return toast.error("Pasirinkite datą");
+    const location=addresses.find(a=>a.id===v.addressId);
+    if(v.gpsRequired&&(!Number.isFinite(location?.latitude)||!Number.isFinite(location?.longitude)))
+      return toast.error("Įjunkite GPS tik objektui, kuriam nurodytos koordinatės");
     const instructions = v.instructions.trim() || addresses.find((a) => a.id === v.addressId)?.instructions || "";
     if (job) {
       updateJob(job.id, { ...v, instructions });
@@ -190,6 +202,20 @@ export function JobFormDialog({
                 {Object.entries(STATUS_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
             </Field>
+          </div>
+          <div className="rounded-lg border p-3">
+            <label className="flex items-center gap-2 text-sm font-semibold">
+              <input type="checkbox" className="size-4 accent-primary" checked={Boolean(v.gpsRequired)}
+                onChange={e=>up("gpsRequired",e.target.checked)}/>
+              Patikrinti GPS vietą užbaigiant darbą
+            </label>
+            {v.gpsRequired&&<label className="mt-3 block text-xs font-semibold">Leistinas atstumas nuo objekto
+              <select className={inputCls+" mt-1"} value={v.gpsRadiusMeters||50}
+                onChange={e=>up("gpsRadiusMeters",Number(e.target.value) as 30|50|100)}>
+                <option value={30}>30 m</option><option value={50}>50 m</option><option value={100}>100 m</option>
+              </select>
+            </label>}
+            <p className="mt-2 text-xs text-muted-foreground">Pagal nutylėjimą išjungta. GPS prašoma tik darbuotojui paspaudus patikrą; nuolatinio sekimo nėra. Reikia objekto koordinačių.</p>
           </div>
           <Field label="Instrukcijos" hint="Palikus tuščią – naudojamos adreso instrukcijos.">
             <textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} />

@@ -6,6 +6,8 @@ import { todayISO } from "./dates";
 import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person, RecruitmentLink, EmploymentPeriod } from "./types";
 import { INSPECTION_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "./types";
 import { loadCloudState,cloudMutations,saveCloudMutations } from "./cloud-sync";
+import { gpsResult,validGpsForCompletion } from "./gps";
+import type { GpsRadius } from "./gps";
 
 const KEY = "svari-aplinka-demo-v1";
 let backend:"demo"|"loading"|"cloud"="demo";
@@ -207,13 +209,17 @@ export function deleteAddress(id: string) {
 }
 
 // ---------- Jobs ----------
-export type JobInput = Pick<Job, "addressId" | "type" | "worker" | "date" | "priority" | "instructions" | "status" | "notes"> & { managerId?: string };
+export type JobInput = Pick<Job, "addressId" | "type" | "worker" | "date" | "priority" | "instructions" | "status" | "notes"> & { managerId?: string;gpsRequired?:boolean;gpsRadiusMeters?:GpsRadius };
 
 function hist(job: Job, text: string): Job {
   return { ...job, history: [...job.history, { at: nowIso(), text }] };
 }
 
 export function addJob(input: JobInput, extra: Partial<Job> = {}): Job {
+  if(input.gpsRequired&&input.status==="atlikta"){
+    input={...input,status:"laukia"};
+    toast.info("GPS patikros reikalaujamas darbas kuriamas neužbaigtas.");
+  }
   const j: Job = {
     ...input,
     id: uid(),
@@ -229,10 +235,18 @@ export function addJob(input: JobInput, extra: Partial<Job> = {}): Job {
 }
 
 export function updateJob(id: string, input: JobInput) {
+  const previous=state.jobs.find(j=>j.id===id);
+  const address=state.addresses.find(a=>a.id===input.addressId);
+  if(input.gpsRequired&&!validObjectCoordinates(address)){toast.error("Pirmiausia įveskite objekto GPS koordinates");return}
+  const changed=previous?.addressId!==input.addressId||previous?.gpsRadiusMeters!==input.gpsRadiusMeters||previous?.gpsRequired!==input.gpsRequired;
+  const verified=changed?undefined:previous?.gpsVerification;
+  const override=changed?undefined:previous?.gpsOverride;
+  if(input.gpsRequired&&input.status==="atlikta"&&previous?.status!=="atlikta"
+    &&!validGpsForCompletion(verified,address||{})&&!override){toast.error("Prieš užbaigdami atlikite GPS patikrą");return}
   set((s) => ({
     jobs: s.jobs.map((j) => {
       if (j.id !== id) return j;
-      let n: Job = { ...j, ...input };
+      let n: Job = { ...j, ...input,gpsVerification:verified,gpsOverride:override };
       const changes: string[] = [];
       if (j.status !== input.status) {
         n.completedAt = input.status === "atlikta" ? nowIso() : undefined;
@@ -247,7 +261,14 @@ export function updateJob(id: string, input: JobInput) {
   }));
 }
 
-export function setJobStatus(id: string, status: JobStatus) {
+export function setJobStatus(id: string, status: JobStatus):boolean {
+  const job=state.jobs.find(j=>j.id===id);
+  const target=state.addresses.find(a=>a.id===job?.addressId);
+  if(!job)return false;
+  if(status==="atlikta"&&job.gpsRequired
+    &&!validGpsForCompletion(job.gpsVerification,target||{})&&!job.gpsOverride){
+      toast.error("Reikalinga galiojanti GPS patikra arba administratoriaus išimtis");return false;
+  }
   set((s) => ({
     jobs: s.jobs.map((j) =>
       j.id === id
@@ -258,8 +279,46 @@ export function setJobStatus(id: string, status: JobStatus) {
         : j,
     ),
   }));
+  return true;
 }
 
+function validObjectCoordinates(address:Address|undefined):boolean {
+  return address?.latitude!==undefined&&address?.longitude!==undefined
+    &&Number.isFinite(address.latitude)&&Number.isFinite(address.longitude)
+    &&Math.abs(address.latitude)<=90&&Math.abs(address.longitude)<=180;
+}
+export async function verifyJobGPS(id:string):Promise<boolean>{
+  const job=state.jobs.find(j=>j.id===id);
+  const target=state.addresses.find(a=>a.id===job?.addressId);
+  if(!job?.gpsRequired||!target||!validObjectCoordinates(target)){
+    toast.error("GPS patikrai reikia įjungto jungiklio ir objekto koordinačių");return false;
+  }
+  if(!navigator.geolocation){toast.error("Šiame įrenginyje GPS nepasiekiamas");return false}
+  try{
+    const position=await new Promise<GeolocationPosition>((resolve,reject)=>navigator.geolocation.getCurrentPosition(
+      resolve,reject,{enableHighAccuracy:true,timeout:15000,maximumAge:0}));
+    const result=gpsResult({
+      latitude:position.coords.latitude,longitude:position.coords.longitude,
+      accuracy:position.coords.accuracy,targetLatitude:target.latitude!,
+      targetLongitude:target.longitude!,radius:job.gpsRadiusMeters||50
+    });
+    set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,gpsVerification:result,gpsOverride:undefined},
+      result.passed?"GPS patikra patvirtinta":"GPS patikra nepraėjo"):j)}));
+    if(!result.passed)toast.warning(result.reason||"GPS patikra nepraėjo");
+    return result.passed;
+  }catch{
+    toast.error("Nepavyko gauti GPS vietos. Patikrinkite leidimus ir bandykite dar kartą.");return false;
+  }
+}
+export function overrideJobGPS(id:string,note:string):boolean{
+  if(note.trim().length<15){toast.error("Nurodykite išimties priežastį (bent 15 simbolių)");return false}
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job?.gpsRequired)return false;
+  const checkedAt=new Date().toISOString();
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,gpsOverride:{checkedAt,reason:note.trim()}},
+    "Administratoriaus GPS išimtis: "+note.trim()):j)}));
+  return true;
+}
 export function setInspection(id: string, inspection: Exclude<Inspection, null>, followupNote?: string) {
   const job = state.jobs.find((j) => j.id === id);
   if (!job) return;

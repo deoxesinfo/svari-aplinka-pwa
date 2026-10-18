@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.2",category:"funkcija",
+   title:"GPS pasirinkimas kiekvienam darbui ir patikros apsauga",
+   details:[
+    "Kuriant ar redaguojant objektą galima įvesti patikros vietos koordinates; kuriant darbą GPS jungiklis pagal nutylėjimą išjungtas.",
+    "Įjungtam GPS darbui parenkamas 30, 50 arba 100 m leistinas spindulys. Tikrinimas naudoja telefono leidžiamą vienkartinę vietą ir vertina tikslumą.",
+    "GPS reikalaujamą darbą užbaigti galima tik po naujos patikros arba aiškios administratoriaus išimties.",
+    "Realaus iOS/Android bandymo, geolokacijos klastojimo atsparumo ir darbuotojų rolės patikrinimo dar nėra.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.1",category:"infrastruktūra",
    title:"GPS atstumo matematikos ir duomenų struktūros pagrindas",
    details:[
