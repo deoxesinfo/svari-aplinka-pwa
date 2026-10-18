@@ -1,4 +1,5 @@
-import { Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { JobDetailDialog } from "./JobDetailDialog";
 import { Check, Camera, MessageSquare, User, AlertTriangle, ChevronRight } from "lucide-react";
 import { useAppState } from "@/lib/store";
 import { isOverdue } from "@/lib/scheduling";
@@ -9,6 +10,7 @@ import { Pill } from "./ui-bits";
 
 export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const { addresses, photos } = useAppState();
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const today = todayISO();
   const address = addresses.find(a => a.id === job.addressId);
   const done = job.status === "atlikta";
@@ -18,12 +20,13 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   // Entire card is one accessible link. A completed state can only be changed
   // on the detail page, so mobile taps cannot accidentally finish a job.
   return (
-    <Link
-      to="/darbai/$jobId"
-      params={{ jobId: job.id }}
+    <>
+    <button
+      type="button"
+      onClick={() => setDetailsOpen(true)}
       aria-label={"Atidaryti darbą: " + (address?.street ?? "Adresas ištrintas")}
       className={cn(
-        "card-surface group flex items-start gap-3 p-3 transition-all hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4",
+        "card-surface group flex w-full items-start gap-3 p-3 text-left transition-all hover:border-primary/35 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4",
         overdue && "border-l-4 border-l-warning",
         done && "bg-muted/30",
       )}
@@ -58,6 +61,8 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         </div>
       </div>
       <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-    </Link>
+    </button>
+    {detailsOpen && <JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen} />}
+    </>
   );
 }
