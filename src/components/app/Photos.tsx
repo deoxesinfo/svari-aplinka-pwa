@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff } from "lucide-react";
+import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -31,12 +31,14 @@ export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => voi
   );
 }
 
-function Lightbox({ photo, onClose }: { photo: PhotoMeta | null; onClose: () => void }) {
+function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; gallery: PhotoMeta[]; onNavigate: (id: string) => void; onClose: () => void }) {
   const { addresses, jobs, photos } = useAppState();
   const [zoom, setZoom] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const full = usePhotoUrl(photo?.id ?? "none", "full");
-  if (!photo) return null;
+  const full = usePhotoUrl(photo.id, "full");
+  const index = gallery.findIndex(p => p.id === photo.id);
+  const previous = index > 0 ? gallery[index - 1] : undefined;
+  const next = index >= 0 && index < gallery.length - 1 ? gallery[index + 1] : undefined;
   const current = photos.find((p) => p.id === photo.id) ?? photo;
   const adr = addresses.find((a) => a.id === photo.addressId);
   const job = jobs.find((j) => j.id === photo.jobId);
@@ -54,6 +56,15 @@ function Lightbox({ photo, onClose }: { photo: PhotoMeta | null; onClose: () => 
             <div className="grid h-64 place-items-center text-sm text-muted-foreground">{full.missing ? "Nuotrauka nerasta šiame įrenginyje" : "Kraunama…"}</div>
           )}
         </div>
+        {gallery.length > 1 && <nav aria-label="Nuotraukų navigacija" className="flex items-center justify-center gap-3 rounded-lg border bg-background p-2">
+          <Button type="button" variant="outline" size="sm" aria-label="Ankstesnė nuotrauka" disabled={!previous} onClick={() => previous && onNavigate(previous.id)}>
+            <ChevronLeft className="size-4" /> Ankstesnė
+          </Button>
+          <span className="min-w-12 text-center text-sm font-medium tabular-nums">{index + 1} / {gallery.length}</span>
+          <Button type="button" variant="outline" size="sm" aria-label="Kita nuotrauka" disabled={!next} onClick={() => next && onNavigate(next.id)}>
+            Kita <ChevronRight className="size-4" />
+          </Button>
+        </nav>}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-2 text-sm">
             {job && <Link to="/darbai/$jobId" params={{ jobId: job.id }} className="text-primary hover:underline" onClick={onClose}>Atidaryti darbą</Link>}
@@ -89,14 +100,15 @@ function Lightbox({ photo, onClose }: { photo: PhotoMeta | null; onClose: () => 
 }
 
 export function PhotoGrid({ photos, empty = "Nuotraukų dar nėra." }: { photos: PhotoMeta[]; empty?: string }) {
-  const [open, setOpen] = useState<PhotoMeta | null>(null);
+  const [openId, setOpenId] = useState<string | null>(null);
+  const selected = photos.find(p => p.id === openId);
   if (!photos.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
     <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-        {photos.map((p) => <Thumb key={p.id} photo={p} onClick={() => setOpen(p)} />)}
+        {photos.map((p) => <Thumb key={p.id} photo={p} onClick={() => setOpenId(p.id)} />)}
       </div>
-      {open && <Lightbox key={open.id} photo={open} onClose={() => setOpen(null)} />}
+      {selected && <Lightbox photo={selected} gallery={photos} onNavigate={setOpenId} onClose={() => setOpenId(null)} />}
     </>
   );
 }
