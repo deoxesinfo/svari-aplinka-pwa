@@ -15,7 +15,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "V1.7–V2.0 kodas turi privalomą Auth, bendrą duomenų šaltinį, auditą, pranešimus ir GPS patikros pagrindą.",
     "Dar neišbandytas dviejų skirtingų telefonų sinchronizavimas, darbuotojų rolės, GPS tikslumas ir tikri Push pranešimai.",
     "Cloudflare R2 ir nuotraukų sinchronizacija atidėta rytojui, demonstraciniai duomenys į Supabase neperkelti.",
-   ],commits:[]},
+   ],commits:["9c1192dd"]},
 
   {date:"2026-10-18",version:"V1.8.2",category:"funkcija",
    title:"Rankinis Supabase duomenų kopijos eksportas",
@@ -23,7 +23,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "Nustatymuose administratorius gali atsisiųsti JSON su bendrais adresais, darbais, darbuotojais ir skelbimais.",
     "Eksportas vykdomas tik paspaudus mygtuką. Nešifruoto failo negalima palikti viešai, nes gali būti durų kodų ar asmens duomenų.",
     "Nuotraukų nėra ir atkūrimas iš JSON neįdiegtas. 5–10 metų saugojimui būtinas nepriklausomas backup planas.",
-   ],commits:[]},
+   ],commits:["ca3aca60"]},
 
   {date:"2026-10-18",version:"V2.0.3",category:"funkcija",
    title:"Vienkartinė GPS patikra ir dokumentuota administratoriaus išimtis",
@@ -32,7 +32,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "GPS reikalaujami darbai nebus užbaigti be naujo patvirtinimo arba administratoriaus įrašytos išimties su priežastimi.",
     "Patikra neįrašo darbuotojo telefono koordinačių ir neveikia fone.",
     "Nuotraukų integracija su R2, darbuotojų paskyros, GPS veikimo realiuose telefonuose ir privatumo informavimas dar nepatikrinti.",
-   ],commits:[]},
+   ],commits:["00bb5d85"]},
 
   {date:"2026-10-18",version:"V2.0.2",category:"funkcija",
    title:"GPS pasirinkimas kiekvienam darbui ir patikros apsauga",
@@ -41,7 +41,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "Įjungtam GPS darbui parenkamas 30, 50 arba 100 m leistinas spindulys. Tikrinimas naudoja telefono leidžiamą vienkartinę vietą ir vertina tikslumą.",
     "GPS reikalaujamą darbą užbaigti galima tik po naujos patikros arba aiškios administratoriaus išimties.",
     "Realaus iOS/Android bandymo, geolokacijos klastojimo atsparumo ir darbuotojų rolės patikrinimo dar nėra.",
-   ],commits:[]},
+   ],commits:["0ea0ff5d"]},
 
   {date:"2026-10-18",version:"V2.0.1",category:"infrastruktūra",
    title:"GPS atstumo matematikos ir duomenų struktūros pagrindas",
@@ -50,7 +50,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "Sukurti ir testuojami Haversine atstumo skaičiavimai, GPS tikslumo vertinimas, 10 minučių patikros galiojimas.",
     "Saugomas tik matavimo rezultatas, o ne darbuotojo telefono koordinatės. Nuolatinio vietos sekimo nėra.",
     "Darbo formos ir praktinis GPS įrenginių testas vykdomi kitu V2.0 etapu.",
-   ],commits:[]},
+   ],commits:["52d954eb"]},
 
   {date:"2026-10-18",version:"V1.9.1",category:"funkcija",
    title:"Paskyros pranešimų varpelis ir įvykių istorija",
@@ -59,7 +59,7 @@ export const CHANGELOG: ChangeEntry[] = [
      "Perskaitymo žyma saugiai įrašoma į konkretaus gavėjo pranešimą; duomenys atnaujinami periodiškai ir grįžus į naršyklę.",
      "Supabase bazėje paruošti trigeriai naujiems priskyrimams, skubiems darbams, komentarams ir patikrinimams.",
      "Telefono Push pranešimai, darbuotojų paskyrų paskirstymas ir tikri iOS/Android testai dar neatlikti.",
-   ],commits:[]},
+   ],commits:["5b1aaac7"]},
 
   {date:"2026-10-18",version:"V1.8.1",category:"funkcija",
    title:"Datuotas Supabase pakeitimų žurnalas ir CSV eksportas",
@@ -68,7 +68,7 @@ export const CHANGELOG: ChangeEntry[] = [
      "Administratoriui pridėta nauja „Istorija“ skiltis su datų nuo/iki pasirinkimu ir saugiu puslapiavimu po 100 įrašų.",
      "Galima eksportuoti matomą istorijos puslapį į CSV; jautrūs duomenų laukai į auditą neįrašomi.",
      "Daugiametės istorijos kaupimo mechanizmas paruoštas, tačiau 5–10 metų išsaugojimui dar reikės atsarginių kopijų ir atkūrimo testų.",
-   ],commits:[]},
+   ],commits:["fa68e41d"]},
 
   {
     date:"2026-10-18",version:"V1.7.7",category:"taisymas",
@@ -80,7 +80,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Adresų forma nebeprideda išgalvoto DEMO patekimo kodo.",
       "Visos funkcijos priklauso nuo realios Auth paskyros; reikia praktinio kelių įrenginių bandymo.",
       "Pašalintas dubliuotas refreshCloudWorkspace eksportas, dėl kurio ankstesnis Build nepraėjo.",
-    ],commits:[],
+    ],commits:["e216a75f","ebec116c"],
   },
   {
     date:"2026-10-18",version:"V1.7.6",category:"funkcija",
@@ -90,7 +90,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Prisijungus adresų, darbų, personalo ir skelbimų duomenų šaltinis yra Supabase, ne vietinis DEMO; 12 DEMO darbų neperkeliami.",
       "Duomenų pakeitimai eilėje siunčiami į Supabase, o nesėkmingą įrašymą aiškiai signalizuoja klaida. Pilnas kelių įrenginių veikimo ir konfliktų testas dar laukia.",
       "Nuotraukų failų įkėlimas bus aktyvuotas tik po Cloudflare R2 integracijos; pranešimai ir GPS diegiami atskirais etapais.",
-    ],commits:[],
+    ],commits:["95cf4de1"],
   },
   {
     date:"2026-10-18",version:"V1.7.5",category:"infrastruktūra",
@@ -102,7 +102,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Pridėti automatiniai UUID, mutacijų eiliškumo ir DEMO neperkėlimo testai.",
       "Automatinis programėlės perjungimas į naują saugyklą, darbuotojų prisijungimai ir R2 dar tikrinami atskirai.",
     ],
-    commits:[],
+    commits:["d3804ec4"],
   },
   {
     date:"2026-10-18",version:"V1.7.4",category:"taisymas",
@@ -113,7 +113,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Kol kas tik išdėstymo pataisa. Kiti PWA puslapiai tebėra vietinis DEMO; privalomas prisijungimas ir duomenų sinchronizavimas dar neįjungti.",
       "DEMO duomenys naršyklėje ir Supabase paskyrų teisės nekeičiami.",
     ],
-    commits:[],
+    commits:["6ec8e700"],
   },
 
   {
@@ -126,7 +126,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Supabase Security Advisor likęs vienas Auth perspėjimas: išjungta nutekėjusių slaptažodžių tikrinimo funkcija. Įjungimą reikės patikrinti Dashboard; šiame etape Auth nustatymai nekeisti.",
       "Privalomas prisijungimas prie PWA, DEMO duomenų perkėlimas ir Cloudflare R2 dar neįjungti, todėl kelių įrenginių sinchronizacija dar neveikia.",
     ],
-    commits:[],
+    commits:["488c2fb0"],
   },
 
   {
