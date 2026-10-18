@@ -8,6 +8,16 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.5",category:"funkcija",
+   title:"Automatinė adreso vietos paieška ir patvirtinamas žymeklis – pagrindas",
+   details:[
+     "Paruoštas adreso GPS apsaugos jungiklis ir žemėlapio komponentas su pasirenkamu, perstumiamu namo žymekliu.",
+     "Adreso paieška vykdoma tik paspaudus mygtuką; bandomajai paieškai naudojama Photon paslauga. Masinių ir automatinio rašymo užklausų nėra.",
+     "GPS žymeklis galioja tik tiksliam patvirtintam gatvės ir miesto įrašui – pakeitus adresą, patvirtinimas prarandamas.",
+     "Google Maps nuorodoms planuojama naudoti patvirtintą žymeklį, o ne vien teksto paiešką. Komponentas dar jungiamas prie adreso formos.",
+     "Cloudflare R2 ir saugių serverio nuotraukų nėra; bandomasis geokoderis nėra garantuotas komercinis SLA.",
+   ],commits:[]},
+
   {
     date:"2026-10-18",version:"V2.0.4",category:"taisymas",
     title:"Adresų kortelės, mobili forma ir slaptažodžio peržiūra",

@@ -41,6 +41,12 @@ export interface Address {
   id: string;
   latitude?: number;
   longitude?: number;
+  /** Set only after an administrator confirms a pin on the map. */
+  gpsLocationConfirmed?: boolean;
+  /** Normalized address when the location was approved. */
+  gpsReference?: string;
+  /** Opt-in location protection for the whole address (jobs and photos). */
+  gpsProtectionEnabled?: boolean;
   street: string;
   city: string;
   status?: ObjectStatus;
