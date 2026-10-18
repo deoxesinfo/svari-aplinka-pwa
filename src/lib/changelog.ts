@@ -19,7 +19,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Pridėtas „Skelbimai“ skirtukas su redaguojamomis HTTPS nuorodomis, kurias galima atidaryti vienu paspaudimu. Automatinio paskelbimo nėra.",
       "Nuolatinė taisyklė: kiekvienas atliktas pakeitimas aprašomas lietuviškai programėlės žurnale ir GitHub dokumente, planai išskiriami.",
     ],
-    commits:["1717d08d","5ea976cb","54ab654f"],
+    commits:["1717d08d","5ea976cb","54ab654f","14e7d8a6","48c58e0c"],
   },
 
   {

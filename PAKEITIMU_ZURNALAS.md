@@ -7,7 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
-| 2026-10-18 | V1.5 | Pareigų pasirinkimas; personalo archyvas, sugrįžimo istorija, skelbimų nuorodos | [1717d08d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1717d08d) · [5ea976cb](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5ea976cb) |
+| 2026-10-18 | V1.5 | Pareigų pasirinkimas; personalo archyvas, sugrįžimo istorija, kaitos diagrama ir skelbimų nuorodos | [1717d08d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1717d08d) · [5ea976cb](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5ea976cb) · [14e7d8a6](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/14e7d8a6) · [48c58e0c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/48c58e0c) |
 | 2026-10-18 | V1.4 | Prioritetinių namų žymėjimas adresų ir darbų kortelėse, filtravimas | [5b9f2411](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5b9f2411) |
 | 2026-10-18 | V1.3 | Personalo registras, vadybininkų paskyrimai, objektų statusai, analitika | [d2dc0ad2](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d2dc0ad2) · [d0509731](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d0509731) |
 | 2026-10-18 | V1.2 | Google Maps maršrutas, 15 nuotraukų darbui | [1c816758](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1c816758) |
