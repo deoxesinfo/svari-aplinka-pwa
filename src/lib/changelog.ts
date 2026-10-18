@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.3",category:"funkcija",
+   title:"Vienkartinė GPS patikra ir dokumentuota administratoriaus išimtis",
+   details:[
+    "Darbo kortelėje galima vienu paspaudimu patikrinti telefono vietą, vertinant pasirinktą 30/50/100 m atstumą bei GPS tikslumą.",
+    "GPS reikalaujami darbai nebus užbaigti be naujo patvirtinimo arba administratoriaus įrašytos išimties su priežastimi.",
+    "Patikra neįrašo darbuotojo telefono koordinačių ir neveikia fone.",
+    "Nuotraukų integracija su R2, darbuotojų paskyros, GPS veikimo realiuose telefonuose ir privatumo informavimas dar nepatikrinti.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.2",category:"funkcija",
    title:"GPS pasirinkimas kiekvienam darbui ir patikros apsauga",
    details:[
