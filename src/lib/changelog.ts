@@ -9,6 +9,18 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7 – 1 etapas",category:"infrastruktūra",
+    title:"Supabase saugumo pagrindas ir prisijungimo sąsaja",
+    details:[
+      "Sukurtos 10 izoliuotų įmonės duomenų lentelių ir RLS politikos: paskyroms, adresams, darbams, darbuotojams, priskyrimams, nuotraukų metaduomenims, skelbimams, istorijai ir pranešimams.",
+      "Apribotos viešos public.rls_auto_enable() vykdymo teisės nepanaikinant automatinio RLS įvykio trigerio; po pakeitimo Supabase Security Advisor pranešimų nėra.",
+      "Paruoštas el. pašto ir slaptažodžio prisijungimas, atsijungimas bei slaptažodžio atkūrimas; paskyrai būtina patvirtinta narystė įmonėje.",
+      "Prisijungimas dar neįjungtas kaip privalomas DEMO, nes administratoriaus paskyros ir bendro duomenų saugojimo migracijos dar nėra. Vietiniai duomenys išsaugoti.",
+      "Cloudflare R2 nuotraukų saugykla ir tikri push pranešimai dar neprijungti.",
+    ],
+    commits:[],
+  },
+  {
     date:"2026-10-18", version:"V1.6", category:"funkcija",
     title:"Darbuotojų profilio nuotraukos ir kalendorinė analitika",
     details:[
