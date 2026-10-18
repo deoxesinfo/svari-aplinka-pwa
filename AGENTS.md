@@ -13,4 +13,6 @@
 
 Tikslas: po metų aiškiai atkurti, kas, kada ir kodėl buvo pakeista.
 
-9. Versijų numeravimas po V2.2.1: kitas smulkus papildymas V2.2.2, vėliau V2.2.3 (kelti paskutinį skaičių). V2.2.1 patvirtintas kalendoriaus filtras, A4 spausdinimas ir mygtukų tarpai; naujų funkcijų be patvirtinimo nepridėti.
+9. Versijų numeravimas po V2.2.2: kitas smulkus papildymas V2.2.3, vėliau V2.2.4 (kelti paskutinį skaičių). V2.2.1 patvirtintas kalendoriaus filtras, A4 spausdinimas ir mygtukų tarpai; naujų funkcijų be patvirtinimo nepridėti.
+
+10. V2.2.2: darbų archyvavimas ir trynimas yra **minkštieji**, kad nebūtų sunaikintos darbo istorijos ar perkurti pasikartojantys darbai; administratoriaus A4 išraše pagal patvirtinimą automatiškai spausdinami konfidencialūs objektų kodai. Kitų funkcijų šioje versijoje nepridėti.

@@ -15,7 +15,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "A4 durų kodai automatiškai įtraukiami po administratoriaus teisių patvirtinimo; checkbox pašalintas.",
     "Personalo kortelių išdėstymas kompaktiškesnis, Redaguoti ir Į archyvą mygtukai vienodo rėmelio.",
     "Standartinis telefono datos ir laiko pasirinkimo kalendorius nepakeistas; fiziniai iPhone testai dar laukiami.",
-  ],commits:[]},
+  ],commits:["28882530","2d244078","a6e56a68","57417756","8d7b04ef","89a28316"]},
 
   {
     date:"2026-10-18",version:"V2.2.1",category:"funkcija",
