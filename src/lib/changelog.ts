@@ -8,6 +8,14 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V1.8.2",category:"funkcija",
+   title:"Rankinis Supabase duomenų kopijos eksportas",
+   details:[
+    "Nustatymuose administratorius gali atsisiųsti JSON su bendrais adresais, darbais, darbuotojais ir skelbimais.",
+    "Eksportas vykdomas tik paspaudus mygtuką. Nešifruoto failo negalima palikti viešai, nes gali būti durų kodų ar asmens duomenų.",
+    "Nuotraukų nėra ir atkūrimas iš JSON neįdiegtas. 5–10 metų saugojimui būtinas nepriklausomas backup planas.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.3",category:"funkcija",
    title:"Vienkartinė GPS patikra ir dokumentuota administratoriaus išimtis",
    details:[
