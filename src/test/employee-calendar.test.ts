@@ -1,7 +1,7 @@
 import {describe,it,expect} from "vitest";
 import {calendarRange,employeeJobs,jobsWithinRange,shiftCalendarMonth} from "@/lib/employee-calendar";
 import type {Job,Person} from "@/lib/types";
-const workers=[{id:"p-a",name:"Asta"},{id:"p-b",name:"Asta"}] as Person[];
+const workers=[{id:"p-a",name:"Asta",role:"darbuotojas"},{id:"p-b",name:"Asta",role:"darbuotojas"}] as Person[];
 const jobs=[
  {id:"a",date:"2026-10-19",worker:"Asta",assignedPersonId:"p-a",addressId:"addr-1"},
  {id:"b",date:"2026-10-20",worker:"Asta",assignedPersonId:"p-b",addressId:"addr-2"},
