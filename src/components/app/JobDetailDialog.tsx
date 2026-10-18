@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft, Camera, CheckCircle2, Clock3, MapPin, MessageSquare,
-  Pencil, RotateCcw, Save, ShieldCheck, AlertCircle, Trash2
+  Pencil, RotateCcw, Save, ShieldCheck, AlertCircle, Trash2, Star
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
@@ -86,6 +86,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
 
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-background p-4 pb-8 sm:p-6">
       <div className="flex flex-wrap gap-2">
+        {address?.isPriority && <Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}
         <Pill tone={done ? "success" : "warning"}>{done ? "Atlikta" : "Laukia atlikimo"}</Pill>
         {!done && job.date < todayISO() && <Pill tone="danger">{overdueLabel(job.date, todayISO())}</Pill>}
         <Pill>{job.worker || "Nepriskirta"}</Pill>

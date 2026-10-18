@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { JobDetailDialog } from "./JobDetailDialog";
-import { Check, Camera, MessageSquare, User, AlertTriangle, ChevronRight } from "lucide-react";
+import { Check, Camera, MessageSquare, User, AlertTriangle, ChevronRight, Star } from "lucide-react";
 import { useAppState } from "@/lib/store";
 import { isOverdue } from "@/lib/scheduling";
 import { fmtShort, overdueLabel, todayISO } from "@/lib/dates";
@@ -49,6 +49,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           <Pill tone={job.type === "patikrinimas" ? "neutral" : "primary"}>{JOB_TYPE_LABEL[job.type]}</Pill>
           {overdue && <Pill tone="warning"><AlertTriangle className="size-3" /> {overdueLabel(job.date, today)} · {fmtShort(job.date)}</Pill>}
           {showDate && !overdue && <Pill>{fmtShort(job.date)}</Pill>}
+          {address?.isPriority && <Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}
           {job.priority === "auksta" && !done && <Pill tone="danger">Skubu</Pill>}
           {job.inspection === "patikrinta" && <Pill tone="success">Patikrinta</Pill>}
           {job.inspection === "taisyti" && <Pill tone="danger">Reikia taisyti</Pill>}

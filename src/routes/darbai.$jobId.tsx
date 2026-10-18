@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   ArrowLeft, MapPin, CheckCircle2, RotateCcw, Pencil, Trash2,
-  Save, ShieldCheck, AlertCircle, Clock, Camera, MessageSquare
+  Save, ShieldCheck, AlertCircle, Clock, Camera, MessageSquare, Star
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -71,6 +71,7 @@ function JobDetail() {
     />
 
     <div className="mb-4 flex flex-wrap items-center gap-2">
+      {address?.isPriority && <Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}
       <Pill tone={done ? "success" : "warning"}>{done ? "Atlikta" : "Laukia atlikimo"}</Pill>
       {!done && job.date < todayISO() && <Pill tone="danger">{overdueLabel(job.date, todayISO())}</Pill>}
       <Pill>{job.worker || "Nepriskirta"}</Pill>

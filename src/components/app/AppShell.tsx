@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings, Users, ChartNoAxesCombined,
-  PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X,
+  PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History,
 } from "lucide-react";
 import { useAppState } from "@/lib/store";
 import { cn } from "@/lib/utils";
@@ -16,6 +16,7 @@ export const NAV = [
   { to: "/analitika", label: "Analitika", icon: ChartNoAxesCombined },
   { to: "/nuotraukos", label: "Nuotraukos", icon: Images },
   { to: "/patikrinimai", label: "Patikrinimai", icon: ShieldCheck },
+  { to: "/pakeitimai", label: "Pakeitimai", icon: History },
   { to: "/nustatymai", label: "Nustatymai", icon: Settings },
 ] as const;
 

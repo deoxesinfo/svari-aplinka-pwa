@@ -7,7 +7,7 @@ import { todayISO } from "@/lib/dates";
 import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, OBJECT_STATUS_LABEL, type Address, type Job } from "@/lib/types";
 import { Field, inputCls, textareaCls } from "./ui-bits";
 
-const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
+const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
 
 export function AddressFormDialog({
   open, onOpenChange, address, onSaved,
@@ -58,6 +58,11 @@ export function AddressFormDialog({
             </Field>
             <Field label="Laiptinių skaičius"><input type="number" min={0} className={inputCls} value={v.entrances} onChange={(e) => up("entrances", Math.max(0, Number(e.target.value)))} /></Field>
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-amber-300 bg-amber-50/60 p-3">
+            <input type="checkbox" className="mt-1 size-5 accent-amber-600" checked={Boolean(v.isPriority)} onChange={e=>up("isPriority",e.target.checked)}/>
+            <span><span className="block text-sm font-semibold text-amber-900">Prioritetinis objektas</span>
+            <span className="block text-xs text-amber-800">Išskiriamas adresų ir darbų sąrašuose. Atskiro darbo skubumas nekeičiamas.</span></span>
+          </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Objekto būsena">
               <select className={inputCls} value={v.status ?? "aktyvus"} onChange={e=>up("status",e.target.value as AddressInput["status"])}>

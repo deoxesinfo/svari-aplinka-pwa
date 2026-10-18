@@ -25,6 +25,8 @@ export interface Address {
   street: string;
   city: string;
   status?: ObjectStatus;
+  /** Nuolatinis objekto prioritetas, nesusijęs su konkretaus darbo skubumu. */
+  isPriority?: boolean;
   serviceStartedAt?: string; // YYYY-MM-DD
   serviceEndedAt?: string; // YYYY-MM-DD
 
