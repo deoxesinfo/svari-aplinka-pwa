@@ -40,7 +40,7 @@ export function AddressFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.25rem)] max-w-lg overflow-y-auto px-4 pb-6 pt-6 sm:p-6">
         <DialogHeader>
           <DialogTitle>{address ? "Redaguoti adresą" : "Naujas adresas"}</DialogTitle>
           <DialogDescription>Adresai išsaugomi prisijungusios įmonės Supabase saugykloje.</DialogDescription>
@@ -100,7 +100,7 @@ export function AddressFormDialog({
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
           </Field>
           <Field label="Pastabos"><textarea className={textareaCls} value={v.notes} onChange={(e) => up("notes", e.target.value)} /></Field>
-          <DialogFooter>
+          <DialogFooter className="mt-3 border-t pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Atšaukti</Button>
             <Button type="submit">Išsaugoti</Button>
           </DialogFooter>
@@ -221,7 +221,7 @@ export function JobFormDialog({
             <textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} />
           </Field>
           <Field label="Pastabos"><textarea className={textareaCls} value={v.notes} onChange={(e) => up("notes", e.target.value)} /></Field>
-          <DialogFooter>
+          <DialogFooter className="mt-3 border-t pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Atšaukti</Button>
             <Button type="submit">Išsaugoti</Button>
           </DialogFooter>

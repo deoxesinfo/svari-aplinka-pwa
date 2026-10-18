@@ -8,6 +8,18 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    date:"2026-10-18",version:"V2.0.4",category:"taisymas",
+    title:"Adresų kortelės, mobili forma ir slaptažodžio peržiūra",
+    details:[
+      "Adresų sąrašo kortelės perrikiuotos: veiksmai atskiroje eilutėje, prioritetinė žyma nebesikerta su Važiuoti mygtuku.",
+      "Pridėta atskira Google Maps žymeklio ikona; patvirtintai vietai naudoja koordinates, kitur – aiškiai pažymėtą adreso paiešką.",
+      "Mobiliojo adreso ir darbo redagavimo lango mygtukų tarpai padidinti, atsižvelgta į Safari apatinę juostą.",
+      "Prisijungimo, slaptažodžio nustatymo ir keitimo laukuose pridėta prieinama slaptažodžio parodymo/paslėpimo akis.",
+      "GPS vietos parinkimo ir fotografavimo taisyklės ruošiamos sekančiuose etapuose. R2 neprijungta.",
+    ],commits:[],
+  },
+
   {date:"2026-10-18",version:"V2.0 – etapų peržiūra",category:"planas",
    title:"Įgyvendintų funkcijų ir likusių bandymų auditas",
    details:[

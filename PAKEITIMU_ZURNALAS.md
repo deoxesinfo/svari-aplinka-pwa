@@ -7,6 +7,8 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V2.0.4 | Adresų kortelių išdėstymas, Maps vietos ikona, formos padding, slaptažodžio rodymo akis | Šiame etape |
+
 | 2026-10-18 | V2.0 – etapas / QA | V1.7–V2.0 etapų sąrašas, įgyvendintų funkcijų ribos, tikrintini telefonų bandymai, R2 atidėta kitam kartui | [Ataskaita](./PWA_ETAPU_ATASKAITA_2026-10-18.md) |
 | 2026-10-18 | V1.8.2 | Rankinis JSON eksportas iš Supabase duomenų; atkūrimas ir nepriklausomos kopijos dar neįdiegtos | [ca3aca60](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/ca3aca60) |
 | 2026-10-18 | V2.0.3 | Vienkartinė GPS patikra darbo kortelėje, leidimo ir tikslumo tikrinimas, išimtis su priežastimi, užbaigimo apsauga; telefonų testai liko | [00bb5d85](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/00bb5d85) |

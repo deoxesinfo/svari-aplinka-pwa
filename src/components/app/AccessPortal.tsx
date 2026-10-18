@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
-import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle } from "lucide-react";
+import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
@@ -10,6 +10,21 @@ import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
 type Account={email:string;membership:Member|null};
 const NAMES:Record<Member["role"],string>={admin:"Administratorius",manager:"Vadybininkas",worker:"Darbuotojas"};
+
+function PasswordInput({value,onChange,autoComplete,minLength}:{value:string;onChange:(v:string)=>void;autoComplete:string;minLength?:number}){
+ const [visible,setVisible]=useState(false);
+ return <div className="relative mt-1">
+   <input className="w-full rounded-lg border bg-background py-3 pl-3 pr-12" type={visible?"text":"password"}
+     autoComplete={autoComplete} minLength={minLength} required value={value} onChange={e=>onChange(e.target.value)}/>
+   <button type="button" aria-label={visible?"Paslėpti slaptažodį":"Rodyti slaptažodį"}
+     aria-pressed={visible} title={visible?"Paslėpti slaptažodį":"Rodyti slaptažodį"}
+     onClick={()=>setVisible(v=>!v)}
+     className="absolute inset-y-0 right-0 grid w-12 place-items-center rounded-r-lg text-muted-foreground hover:text-primary focus-visible:outline-2 focus-visible:outline-primary">
+     {visible?<EyeOff className="size-5"/>:<Eye className="size-5"/>}
+   </button>
+ </div>;
+}
+
 
 export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"account"}){
  const [loading,setLoading]=useState(true);
@@ -93,8 +108,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const passwordForm=(heading:string)=><form onSubmit={setNew} className="card-surface space-y-3 p-4">
    <h2 className="text-sm font-semibold">{heading}</h2>
    <label className="block text-sm font-medium">Naujas slaptažodis
-     <input className="mt-1 w-full rounded-lg border bg-background p-3" type="password"
-       autoComplete="new-password" minLength={12} required value={newPassword} onChange={e=>setNewPassword(e.target.value)}/>
+     <PasswordInput value={newPassword} onChange={setNewPassword} autoComplete="new-password" minLength={12}/>
    </label>
    <p className="text-xs text-muted-foreground">Bent 12 simbolių. Slaptažodžio niekam nesiųskite.</p>
    <Button disabled={busy} type="submit">Išsaugoti slaptažodį</Button>
@@ -148,7 +162,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      <label className="block text-sm font-medium">El. paštas
        <input className="mt-1 w-full rounded-lg border bg-background p-3" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
      <label className="block text-sm font-medium">Slaptažodis
-       <input className="mt-1 w-full rounded-lg border bg-background p-3" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label>
+       <PasswordInput value={password} onChange={setPassword} autoComplete="current-password"/></label>
      <Button type="submit" disabled={busy} className="w-full"><LogIn className="size-4"/>Prisijungti</Button>
      <button type="button" disabled={busy} onClick={()=>void reset()} className="text-sm text-primary underline">Pamiršau slaptažodį</button>
    </form>
