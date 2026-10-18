@@ -1,7 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
-  LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings,
+  LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings, Users, ChartNoAxesCombined,
   PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X,
 } from "lucide-react";
 import { useAppState } from "@/lib/store";
@@ -12,6 +12,8 @@ export const NAV = [
   { to: "/kalendorius", label: "Kalendorius", icon: CalendarDays },
   { to: "/darbai", label: "Darbai", icon: ClipboardList },
   { to: "/adresai", label: "Adresai", icon: Building2 },
+  { to: "/darbuotojai", label: "Darbuotojai", icon: Users },
+  { to: "/analitika", label: "Analitika", icon: ChartNoAxesCombined },
   { to: "/nuotraukos", label: "Nuotraukos", icon: Images },
   { to: "/patikrinimai", label: "Patikrinimai", icon: ShieldCheck },
   { to: "/nustatymai", label: "Nustatymai", icon: Settings },

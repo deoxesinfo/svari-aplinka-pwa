@@ -4,11 +4,30 @@ export type JobStatus = "laukia" | "atlikta";
 export type PhotoTag = "pries" | "po" | "problema";
 export type Inspection = "patikrinta" | "taisyti" | null;
 export type Priority = "zema" | "vidutine" | "auksta";
+export type PersonRole = "darbuotojas" | "vadybininkas" | "kandidatas";
+export type PersonStatus = "aktyvus" | "atostogos" | "nebedirba" | "kandidatas";
+export interface Person {
+  id: string;
+  name: string;
+  role: PersonRole;
+  status: PersonStatus;
+  notes: string;
+  createdAt: string;
+}
+export type ObjectStatus = "aktyvus" | "naujas" | "sustabdytas" | "nebeaptarnaujamas";
+export const OBJECT_STATUS_LABEL: Record<ObjectStatus, string> = {
+  aktyvus: "Aktyvus", naujas: "Naujas", sustabdytas: "Sustabdytas", nebeaptarnaujamas: "Nebeteikiamos paslaugos",
+};
+
 
 export interface Address {
   id: string;
   street: string;
   city: string;
+  status?: ObjectStatus;
+  serviceStartedAt?: string; // YYYY-MM-DD
+  serviceEndedAt?: string; // YYYY-MM-DD
+
   type: AddressType;
   entrances: number;
   stairwellVisitsPerWeek?: number;
@@ -35,6 +54,7 @@ export interface Job {
   addressId: string;
   type: JobType;
   worker: string;
+  managerId?: string;
   date: string; // original scheduled date YYYY-MM-DD
   priority: Priority;
   instructions: string;

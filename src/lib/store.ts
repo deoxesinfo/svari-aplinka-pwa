@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { buildSeed, WORKERS } from "./seed";
 import { clearPhotoBlobs, deletePhotoBlobs } from "./photos";
 import { todayISO } from "./dates";
-import type { Address, Inspection, Job, JobStatus, PhotoMeta } from "./types";
+import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person } from "./types";
 import { INSPECTION_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "./types";
 
 const KEY = "svari-aplinka-demo-v1";
@@ -14,9 +14,16 @@ export interface AppState {
   jobs: Job[];
   photos: PhotoMeta[];
   workers: string[];
+  people: Person[];
 }
 
-const EMPTY: AppState = { loaded: false, addresses: [], jobs: [], photos: [], workers: WORKERS };
+const seedPeople = (): Person[] => [
+  ...WORKERS.map((name, i) => ({ id: "worker-" + (i+1), name, role: "darbuotojas" as const, status: "aktyvus" as const, notes: "", createdAt: new Date().toISOString() })),
+  { id: "manager-1", name: "Vadybininkas A (DEMO)", role: "vadybininkas", status: "aktyvus", notes: "", createdAt: new Date().toISOString() },
+  { id: "manager-2", name: "Vadybininkas B (DEMO)", role: "vadybininkas", status: "aktyvus", notes: "", createdAt: new Date().toISOString() },
+];
+const activeWorkerNames = (people: Person[]) => Array.from(new Set([...WORKERS, ...people.filter(p=>p.role === "darbuotojas" && p.status !== "nebedirba").map(p=>p.name)]));
+const EMPTY: AppState = { loaded: false, addresses: [], jobs: [], photos: [], workers: WORKERS, people: [] };
 let state: AppState = EMPTY;
 const listeners = new Set<() => void>();
 
@@ -25,21 +32,22 @@ function load() {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const p = JSON.parse(raw);
-      state = { loaded: true, addresses: p.addresses ?? [], jobs: p.jobs ?? [], photos: p.photos ?? [], workers: WORKERS };
+      const people: Person[] = Array.isArray(p.people) ? p.people : seedPeople();
+      state = { loaded: true, addresses: p.addresses ?? [], jobs: p.jobs ?? [], photos: p.photos ?? [], people, workers: activeWorkerNames(people) };
       return;
     }
   } catch {
     /* corrupted – reseed */
   }
   const s = buildSeed();
-  state = { loaded: true, ...s, photos: [], workers: WORKERS };
+  state = { loaded: true, ...s, photos: [], people: seedPeople(), workers: WORKERS };
   persist();
 }
 
 function persist() {
   try {
-    const { addresses, jobs, photos } = state;
-    localStorage.setItem(KEY, JSON.stringify({ addresses, jobs, photos }));
+    const { addresses, jobs, photos, people } = state;
+    localStorage.setItem(KEY, JSON.stringify({ addresses, jobs, photos, people }));
   } catch {
     toast.error("Nepavyko išsaugoti – įrenginio atmintis pilna.");
   }
@@ -68,6 +76,28 @@ export function useAppState() {
 const uid = () => crypto.randomUUID();
 const nowIso = () => new Date().toISOString();
 
+// ---------- Personnel ----------
+export type PersonInput = Omit<Person, "id" | "createdAt">;
+export function addPerson(input: PersonInput): Person {
+  const person: Person = { ...input, id: uid(), createdAt: nowIso() };
+  set(s=>({people: [...s.people, person], workers: activeWorkerNames([...s.people, person])}));
+  return person;
+}
+export function updatePerson(id: string, input: PersonInput) {
+  const original = state.people.find(p=>p.id===id);
+  const people = state.people.map(p=>p.id===id ? {...p,...input} : p);
+  set(s=>({ people, workers: activeWorkerNames(people),
+    jobs: original?.role === "darbuotojas" && original.name !== input.name
+      ? s.jobs.map(j=>j.worker === original.name ? {...j, worker:input.name} : j) : s.jobs }));
+}
+export function deletePerson(id: string): boolean {
+  const person = state.people.find(p=>p.id===id);
+  if (!person || state.jobs.some(j=>j.managerId===id || (person.role==="darbuotojas" && j.worker===person.name))) return false;
+  const people=state.people.filter(p=>p.id!==id);
+  set(()=>({people,workers:activeWorkerNames(people)}));
+  return true;
+}
+
 // ---------- Addresses ----------
 export type AddressInput = Omit<Address, "id" | "createdAt">;
 export function addAddress(input: AddressInput): Address {
@@ -89,7 +119,7 @@ export function deleteAddress(id: string) {
 }
 
 // ---------- Jobs ----------
-export type JobInput = Pick<Job, "addressId" | "type" | "worker" | "date" | "priority" | "instructions" | "status" | "notes">;
+export type JobInput = Pick<Job, "addressId" | "type" | "worker" | "date" | "priority" | "instructions" | "status" | "notes"> & { managerId?: string };
 
 function hist(job: Job, text: string): Job {
   return { ...job, history: [...job.history, { at: nowIso(), text }] };

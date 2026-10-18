@@ -4,10 +4,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { Button } from "@/components/ui/button";
 import { addAddress, addJob, updateAddress, updateJob, useAppState, type AddressInput, type JobInput } from "@/lib/store";
 import { todayISO } from "@/lib/dates";
-import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, type Address, type Job } from "@/lib/types";
+import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, OBJECT_STATUS_LABEL, type Address, type Job } from "@/lib/types";
 import { Field, inputCls, textareaCls } from "./ui-bits";
 
-const emptyAddress: AddressInput = { street: "", city: "", type: "abu", entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
+const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
 
 export function AddressFormDialog({
   open, onOpenChange, address, onSaved,
@@ -25,6 +25,7 @@ export function AddressFormDialog({
       stairwellVisitsPerWeek: v.type === "teritorija" ? undefined : v.stairwellVisitsPerWeek,
       territoryVisitsPerWeek: v.type === "laiptine" ? undefined : v.territoryVisitsPerWeek
     };
+    if (saved.status === "nebeaptarnaujamas" && !saved.serviceEndedAt) return toast.error("Nurodykite aptarnavimo pabaigos datą");
     if (address) {
       updateAddress(address.id, saved);
       toast.success("Adresas išsaugotas");
@@ -56,6 +57,15 @@ export function AddressFormDialog({
               </select>
             </Field>
             <Field label="Laiptinių skaičius"><input type="number" min={0} className={inputCls} value={v.entrances} onChange={(e) => up("entrances", Math.max(0, Number(e.target.value)))} /></Field>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field label="Objekto būsena">
+              <select className={inputCls} value={v.status ?? "aktyvus"} onChange={e=>up("status",e.target.value as AddressInput["status"])}>
+                {Object.entries(OBJECT_STATUS_LABEL).map(([key,label])=><option key={key} value={key}>{label}</option>)}
+              </select>
+            </Field>
+            <Field label="Aptarnavimo pradžia"><input type="date" className={inputCls} value={v.serviceStartedAt ?? ""} onChange={e=>up("serviceStartedAt",e.target.value || undefined)}/></Field>
+            <Field label="Aptarnavimo pabaiga"><input type="date" className={inputCls} value={v.serviceEndedAt ?? ""} onChange={e=>up("serviceEndedAt",e.target.value || undefined)}/></Field>
           </div>
           <div className="rounded-lg border bg-muted/30 p-3">
   <p className="mb-3 text-sm font-semibold">Valymo kartai per savaitę</p>
@@ -93,11 +103,13 @@ export function JobFormDialog({
 }: {
   open: boolean; onOpenChange: (o: boolean) => void; job?: Job; defaultAddressId?: string; defaultDate?: string; onSaved?: (j: Job) => void;
 }) {
-  const { addresses, workers } = useAppState();
+  const { addresses, workers, people } = useAppState();
+  const managers=people.filter(p=>p.role==="vadybininkas" && p.status!=="nebedirba");
   const blank = (): JobInput => ({
     addressId: defaultAddressId ?? addresses[0]?.id ?? "",
     type: "laiptine",
-    worker: workers[0],
+    worker: workers[0] ?? "",
+    managerId: "",
     date: defaultDate ?? todayISO(),
     priority: "vidutine",
     instructions: "",
@@ -151,6 +163,12 @@ export function JobFormDialog({
             <Field label="Darbuotojas">
               <select className={inputCls} value={v.worker} onChange={(e) => up("worker", e.target.value)}>
                 {workers.map((w) => <option key={w}>{w}</option>)}
+              </select>
+            </Field>
+            <Field label="Atsakingas vadybininkas">
+              <select className={inputCls} value={v.managerId ?? ""} onChange={e=>up("managerId",e.target.value || undefined)}>
+                <option value="">Nepriskirta</option>
+                {managers.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
             <Field label="Suplanuota data"><input type="date" className={inputCls} value={v.date} onChange={(e) => up("date", e.target.value)} /></Field>
