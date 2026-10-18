@@ -16,6 +16,12 @@ describe("Darbuotojo grafiko atvaizdavimas",()=>{
  it("seną vien vardu priskirtą darbą rodo tik kai vardas unikalus",()=>{
   expect(employeeJobs(jobs,workers[0],[workers[0]]).map(j=>j.id)).toEqual(["a","c","d"]);
  });
+ it("archyvuoti ar ištrinti darbai nepatenka į aktyvų grafiką",()=>{
+  const archive={...jobs[0],archivedAt:"2026-10-20T10:00:00Z"};
+  const deleted={...jobs[1],deletedAt:"2026-10-20T10:00:00Z"};
+  const visible=jobs[2];
+  expect(jobsWithinRange([archive,deleted,visible],{from:"2026-10-19",to:"2026-10-31"}).map(j=>j.id)).toEqual(["c"]);
+ });
  it("vieno darbuotojo savaitė prasideda pirmadienį",()=>{
   expect(calendarRange("2026-10-18","savaite")).toEqual({from:"2026-10-12",to:"2026-10-18"});
  });

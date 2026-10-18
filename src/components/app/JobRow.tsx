@@ -62,18 +62,18 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
 
   return <>
     <div className="relative overflow-hidden rounded-xl" onTouchStart={startTouch} onTouchEnd={endTouch}>
-      <div className="absolute inset-y-0 right-0 flex w-[186px] items-stretch justify-end gap-px bg-muted/80 p-1">
+      <div aria-hidden={!actionsOpen} className="absolute inset-y-0 right-0 flex w-[186px] items-stretch justify-end gap-px bg-muted/80 p-1">
         <button type="button" className="flex w-[61px] flex-col items-center justify-center gap-1 rounded-lg bg-card px-1 text-[11px] font-semibold text-primary disabled:opacity-40"
-          disabled={!done&&!job.archivedAt} onClick={changeArchive} aria-label={job.archivedAt?"Atkurti darbą":"Archyvuoti atliktą darbą"}>
+          disabled={!done&&!job.archivedAt} tabIndex={actionsOpen?0:-1} onClick={changeArchive} aria-label={job.archivedAt?"Atkurti darbą":"Archyvuoti atliktą darbą"}>
           {job.archivedAt?<ArchiveRestore className="size-5"/>:<Archive className="size-5"/>}
           {job.archivedAt?"Atkurti":"Archyvas"}
         </button>
         <button type="button" className="flex w-[61px] flex-col items-center justify-center gap-1 rounded-lg bg-card px-1 text-[11px] font-semibold text-primary"
-          onClick={()=>{setEditing(true);setActionsOpen(false)}} aria-label="Redaguoti darbą">
+          tabIndex={actionsOpen?0:-1} onClick={()=>{setEditing(true);setActionsOpen(false)}} aria-label="Redaguoti darbą">
           <Pencil className="size-5"/>Redaguoti
         </button>
         <button type="button" className="flex w-[61px] flex-col items-center justify-center gap-1 rounded-lg bg-destructive/10 px-1 text-[11px] font-semibold text-destructive"
-          onClick={()=>{setDeleteOpen(true);setActionsOpen(false)}} aria-label="Ištrinti darbą (administratoriui)">
+          tabIndex={actionsOpen?0:-1} onClick={()=>{setDeleteOpen(true);setActionsOpen(false)}} aria-label="Ištrinti darbą (administratoriui)">
           <Trash2 className="size-5"/>Ištrinti
         </button>
       </div>
