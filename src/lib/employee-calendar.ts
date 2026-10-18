@@ -16,11 +16,14 @@ export function calendarRange(day:string,mode:CalendarMode):DateRange{
 }
 
 /** IDs are authoritative. Name fallback exists only for legacy jobs without a person ID. */
-export function employeeJobs(jobs:Job[],person:Person|undefined):Job[]{
+export function employeeJobs(jobs:Job[],person:Person|undefined,allPeople:Person[]=[]):Job[]{
   if(!person)return jobs;
+  const sameNameCount=allPeople.filter(p=>p.role==="darbuotojas"&&p.name===person.name).length;
   return jobs.filter(job=>{
     const assigned=(job as Job & {assignedPersonId?:string}).assignedPersonId;
-    return assigned?assigned===person.id:job.worker===person.name;
+    if(assigned)return assigned===person.id;
+    // Legacy assignments use names; don't guess when workers have identical names.
+    return sameNameCount<=1&&job.worker===person.name;
   });
 }
 export function jobsWithinRange(jobs:Job[],range:DateRange):Job[]{

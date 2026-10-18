@@ -10,8 +10,11 @@ const jobs=[
 ] as Job[];
 describe("Darbuotojo grafiko atvaizdavimas",()=>{
  it("atskiria vienodų vardų paskyras pagal person ID",()=>{
-  expect(employeeJobs(jobs,workers[0]).map(j=>j.id)).toEqual(["a","c","d"]);
-  expect(employeeJobs(jobs,workers[1]).map(j=>j.id)).toEqual(["b","c"]);
+  expect(employeeJobs(jobs,workers[0],workers).map(j=>j.id)).toEqual(["a","d"]);
+  expect(employeeJobs(jobs,workers[1],workers).map(j=>j.id)).toEqual(["b"]);
+ });
+ it("seną vien vardu priskirtą darbą rodo tik kai vardas unikalus",()=>{
+  expect(employeeJobs(jobs,workers[0],[workers[0]]).map(j=>j.id)).toEqual(["a","c","d"]);
  });
  it("vieno darbuotojo savaitė prasideda pirmadienį",()=>{
   expect(calendarRange("2026-10-18","savaite")).toEqual({from:"2026-10-12",to:"2026-10-18"});
