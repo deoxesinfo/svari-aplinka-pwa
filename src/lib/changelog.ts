@@ -17,6 +17,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Darbuotojų ir darbų nuotraukų įkėlimas užblokuotas iki privačios Cloudflare R2 integracijos.",
       "Adresų forma nebeprideda išgalvoto DEMO patekimo kodo.",
       "Visos funkcijos priklauso nuo realios Auth paskyros; reikia praktinio kelių įrenginių bandymo.",
+      "Pašalintas dubliuotas refreshCloudWorkspace eksportas, dėl kurio ankstesnis Build nepraėjo.",
     ],commits:[],
   },
   {

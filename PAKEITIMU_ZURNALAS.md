@@ -7,7 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
-| 2026-10-18 | V1.7.7 | Bendrų Supabase duomenų atnaujinimas, saugus nuotraukų atidėjimas iki R2, išjungtas DEMO trynimas | Šis etapas |
+| 2026-10-18 | V1.7.7 | Bendrų Supabase duomenų atnaujinimas, saugus nuotraukų atidėjimas iki R2, išjungtas DEMO trynimas; Build dublikato taisymas | Šis etapas |
 | 2026-10-18 | V1.7.6 | Privalomas Auth patikrinimas, Supabase įmonės duomenys vietoje DEMO; įrašymo eilė, išsaugojimo klaidų rodymas. R2, GPS ir daugiaįrengininiai testai dar laukia. | Šis etapas |
 | 2026-10-18 | V1.7.5 | Supabase atskirtų įmonės duomenų skaitymo/rašymo adapteris ir testai; DEMO migracijos nėra, perjungimas dar neaktyvus | Šiame etape |
 | 2026-10-18 | V1.7.4 | Prisijungimo langas be kairiojo meniu ir DEMO juostos; paskyros grįžimas į apžvalgą. Tik UI, be duomenų migracijos. | Įrašas šiame komite |

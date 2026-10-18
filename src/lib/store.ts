@@ -17,16 +17,6 @@ export const getCloudSaveError=()=>saveError;
 export function leaveCloudWorkspace(){
   backend="loading";company=null;saveError=null;state=EMPTY;listeners.forEach(l=>l());
 }
-export async function refreshCloudWorkspace(){
-  if(!company||backend!=="cloud"||saveError)return;
-  const org=company;
-  await saveQueue;
-  const fresh=await loadCloudState(org);
-  if(org===company){
-    state={loaded:true,...fresh};
-    listeners.forEach(l=>l());
-  }
-}
 export async function enterCloudWorkspace(org:string){
   if(backend==="cloud"&&company===org&&state.loaded)return;
   backend="loading";company=null;state=EMPTY;listeners.forEach(l=>l());
