@@ -6,12 +6,13 @@
 
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
-|---|---|---|
-| 2026-10-18 | V2.0.8 | GPS žymeklio rodymas po geokodavimo, vienkartinė automatinė paieška įjungus apsaugą, Google Maps nuorodų testai | Šiame etape |
-| 2026-10-18 | V2.0.7 | GPS patikra prie fotografavimo, 10 min galiojimas, užraktas; R2 debesijos įkėlimas vis dar išjungtas | Šiame etape |
-| 2026-10-18 | V2.0.6 | GPS apsauga adreso formoje, vietos patvirtinimas žemėlapyje, paveldėjimas darbams ir Google Maps vietos nuoroda | Šiame etape |
-| 2026-10-18 | V2.0.5 | Adreso GPS žymeklio parinkiklio modulis, Photon paieška pagal mygtuką, tikslus OSM žemėlapis ir patvirtinimo logika. Komponento integravimas tęsiamas. | Šiame etape |
-| 2026-10-18 | V2.0.4 | Adresų kortelių išdėstymas, Maps vietos ikona, formos padding, slaptažodžio rodymo akis | Šiame etape |
+|---|---|---|---|
+| 2026-10-18 | V2.0.9 | Maps URL testo pataisa ir V2.0.4–V2.0.8 ataskaitų galutinis suvedimas | Šiame etape |
+| 2026-10-18 | V2.0.8 | GPS žymeklio rodymas po geokodavimo, vienkartinė automatinė paieška įjungus apsaugą, Google Maps nuorodų testai | [e5c5578c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/e5c5578c) |
+| 2026-10-18 | V2.0.7 | GPS patikra prie fotografavimo, 10 min galiojimas, užraktas; R2 debesijos įkėlimas vis dar išjungtas | [89c2bef3](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/89c2bef3) |
+| 2026-10-18 | V2.0.6 | GPS apsauga adreso formoje, vietos patvirtinimas žemėlapyje, paveldėjimas darbams ir Google Maps vietos nuoroda | [a646fd7e](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/a646fd7e) |
+| 2026-10-18 | V2.0.5 | Adreso GPS žymeklio parinkiklio modulis, Photon paieška pagal mygtuką, tikslus OSM žemėlapis ir patvirtinimo logika. Komponento integravimas tęsiamas. | [916b5425](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/916b5425) |
+| 2026-10-18 | V2.0.4 | Adresų kortelių išdėstymas, Maps vietos ikona, formos padding, slaptažodžio rodymo akis | [f472074e](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/f472074e) |
 
 | 2026-10-18 | V2.0 – etapas / QA | V1.7–V2.0 etapų sąrašas, įgyvendintų funkcijų ribos, tikrintini telefonų bandymai, R2 atidėta kitam kartui | [Ataskaita](./PWA_ETAPU_ATASKAITA_2026-10-18.md) |
 | 2026-10-18 | V1.8.2 | Rankinis JSON eksportas iš Supabase duomenų; atkūrimas ir nepriklausomos kopijos dar neįdiegtos | [ca3aca60](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/ca3aca60) |

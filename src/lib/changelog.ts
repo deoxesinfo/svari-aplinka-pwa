@@ -8,6 +8,14 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.9",category:"taisymas",
+   title:"Maps nuorodų testų ir pakeitimų žurnalo patikslinimas",
+   details:[
+     "Pataisytas Google Maps adreso nuorodos testas, kad URL paieškos parametrų plus tarpai būtų interpretuojami teisingai.",
+     "Abu pakeitimų žurnalai papildyti konkrečiais V2.0.4–V2.0.8 komitais ir detalia saugumo bei GPS integracijos ribų ataskaita.",
+     "Įrenginių GPS bandymai, realus adresų geokoderio patikimumas ir serverinė foto autorizacija dar laukia; Cloudflare R2 nejungta.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.8",category:"taisymas",
    title:"GPS žymeklio paieškos ir Google Maps nuorodų stabilizavimas",
    details:[
@@ -15,7 +23,7 @@ export const CHANGELOG: ChangeEntry[] = [
      "Pasirinkus paieškos rezultatą, žymeklis sukuriamas arba perkeliamas į naują vietą; administratoriui leidžiama patikslinti jį paspaudimu arba tempimu.",
      "Google Maps vietos ir navigacijos nuorodoms pridėti testai: patvirtintos koordinatės ir nepatvirtinto adreso paieškos režimas.",
      "Automatinio geokodavimo paslauga yra bandomoji, neteikia veikimo garantijos. R2 nuotraukų įkėlimas vis dar atidėtas.",
-   ],commits:[]},
+   ],commits:["e5c5578c"]},
 
   {date:"2026-10-18",version:"V2.0.7",category:"funkcija",
    title:"GPS apsauga fotografavimo ir įkėlimo mygtukams",
@@ -24,7 +32,7 @@ export const CHANGELOG: ChangeEntry[] = [
     "Patikra galioja 10 minučių; darbų patikra susieta su darbu, o bendram objekto fotografavimui naudojama trumpalaikė naršyklės patikra.",
     "Kol Cloudflare R2 neprijungta, debesijos nuotraukų mygtukai lieka išjungti net esant sėkmingam GPS rezultatui.",
     "Serverio autorizacija ir realūs iOS/Android testai būtini prieš produkcinį nuotraukų įkėlimą.",
-   ],commits:[]},
+   ],commits:["89c2bef3"]},
 
   {date:"2026-10-18",version:"V2.0.6",category:"funkcija",
    title:"GPS apsauga susieta su patvirtintu objekto adresu",
@@ -33,7 +41,7 @@ export const CHANGELOG: ChangeEntry[] = [
      "Žymeklį galima parinkti pagal adresą, pataisyti žemėlapyje ir patvirtinti. Pakeitus gatvę ar miestą patvirtinimas nebegalioja.",
      "Kai adresui įjungta GPS apsauga, naujas darbas ją automatiškai paveldi; nuotraukų ir užbaigimo tikrinimas ruošiamas atskirame etape.",
      "Adreso kortelės Google Maps vietos nuoroda naudoja tik patvirtintas koordinates. R2 kol kas išjungta.",
-   ],commits:[]},
+   ],commits:["a646fd7e"]},
 
   {date:"2026-10-18",version:"V2.0.5",category:"funkcija",
    title:"Automatinė adreso vietos paieška ir patvirtinamas žymeklis – pagrindas",
@@ -43,7 +51,7 @@ export const CHANGELOG: ChangeEntry[] = [
      "GPS žymeklis galioja tik tiksliam patvirtintam gatvės ir miesto įrašui – pakeitus adresą, patvirtinimas prarandamas.",
      "Google Maps nuorodoms planuojama naudoti patvirtintą žymeklį, o ne vien teksto paiešką. Komponentas dar jungiamas prie adreso formos.",
      "Cloudflare R2 ir saugių serverio nuotraukų nėra; bandomasis geokoderis nėra garantuotas komercinis SLA.",
-   ],commits:[]},
+   ],commits:["916b5425"]},
 
   {
     date:"2026-10-18",version:"V2.0.4",category:"taisymas",
@@ -54,7 +62,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Mobiliojo adreso ir darbo redagavimo lango mygtukų tarpai padidinti, atsižvelgta į Safari apatinę juostą.",
       "Prisijungimo, slaptažodžio nustatymo ir keitimo laukuose pridėta prieinama slaptažodžio parodymo/paslėpimo akis.",
       "GPS vietos parinkimo ir fotografavimo taisyklės ruošiamos sekančiuose etapuose. R2 neprijungta.",
-    ],commits:[],
+    ],commits:["f472074e"],
   },
 
   {date:"2026-10-18",version:"V2.0 – etapų peržiūra",category:"planas",

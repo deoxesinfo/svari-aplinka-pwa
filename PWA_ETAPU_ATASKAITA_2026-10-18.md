@@ -33,3 +33,12 @@
 5. Prieš pradėdami naudoti tikrus darbuotojų duomenis, sutvarkyti staff roles, privatumo politiką ir atsarginių kopijų politiką.
 
 **Taisyklė:** šis dokumentas yra įgyvendintų funkcijų ir likusių testų ataskaita, o ne tvirtinimas, kad sistema production-ready.
+
+## Papildymas 2026-10-18 – V2.0.4–V2.0.8 UX + GPS
+- Mobiliojo adreso sąrašo kortelės pertvarkytos – veiksmų mygtukai atskirai nuo prioritetų žymų.
+- Adresų ir darbų formų apačioje pagerinti tarpai; slaptažodžio laukai turi parodyti / paslėpti mygtukus.
+- Į adreso formą pridėtas GPS apsaugos jungiklis (OFF), pasirenkama vietos paieška pagal gatvę ir miestą, žemėlapio žymeklis ir vietos patvirtinimas.
+- Ieškoma per Photon demo geokoderį pagal administratorius veiksmą (rezultato patvirtinimo mygtukas). Tai bandomoji, išorinė paslauga su ribojimais; ilgalaikiam naudojimui reikės patikimo geokoderio arba nuosavo serverio. Interaktyvus OSM žemėlapis rodomas tik atidarius vietos parinkiklį.
+- Patvirtintą žymeklį galima atverti Google Maps; jei vieta nepatvirtinta, naudojama adreso paieška.
+- GPS reikalaujamiems darbams ir adresams sukurtas foto įkėlimo užraktas, vietos patikra su 10 min galiojimu bei atstumo/tikslumo vertinimu. **Cloudflare R2 neprijungta: nuotraukų įkėlimas debesijoje vis dar išjungtas visiems**, nepriklausomai nuo GPS rezultato.
+- GPS nėra neklastojamas darbo įrodymas. Serverinė įkėlimo autorizacija, iOS / Android bandymai, dviejų įrenginių sinchronizavimo ir privatumo patikra lieka vėlesniam etapui.
