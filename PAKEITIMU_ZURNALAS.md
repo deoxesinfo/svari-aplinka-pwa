@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V2.2.1 | Darbuotojo dienos/savaitės/mėnesio filtras bendrame kalendoriuje, A4 savaitės/mėnesio spausdinimas (durų kodai tik administratoriui pažymėjus ir patvirtinus), 16 px tarpai tarp priskyrimo formos mygtukų; iPhone datos valdiklis nepakeistas. | [92993a61](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/92993a61) · [5c378205](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5c378205) · [8afb8740](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/8afb8740) · [6af6724e](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/6af6724e) · [125fc382](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/125fc382) · [8f9db87d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/8f9db87d) |
 | 2026-10-18 | V2.1 | Priskyrimai iš adreso, darbuotojas iš Personalo, dvi valymo rūšys ir savaitės dienos, vienkartinis / nuolatinis, transportas, nuolatinis bilietas; Supabase 4 sav. darbų generavimas be dublikatų, susiejimas darbuotojų skiltyje. Be R2 ir papildomų funkcijų. | [e9e914ec](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/e9e914ec) · [320e545d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/320e545d) · [b19d46ce](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/b19d46ce) · [18d00799](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/18d00799) |
 | 2026-10-18 | V2.0.9 | Maps URL testo pataisa ir V2.0.4–V2.0.8 ataskaitų galutinis suvedimas | Šiame etape |
 | 2026-10-18 | V2.0.8 | GPS žymeklio rodymas po geokodavimo, vienkartinė automatinė paieška įjungus apsaugą, Google Maps nuorodų testai | [e5c5578c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/e5c5578c) |
@@ -64,3 +65,10 @@ Naujas Švari Aplinka PWA projektas patikrintas tik skaitymui. Projektas ACTIVE_
 
 ## V2.1 vykdymo ribos
 Darbuotojo priskyrimas veikia pagal esamo Personalo įrašo ID, nepriklausomai nuo to, ar jis turi atskirą prisijungimą. Individualūs pranešimai gaunami tik vėliau susiejus Auth vartotoją. Nuolatinės užduotys generuojamos į kalendorių artimiausioms 4 savaitėms ir papildomos, kai atidaroma / atnaujinama PWA. Jei niekas neprisijungia, serveris be papildomo planavimo automatiškai naujų datų nekuria. Priskyrimų keitimas, automobilio pasirinkimas ir kitos papildomos funkcijos atidėtos – pagal vartotojo prašymą nedarėme sudėtingesnės sistemos. Cloudflare R2 neprijungta.
+
+
+## V2.2.1 ribos ir sekantys etapai
+- A4 spausdinamas tik vieno administratoriaus pasirinkto darbuotojo savaitės ar mėnesio grafikas. Konfidencialūs durų kodai pagal nutylėjimą neįtraukiami.
+- V2.1 pasikartojančios užduotys generuojamos artimiausioms 4 savaitėms. Mėnesio peržiūroje ar spausdinime toliau už šio lango dar neparuošti darbai neatsiras, kol nebus sugeneruoti. Jokio naujo foninio generatoriaus V2.2.1 nepridėta.
+- Standartiniai iPhone datos/laiko valdikliai nepakeisti.
+- Atskiros darbuotojų Auth paskyros ir papildoma kalba perkeltos į „Būsimi darbai“; Cloudflare R2 lieka atskiram etapui.

@@ -9,6 +9,20 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V2.2.1",category:"funkcija",
+    title:"Individualus darbuotojo kalendorius, A4 grafikas ir formos tarpai",
+    details:[
+      "Esamoje Kalendorius skiltyje galima pasirinkti darbuotoją iš Personalo sąrašo ir peržiūrėti jo dienos, savaitės ar mėnesio užduotis; kitiems darbuotojams priklausantys darbai filtruojami pagal profilio ID.",
+      "Savaitės ir mėnesio režimu pridėtas individualaus A4 grafiko spausdinimas. Lape – darbuotojas, data, laikas, adresas, valymo tipas ir būsena; meniu bei administravimo mygtukai nespausdinami.",
+      "Durų kodai spausdinami tik jei administratorius atskirai pažymi konfidencialų pasirinkimą ir patvirtina saugų perdavimą. Pagal nutylėjimą jie neįtraukiami.",
+      "Pop-up Priskirti darbą mygtukai Išsaugoti ir Atšaukti atskirti 16 px, pagerintas apatinis tarpas mobiliuose ekranuose.",
+      "Standartiniai iPhone datos ir laiko pasirinkimo valdikliai palikti nekeičiami. Papildomos kalbos ir darbuotojų asmeninės paskyros – vėlesni darbai.",
+      "Spausdinamos tik jau sugeneruotos užduotys (V2.1 jas generuoja 4 savaitėms); spausdinimas iPhone ir skirtinguose įrenginiuose dar turi būti praktiškai patikrintas.",
+    ],
+    commits:["92993a61","5c378205","8afb8740","6af6724e","125fc382","8f9db87d"],
+  },
+
+  {
     date:"2026-10-18",version:"V2.1",category:"funkcija",
     title:"Paprasti vienkartiniai ir pasikartojantys darbų priskyrimai",
     details:[
@@ -363,13 +377,14 @@ export const CHANGELOG: ChangeEntry[] = [
   },
 ];
 export const ROADMAP: PlannedEntry[] = [
-  {title:"Supabase konfigūracija ir integracija",summary:"Projektas jau sukurtas, bet be lentelių. Prieš integraciją sutvarkyti viešai vykdomos public.rls_auto_enable() saugumą, tada įvesti RLS, Auth, sinchronizaciją ir atsargines kopijas. Tik po atskiro patvirtinimo.",status:"Laukia",stage:"Reikia patvirtinimo"},
-  {title:"Administratorius / vadybininkas / darbuotojas",summary:"Pagal rolę rodyti tik leistus adresus, patikrinimus ir analizę. Realios teisės tik su duomenų baze.",status:"Laukia",stage:"Po Supabase"},
-  {title:"PWA pranešimai",summary:"Naujos, skubios ir vėluojančios užduotys; naudotojui leidus, įrenginio push pranešimai.",status:"Laukia",stage:"Po prisijungimų"},
-  {title:"Privati foto saugykla",summary:"Cloudflare R2 arba kita uždara objektų saugykla; susieti nuotraukas su adresu ir darbu, taikyti leidimus ir saugojimo taisykles.",status:"Laukia",stage:"Po Supabase"},
-  {title:"Pasirenkama GPS darbo vietos patikra",summary:"Kuriant darbą atskirai įjungti arba išjungti GPS vietos patikrinimą ir leistiną nuokrypį, palikti tikslumo toleranciją bei administratoriaus išimtis.",status:"Vėlesnis etapas",stage:"Po Supabase"},
-  {title:"Ilgalaikis duomenų saugojimas",summary:"Datuotų objektų, darbų ir darbuotojų įvykių istorija, atsarginės kopijos ir privatumo apsauga 5–10 metų analitikai.",status:"Vėlesnis etapas",stage:"Po Supabase"},
-  {title:"Inventoriaus apskaita",summary:"Priemonių likučiai, papildymai, išdavimas, perspėjimai ir sunaudojimo statistika.",status:"Vėlesnis etapas",stage:"Planuojama"},
-  {title:"Automobiliai, kuras ir draudimai",summary:"Kuro išlaidos, litrai, rida, TA/draudimo datos bei priminimai.",status:"Vėlesnis etapas",stage:"Planuojama"},
-  {title:"Analitikos gilinimas",summary:"Mėnesinės ataskaitos, objekto priežiūros kokybė ir dokumentų eksportas. Pajamų apskaita – ne dabartinis prioritetas.",status:"Vėlesnis etapas",stage:"Planuojama"},
+  {title:"Darbuotojo asmeninė paskyra",summary:"Pakvietimas ir saugus darbuotojo Auth paskyros susiejimas su Personalo profiliu; matomi tik jam paskirti darbai, be prieigos prie kitų darbuotojų ar durų kodų be leidimo.",status:"Vėlesnis etapas",stage:"Po V2.2.1"},
+  {title:"Papildoma kalba",summary:"Antroji programėlės kalba – pridėti tik užbaigus pagrindines funkcijas. Standartinį iPhone datos pasirinkimo kalendorių palikti.",status:"Vėlesnis etapas",stage:"Vėliau"},
+  {title:"Privati nuotraukų saugykla – Cloudflare R2",summary:"Saugus nuotraukų įkėlimas, peržiūra, GPS tikrinimas serveryje ir saugojimo politika. R2 dar neprijungta.",status:"Laukia",stage:"Atskiras patvirtintas etapas"},
+  {title:"Darbuotojų ir vadybininkų rolės",summary:"Patikrinti skirtingų paskyrų RLS, įmonės duomenų ribas ir priskirtų objektų matomumą; dabar aktyvi tik administratoriaus paskyra.",status:"Laukia",stage:"Po darbuotojų pakvietimų"},
+  {title:"Telefonų Push pranešimai",summary:"Vidinis varpelis jau veikia, bet iOS ir Android Push siuntimas bei leidimai dar neįjungti.",status:"Vėlesnis etapas",stage:"Po paskyrų integracijos"},
+  {title:"GPS bandymai realiuose telefonuose",summary:"Tikslumo, vienkartinio vietos leidimo, administratoriaus išimties ir serverinio nuotraukų užrakto patikra. GPS pagrindas jau įdiegtas.",status:"Vėlesnis etapas",stage:"Po R2"},
+  {title:"Ilgalaikių duomenų atsarginės kopijos",summary:"Veikia įvykių istorija ir rankinis CSV/JSON eksportas, bet patikimo automatinio 5–10 metų archyvo ir atkūrimo dar nėra.",status:"Vėlesnis etapas",stage:"Duomenų saugumas"},
+  {title:"Inventoriaus apskaita",summary:"Priemonių likučiai, išdavimas, perspėjimai ir sunaudojimo statistika.",status:"Vėlesnis etapas",stage:"Planuojama"},
+  {title:"Automobiliai, kuras ir draudimai",summary:"Atskiras automobilių registras, rida, TA/draudimas ir priskyrimų detalizavimas. V2.1 kol kas saugo tik transporto būdą.",status:"Vėlesnis etapas",stage:"Planuojama"},
+  {title:"Analitikos gilinimas",summary:"Kokybės rodikliai ir papildomi laikotarpiai bei eksporto galimybės. Esami analitikos duomenys veikia.",status:"Vėlesnis etapas",stage:"Planuojama"},
 ];

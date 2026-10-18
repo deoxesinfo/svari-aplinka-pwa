@@ -12,3 +12,5 @@
 8. V1.7–V2.0 darbų planas patvirtintas 2026-10-18; V2.1 supaprastinti darbuotojų priskyrimai patvirtinti atskirai. DEMO duomenų į Supabase neperkelti. R2 integracija ir mokamos paslaugos atidėtos iki naujo patvirtinimo. Bet kokius papildomus prisijungimus ir migracijas derinti atskirai.
 
 Tikslas: po metų aiškiai atkurti, kas, kada ir kodėl buvo pakeista.
+
+9. Versijų numeravimas po V2.2.1: kitas smulkus papildymas V2.2.2, vėliau V2.2.3 (kelti paskutinį skaičių). V2.2.1 patvirtintas kalendoriaus filtras, A4 spausdinimas ir mygtukų tarpai; naujų funkcijų be patvirtinimo nepridėti.
