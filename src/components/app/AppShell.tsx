@@ -137,7 +137,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile bottom nav */}
         <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur lg:hidden" aria-label="Apatinė navigacija">
           <div className="grid grid-cols-5">
-            {NAV.slice(0, 5).map((n) => (
+            {NAV.filter(n => ["/", "/kalendorius", "/darbai", "/adresai", "/nuotraukos"].includes(n.to)).map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
