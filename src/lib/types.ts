@@ -6,14 +6,29 @@ export type Inspection = "patikrinta" | "taisyti" | null;
 export type Priority = "zema" | "vidutine" | "auksta";
 export type PersonRole = "darbuotojas" | "vadybininkas" | "kandidatas";
 export type PersonStatus = "aktyvus" | "atostogos" | "nebedirba" | "kandidatas";
+/** Būsima prisijungimo rolė ir profesija saugomos atskirai. */
+export type PersonPosition = "valytojas" | "kiemsargis" | "vadybininkas" | "kita";
+export const PERSON_POSITION_LABEL: Record<PersonPosition, string> = {
+  valytojas: "Valytojas (-a)",
+  kiemsargis: "Kiemsargis (-ė)",
+  vadybininkas: "Vadybininkas (-ė)",
+  kita: "Kitos pareigos",
+};
+export type EmploymentPeriod = { startedAt: string; endedAt?: string };
 export interface Person {
   id: string;
   name: string;
   role: PersonRole;
+  /** Actual job title; separate from account permissions. */
+  position?: PersonPosition;
   status: PersonStatus;
   notes: string;
-  createdAt: string;
+  createdAt: string; // when profile was entered, NOT the hire date
+  startedAt?: string; // current/latest hire date
+  endedAt?: string; // most recent departure
+  employmentPeriods?: EmploymentPeriod[]; // preserved after employee returns
 }
+export type RecruitmentLink = { id: string; title: string; url: string; notes: string; createdAt: string };
 export type ObjectStatus = "aktyvus" | "naujas" | "sustabdytas" | "nebeaptarnaujamas";
 export const OBJECT_STATUS_LABEL: Record<ObjectStatus, string> = {
   aktyvus: "Aktyvus", naujas: "Naujas", sustabdytas: "Sustabdytas", nebeaptarnaujamas: "Nebeteikiamos paslaugos",

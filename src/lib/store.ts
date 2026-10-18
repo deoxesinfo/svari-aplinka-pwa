@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { buildSeed, WORKERS } from "./seed";
 import { clearPhotoBlobs, deletePhotoBlobs } from "./photos";
 import { todayISO } from "./dates";
-import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person } from "./types";
+import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person, RecruitmentLink, EmploymentPeriod } from "./types";
 import { INSPECTION_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "./types";
 
 const KEY = "svari-aplinka-demo-v1";
@@ -15,6 +15,7 @@ export interface AppState {
   photos: PhotoMeta[];
   workers: string[];
   people: Person[];
+  recruitmentLinks: RecruitmentLink[];
 }
 
 const seedPeople = (): Person[] => [
@@ -22,8 +23,8 @@ const seedPeople = (): Person[] => [
   { id: "manager-1", name: "Vadybininkas A (DEMO)", role: "vadybininkas", status: "aktyvus", notes: "", createdAt: new Date().toISOString() },
   { id: "manager-2", name: "Vadybininkas B (DEMO)", role: "vadybininkas", status: "aktyvus", notes: "", createdAt: new Date().toISOString() },
 ];
-const activeWorkerNames = (people: Person[]) => Array.from(new Set([...WORKERS, ...people.filter(p=>p.role === "darbuotojas" && p.status !== "nebedirba").map(p=>p.name)]));
-const EMPTY: AppState = { loaded: false, addresses: [], jobs: [], photos: [], workers: WORKERS, people: [] };
+const activeWorkerNames = (people: Person[]) => Array.from(new Set(people.filter(p=>p.role === "darbuotojas" && (p.status === "aktyvus" || p.status === "atostogos")).map(p=>p.name)));
+const EMPTY: AppState = { loaded: false, addresses: [], jobs: [], photos: [], workers: WORKERS, people: [], recruitmentLinks: [] };
 let state: AppState = EMPTY;
 const listeners = new Set<() => void>();
 
@@ -33,21 +34,21 @@ function load() {
     if (raw) {
       const p = JSON.parse(raw);
       const people: Person[] = Array.isArray(p.people) ? p.people : seedPeople();
-      state = { loaded: true, addresses: p.addresses ?? [], jobs: p.jobs ?? [], photos: p.photos ?? [], people, workers: activeWorkerNames(people) };
+      state = { loaded: true, addresses: p.addresses ?? [], jobs: p.jobs ?? [], photos: p.photos ?? [], people, recruitmentLinks: Array.isArray(p.recruitmentLinks) ? p.recruitmentLinks : [], workers: activeWorkerNames(people) };
       return;
     }
   } catch {
     /* corrupted – reseed */
   }
   const s = buildSeed();
-  state = { loaded: true, ...s, photos: [], people: seedPeople(), workers: WORKERS };
+  state = { loaded: true, ...s, photos: [], people: seedPeople(), recruitmentLinks: [], workers: WORKERS };
   persist();
 }
 
 function persist() {
   try {
-    const { addresses, jobs, photos, people } = state;
-    localStorage.setItem(KEY, JSON.stringify({ addresses, jobs, photos, people }));
+    const { addresses, jobs, photos, people, recruitmentLinks } = state;
+    localStorage.setItem(KEY, JSON.stringify({ addresses, jobs, photos, people, recruitmentLinks }));
   } catch {
     toast.error("Nepavyko išsaugoti – įrenginio atmintis pilna.");
   }
@@ -77,25 +78,66 @@ const uid = () => crypto.randomUUID();
 const nowIso = () => new Date().toISOString();
 
 // ---------- Personnel ----------
-export type PersonInput = Omit<Person, "id" | "createdAt">;
+// An old profile with no employment start is NOT silently assigned a false hire date.
+// The createdAt timestamp still shows when the record was entered.
+export type PersonInput = Omit<Person, "id" | "createdAt" | "employmentPeriods">;
+const working = (status: Person["status"]) => status === "aktyvus" || status === "atostogos";
+export function deriveEmploymentPeriods(previous: Person | null, input: PersonInput): EmploymentPeriod[] {
+  const periods: EmploymentPeriod[] = previous?.employmentPeriods?.map(p=>({...p}))
+    ?? (previous?.startedAt ? [{startedAt:previous.startedAt, endedAt:previous.endedAt}] : []);
+  if (input.role === "kandidatas") return periods;
+  const wasWorking = previous ? working(previous.status) : false;
+  const nowWorking = working(input.status);
+  const start = input.startedAt || "";
+  if (nowWorking && !wasWorking) {
+    if (start) periods.push({startedAt:start});
+  } else if (nowWorking && wasWorking) {
+    const last = periods.at(-1);
+    if (last && !last.endedAt && start) last.startedAt = start;
+    else if (!last && start) periods.push({startedAt:start});
+  } else if (!nowWorking && wasWorking) {
+    const last = periods.at(-1);
+    if (last && !last.endedAt) last.endedAt = input.endedAt;
+    else if (!last && start) periods.push({startedAt:start,endedAt:input.endedAt});
+  } else if (!nowWorking && input.endedAt && periods.length) {
+    const last = periods.at(-1);
+    if (last) last.endedAt = input.endedAt;
+  }
+  return periods;
+}
 export function addPerson(input: PersonInput): Person {
-  const person: Person = { ...input, id: uid(), createdAt: nowIso() };
+  const person: Person = { ...input, id: uid(), createdAt: nowIso(), employmentPeriods:deriveEmploymentPeriods(null,input) };
   set(s=>({people: [...s.people, person], workers: activeWorkerNames([...s.people, person])}));
   return person;
 }
 export function updatePerson(id: string, input: PersonInput) {
   const original = state.people.find(p=>p.id===id);
-  const people = state.people.map(p=>p.id===id ? {...p,...input} : p);
-  set(s=>({ people, workers: activeWorkerNames(people),
-    jobs: original?.role === "darbuotojas" && original.name !== input.name
-      ? s.jobs.map(j=>j.worker === original.name ? {...j, worker:input.name} : j) : s.jobs }));
+  if (!original) return;
+  // Rehire is always the SAME profile and therefore preserves history.
+  const revised: Person={...original,...input,employmentPeriods:deriveEmploymentPeriods(original,input)};
+  const people = state.people.map(p=>p.id===id?revised:p);
+  set(s=>({people,workers:activeWorkerNames(people),
+    jobs: original.role === "darbuotojas" && original.name !== input.name
+      ? s.jobs.map(j=>j.worker === original.name ? {...j,worker:input.name}:j):s.jobs}));
 }
-export function deletePerson(id: string): boolean {
+export function archivePerson(id: string, endedAt: string): boolean {
   const person = state.people.find(p=>p.id===id);
-  if (!person || state.jobs.some(j=>j.managerId===id || (person.role==="darbuotojas" && j.worker===person.name))) return false;
-  const people=state.people.filter(p=>p.id!==id);
-  set(()=>({people,workers:activeWorkerNames(people)}));
+  if (!person || person.status==="nebedirba" || !endedAt) return false;
+  updatePerson(id, {name:person.name,role:person.role,position:person.position,status:"nebedirba",
+    notes:person.notes,startedAt:person.startedAt,endedAt});
   return true;
+}
+// Older consumers cannot hard-delete personnel. Archive instead.
+export function deletePerson(_id: string): boolean { return false; }
+
+// ---------- Recruitment links (DEMO only, not connected to job boards) ----------
+export function addRecruitmentLink(title: string, url: string, notes: string): RecruitmentLink {
+  const link={id:uid(),title,url,notes,createdAt:nowIso()};
+  set(s=>({recruitmentLinks:[...s.recruitmentLinks,link]}));
+  return link;
+}
+export function removeRecruitmentLink(id: string) {
+  set(s=>({recruitmentLinks:s.recruitmentLinks.filter(l=>l.id!==id)}));
 }
 
 // ---------- Addresses ----------
