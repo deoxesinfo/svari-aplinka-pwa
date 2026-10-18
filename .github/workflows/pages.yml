@@ -25,6 +25,8 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Build
         run: npm run build
+      - name: Test interactive work-card opening
+        run: npm test
       - uses: actions/configure-pages@v5
         with:
           enablement: true
