@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.8",category:"taisymas",
+   title:"GPS žymeklio paieškos ir Google Maps nuorodų stabilizavimas",
+   details:[
+     "Įjungus GPS apsaugą žemėlapio adreso paieška paleidžiama vieną kartą pagal įvestą gatvę ir miestą.",
+     "Pasirinkus paieškos rezultatą, žymeklis sukuriamas arba perkeliamas į naują vietą; administratoriui leidžiama patikslinti jį paspaudimu arba tempimu.",
+     "Google Maps vietos ir navigacijos nuorodoms pridėti testai: patvirtintos koordinatės ir nepatvirtinto adreso paieškos režimas.",
+     "Automatinio geokodavimo paslauga yra bandomoji, neteikia veikimo garantijos. R2 nuotraukų įkėlimas vis dar atidėtas.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.7",category:"funkcija",
    title:"GPS apsauga fotografavimo ir įkėlimo mygtukams",
    details:[

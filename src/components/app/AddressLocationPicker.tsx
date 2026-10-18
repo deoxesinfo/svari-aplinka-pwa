@@ -42,6 +42,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
  const node=useRef<HTMLDivElement>(null);
  const mapRef=useRef<import("leaflet").Map|null>(null);
  const markerRef=useRef<import("leaflet").Marker|null>(null);
+ const markerSetRef=useRef<((lat:number,lon:number)=>void)|null>(null);
  const [open,setOpen]=useState(false);
  const [busy,setBusy]=useState(false);
  const [candidates,setCandidates]=useState<Result[]>([]);
@@ -50,6 +51,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
  const confirmed=hasConfirmedPin(value);
  const updatePin=(lat:number,lon:number)=>{
    onChange({latitude:+lat.toFixed(7),longitude:+lon.toFixed(7),gpsLocationConfirmed:false,gpsReference:undefined});
+   markerSetRef.current?.(lat,lon);
  };
  useEffect(()=>{
    if(!open||!node.current)return;
@@ -74,18 +76,19 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
          });
        }
      };
+     markerSetRef.current=setMarker;
      if(selected)setMarker(value.latitude!,value.longitude!);
      map.on("click",(e:import("leaflet").LeafletMouseEvent)=>{setMarker(e.latlng.lat,e.latlng.lng);updatePin(e.latlng.lat,e.latlng.lng)});
      requestAnimationFrame(()=>{if(active)map?.invalidateSize()});
    }).catch(()=>setError("Nepavyko atidaryti žemėlapio."));
-   return()=>{active=false;markerRef.current=null;mapRef.current=null;map?.remove()};
+   return()=>{active=false;markerRef.current=null;markerSetRef.current=null;mapRef.current=null;map?.remove()};
  // Initialize on opening; pin is updated without tearing down the map.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[open]);
  useEffect(()=>{
    if(open&&mapRef.current&&selected){
      mapRef.current.setView([value.latitude!,value.longitude!],17);
-     markerRef.current?.setLatLng([value.latitude!,value.longitude!]);
+     markerSetRef.current?.(value.latitude!,value.longitude!);
    }
  },[open,selected,value.latitude,value.longitude]);
  const lookup=async()=>{
@@ -99,24 +102,25 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
    }catch(e){setError(e instanceof Error?e.message:"Paieškos klaida.")}
    finally{setBusy(false)}
  };
- useEffect(()=>{
-   if(value.gpsProtectionEnabled&&value.street?.trim()&&value.city?.trim()&&open&&!selected&&candidates.length===0&&!busy&&!error){
-     // No background API call: administrator explicitly presses Search.
-   }
- },[value.gpsProtectionEnabled,value.street,value.city,open,selected,candidates.length,busy,error]);
  return <section className="rounded-xl border bg-muted/20 p-3 sm:p-4">
    <label className="flex cursor-pointer items-start gap-3">
      <input type="checkbox" className="mt-1 size-5 shrink-0 accent-primary"
        checked={Boolean(value.gpsProtectionEnabled)} onChange={e=>{
          onChange({gpsProtectionEnabled:e.target.checked});
-         if(e.target.checked)setOpen(true);
+         if(e.target.checked){
+           setOpen(true);
+           if(value.street.trim()&&value.city.trim())void lookup();
+         }
        }}/>
      <span><strong className="text-sm">Apsaugoti nuotraukas ir darbus pagal GPS</strong>
        <span className="mt-1 block text-xs text-muted-foreground">Pagal nutylėjimą išjungta. Įjungus reikia patvirtinti tikslų namo žymeklį.</span>
      </span>
    </label>
    <div className="mt-3 flex flex-wrap items-center gap-2">
-     <Button type="button" variant="outline" size="sm" onClick={()=>setOpen(x=>!x)}>
+     <Button type="button" variant="outline" size="sm" onClick={()=>{
+         if(!open&&value.street.trim()&&value.city.trim()&&!selected)void lookup();
+         setOpen(x=>!x);
+       }}>
        <MapPinned className="size-4"/>{open?"Uždaryti žemėlapį":"Pasirinkti tikslią vietą"}
      </Button>
      {confirmed&&<span className="inline-flex items-center gap-1 text-xs font-semibold text-primary"><CheckCircle2 className="size-4"/>Vieta patvirtinta</span>}
