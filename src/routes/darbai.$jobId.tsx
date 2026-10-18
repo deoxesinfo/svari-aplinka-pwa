@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { JobFormDialog } from "@/components/app/forms";
 import { AccessCode, Confirm, EmptyState, PageHeader, Pill, textareaCls } from "@/components/app/ui-bits";
 import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
+import { MapsLink } from "@/components/app/MapsLink";
 import { useAppState, setJobStatus, addComment, setInspection, deleteJob } from "@/lib/store";
 import { JOB_TYPE_LABEL } from "@/lib/types";
 import { fmtLong, fmtDateTime, todayISO, overdueLabel } from "@/lib/dates";
@@ -85,6 +86,7 @@ function JobDetail() {
           className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
           <MapPin className="size-4" />{address.street}, {address.city} →
         </Link>}
+        {address && <MapsLink street={address.street} city={address.city} />}
         {address && <div>
           <div className="mb-2 text-xs text-muted-foreground">Durų kodas (tik DEMO)</div>
           <AccessCode code={address.accessCode} />

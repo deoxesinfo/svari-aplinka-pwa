@@ -120,13 +120,13 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const [tag, setTag] = useState<PhotoTag>("po");
   const { photos } = useAppState();
   const count = photos.filter((photo) => photo.jobId === jobId && !!jobId).length;
-  const remaining = jobId ? Math.max(0, 12 - count) : Infinity;
+  const remaining = jobId ? Math.max(0, 15 - count) : Infinity;
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
-    if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 12 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
+    if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 15 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
     const list = incoming.slice(0, remaining);
     if (!list.length) return;
     setBusy(list.length);
@@ -153,7 +153,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
 
   return (
     <div className="space-y-3">
-      {jobId && <div className="flex items-center justify-between text-sm"><span className="font-medium">Darbo nuotraukos</span><span className="text-muted-foreground">{count}/12</span></div>}
+      {jobId && <div className="flex items-center justify-between text-sm"><span className="font-medium">Darbo nuotraukos</span><span className="text-muted-foreground">{count}/15</span></div>}
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">Naujų nuotraukų žyma:</span>
         {Object.entries(PHOTO_TAG_LABEL).map(([k, label]) => <button key={k} type="button" onClick={() => setTag(k as PhotoTag)} aria-pressed={tag === k} className={`rounded-lg border px-3 py-2 text-sm ${tag === k ? "border-primary bg-primary/10 text-primary font-semibold" : "border-input text-muted-foreground"}`}>{label}</button>)}
@@ -168,7 +168,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
       </div>
       <input ref={cam} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handle(e.target.files)} />
       <input ref={gal} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handle(e.target.files)} />
-      {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 12 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
+      {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 15 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
       {busy > 0 ? (
         <p className="flex items-center gap-2 text-sm text-primary" role="status">
           <Loader2 className="size-4 animate-spin" /> Apdorojama nuotraukų: {busy}…

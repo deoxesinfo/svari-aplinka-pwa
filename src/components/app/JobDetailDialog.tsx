@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { JobFormDialog } from "@/components/app/forms";
 import { AccessCode, Confirm, Pill, textareaCls } from "@/components/app/ui-bits";
 import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
+import { MapsLink } from "./MapsLink";
 import { useAppState, addComment, setJobStatus, setInspection, deleteJob } from "@/lib/store";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { fmtDateTime, fmtLong, overdueLabel, todayISO } from "@/lib/dates";
@@ -99,6 +100,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
             onClick={onClose} className="inline-flex items-center gap-2 text-sm text-primary hover:underline">
             <MapPin className="size-4" />{address.street}, {address.city} →
           </Link>}
+          {address && <MapsLink street={address.street} city={address.city} />}
           {address && <div><p className="mb-1 text-xs text-muted-foreground">Patekimo kodas (tik DEMO)</p>
             <AccessCode code={address.accessCode} /></div>}
           <div><p className="text-xs text-muted-foreground">Laiptinių skaičius</p>
@@ -116,7 +118,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         </section>
 
         <section className="card-surface space-y-3 p-4 sm:p-5">
-          <h3 className="flex items-center gap-2 text-base font-bold"><Camera className="size-5 text-primary"/> Nuotraukos · {related.length}/12</h3>
+          <h3 className="flex items-center gap-2 text-base font-bold"><Camera className="size-5 text-primary"/> Nuotraukos · {related.length}/15</h3>
           <p className="text-xs text-muted-foreground">Pasirinkite žymą „Prieš“, „Po“ arba „Problema“. Nuotraukos WebP formatu saugomos tik šio įrenginio naršyklėje.</p>
           {address && <PhotoUploader addressId={address.id} jobId={job.id} />}
           <PhotoGrid photos={related} empty="Nuotraukų dar nėra." />

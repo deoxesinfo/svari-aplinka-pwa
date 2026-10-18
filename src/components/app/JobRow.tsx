@@ -7,6 +7,7 @@ import { fmtShort, overdueLabel, todayISO } from "@/lib/dates";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Pill } from "./ui-bits";
+import { MapsLink } from "./MapsLink";
 
 export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const { addresses, photos } = useAppState();
@@ -55,13 +56,14 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1"><User className="size-3.5" />{job.worker || "Nepriskirta"}</span>
-          <span className="inline-flex items-center gap-1"><Camera className="size-3.5" />{count}/12</span>
+          <span className="inline-flex items-center gap-1"><Camera className="size-3.5" />{count}/15</span>
           <span className="inline-flex items-center gap-1"><MessageSquare className="size-3.5" />{job.comments.length}</span>
           {done && <span className="inline-flex items-center gap-1 text-primary"><Check className="size-3.5" />Atlikta</span>}
         </div>
       </div>
       <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
     </button>
+    {address && <div className="-mt-1 mb-2 flex justify-end"><MapsLink street={address.street} city={address.city} compact /></div>}
     {detailsOpen && <JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen} />}
     </>
   );
