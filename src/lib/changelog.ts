@@ -19,7 +19,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Standartiniai iPhone datos ir laiko pasirinkimo valdikliai palikti nekeičiami. Papildomos kalbos ir darbuotojų asmeninės paskyros – vėlesni darbai.",
       "Spausdinamos tik jau sugeneruotos užduotys (V2.1 jas generuoja 4 savaitėms); spausdinimas iPhone ir skirtinguose įrenginiuose dar turi būti praktiškai patikrintas.",
     ],
-    commits:["92993a61","5c378205","8afb8740","6af6724e","125fc382","8f9db87d"],
+    commits:["92993a61","5c378205","8afb8740","6af6724e","125fc382","8f9db87d","69fb4838","3e351c35"],
   },
 
   {
