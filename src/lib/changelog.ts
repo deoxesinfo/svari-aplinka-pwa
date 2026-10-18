@@ -18,7 +18,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Privatus administratoriaus paruošimo įrašas neprieinamas viešiems ar paprastiems prisijungusiems naudotojams. Supabase Security Advisor – 0 perspėjimų.",
       "Privalomas prisijungimas ir debesijos sinchronizacija neįjungti, esami DEMO duomenys nepakeisti. Cloudflare R2 lieka vėlesniam etapui.",
     ],
-    commits:[],
+    commits:["89e01778"],
   },
   {
     date:"2026-10-18",version:"V1.7 – 1 etapas",category:"infrastruktūra",
