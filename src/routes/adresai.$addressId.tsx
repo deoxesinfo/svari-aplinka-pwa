@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AddressFormDialog, JobFormDialog } from "@/components/app/forms";
 import { AccessCode, Confirm, EmptyState, PageHeader, Pill } from "@/components/app/ui-bits";
 import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
-import { MapsLink } from "@/components/app/MapsLink";
+import { MapsLink, MapPinLink } from "@/components/app/MapsLink";
 import { JobRow } from "@/components/app/JobRow";
 import { useAppState, deleteAddress } from "@/lib/store";
 import { ADDRESS_TYPE_LABEL } from "@/lib/types";
@@ -24,7 +24,7 @@ function AddressDetail(){
   const pictures=photos.filter(p=>p.addressId===a.id);
   return <div>
     <Link to="/adresai" className="mb-4 inline-flex gap-2 items-center text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="size-4"/> Visi adresai</Link>
-    <PageHeader title={a.street} subtitle={<span className="inline-flex items-center gap-1"><MapPin className="size-4"/>{a.city} · {ADDRESS_TYPE_LABEL[a.type]} {a.isPriority&&<Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}</span>} actions={<><MapsLink street={a.street} city={a.city}/><Button variant="outline" onClick={()=>setEdit(true)}><Pencil/> Redaguoti</Button><Button variant="outline" onClick={()=>setRemove(true)}><Trash2/> Ištrinti</Button></>}/>
+    <PageHeader title={a.street} subtitle={<span className="inline-flex items-center gap-1"><MapPin className="size-4"/>{a.city} · {ADDRESS_TYPE_LABEL[a.type]} {a.isPriority&&<Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}</span>} actions={<><div className="flex items-center gap-2"><MapPinLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)}/><MapsLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)}/></div><Button variant="outline" onClick={()=>setEdit(true)}><Pencil/> Redaguoti</Button><Button variant="outline" onClick={()=>setRemove(true)}><Trash2/> Ištrinti</Button></>}/>
     <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
       <section className="card-surface space-y-4 p-5"><h2 className="text-lg font-semibold">Objekto informacija</h2><div><div className="text-xs text-muted-foreground">Laiptinių skaičius</div><div className="font-semibold">{a.entrances}</div></div><div className="rounded-lg bg-muted/50 p-3"><div className="mb-1 text-xs font-medium text-muted-foreground">Valymo kartai per savaitę</div>
 {a.type !== "teritorija" && <p className="text-sm">Laiptinės: <strong>{a.stairwellVisitsPerWeek != null ? a.stairwellVisitsPerWeek+" k." : "Nenurodyta"}</strong></p>}

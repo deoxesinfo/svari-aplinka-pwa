@@ -6,8 +6,10 @@ import { addAddress, addJob, updateAddress, updateJob, useAppState, type Address
 import { todayISO } from "@/lib/dates";
 import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, OBJECT_STATUS_LABEL, type Address, type Job } from "@/lib/types";
 import { Field, inputCls, textareaCls } from "./ui-bits";
+import { AddressLocationPicker } from "./AddressLocationPicker";
+import { hasConfirmedPin } from "@/lib/address-gps";
 
-const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "", notes: "" };
+const emptyAddress: AddressInput = { street: "", city: "", gpsProtectionEnabled:false, type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "", notes: "" };
 
 export function AddressFormDialog({
   open, onOpenChange, address, onSaved,
@@ -16,11 +18,16 @@ export function AddressFormDialog({
   useEffect(() => {
     if (open) setV(address ? { ...address } : emptyAddress);
   }, [open, address]);
-  const up = <K extends keyof AddressInput>(k: K, val: AddressInput[K]) => setV((s) => ({ ...s, [k]: val }));
+  const up = <K extends keyof AddressInput>(k: K, val: AddressInput[K]) => setV((s) => ({
+    ...s,[k]:val,
+    ...(k==="street"||k==="city"?{gpsLocationConfirmed:false,gpsReference:undefined}:{}),
+  }));
+  const patchGps=(patch:Partial<AddressInput>)=>setV(s=>({...s,...patch}));
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!v.street.trim() || !v.city.trim()) return toast.error("Įveskite gatvę ir miestą");
+    if(v.gpsProtectionEnabled&&!hasConfirmedPin(v))return toast.error("GPS apsaugai patvirtinkite tikslią objekto vietą žemėlapyje");
     const saved: AddressInput = { ...v,
       stairwellVisitsPerWeek: v.type === "teritorija" ? undefined : v.stairwellVisitsPerWeek,
       territoryVisitsPerWeek: v.type === "laiptine" ? undefined : v.territoryVisitsPerWeek
@@ -88,13 +95,7 @@ export function AddressFormDialog({
   </div>
   <p className="mt-2 text-xs text-muted-foreground">Tik informacinis dažnumas – automatinio darbų grafiko dar nesukuria.</p>
 </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="GPS platuma (neprivaloma)"><input className={inputCls} type="number" step="any" min={-90} max={90}
-              value={v.latitude??""} onChange={e=>up("latitude",e.target.value===""?undefined:Number(e.target.value))}/></Field>
-            <Field label="GPS ilguma (neprivaloma)"><input className={inputCls} type="number" step="any" min={-180} max={180}
-              value={v.longitude??""} onChange={e=>up("longitude",e.target.value===""?undefined:Number(e.target.value))}/></Field>
-          </div>
-          <p className="text-xs text-muted-foreground">GPS įjunkite tik jei reikės patikrinti darbuotojo atvykimą. Koordinates įveskite iš patikimo objekto žemėlapio.</p>
+          <AddressLocationPicker value={v} onChange={patchGps}/>
           <Field label="Valymo instrukcijos"><textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} /></Field>
           <Field label="Patekimo kodas" hint="Neskelbkite prieigos kodų neįgaliotiems darbuotojams.">
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
@@ -146,13 +147,17 @@ export function JobFormDialog({
     const location=addresses.find(a=>a.id===v.addressId);
     if(v.gpsRequired&&(!Number.isFinite(location?.latitude)||!Number.isFinite(location?.longitude)))
       return toast.error("Įjunkite GPS tik objektui, kuriam nurodytos koordinatės");
+    if((v.gpsRequired||location?.gpsProtectionEnabled)&&!hasConfirmedPin(location)){
+      return toast.error("GPS darbui reikia patvirtintos tikslios objekto vietos");
+    }
     const instructions = v.instructions.trim() || addresses.find((a) => a.id === v.addressId)?.instructions || "";
+    const savedJob={...v, gpsRequired:Boolean(v.gpsRequired||location?.gpsProtectionEnabled),instructions};
     if (job) {
-      updateJob(job.id, { ...v, instructions });
+      updateJob(job.id, savedJob);
       toast.success("Darbas išsaugotas");
       onSaved?.({ ...job, ...v });
     } else {
-      const j = addJob({ ...v, instructions });
+      const j = addJob(savedJob);
       toast.success("Darbas sukurtas");
       onSaved?.(j);
     }
@@ -205,17 +210,19 @@ export function JobFormDialog({
           </div>
           <div className="rounded-lg border p-3">
             <label className="flex items-center gap-2 text-sm font-semibold">
-              <input type="checkbox" className="size-4 accent-primary" checked={Boolean(v.gpsRequired)}
+              <input type="checkbox" className="size-4 accent-primary"
+                checked={Boolean(v.gpsRequired||addresses.find(a=>a.id===v.addressId)?.gpsProtectionEnabled)}
+                disabled={Boolean(addresses.find(a=>a.id===v.addressId)?.gpsProtectionEnabled)}
                 onChange={e=>up("gpsRequired",e.target.checked)}/>
               Patikrinti GPS vietą užbaigiant darbą
             </label>
-            {v.gpsRequired&&<label className="mt-3 block text-xs font-semibold">Leistinas atstumas nuo objekto
+            {(v.gpsRequired||addresses.find(a=>a.id===v.addressId)?.gpsProtectionEnabled)&&<label className="mt-3 block text-xs font-semibold">Leistinas atstumas nuo objekto
               <select className={inputCls+" mt-1"} value={v.gpsRadiusMeters||50}
                 onChange={e=>up("gpsRadiusMeters",Number(e.target.value) as 30|50|100)}>
                 <option value={30}>30 m</option><option value={50}>50 m</option><option value={100}>100 m</option>
               </select>
             </label>}
-            <p className="mt-2 text-xs text-muted-foreground">Pagal nutylėjimą išjungta. GPS prašoma tik darbuotojui paspaudus patikrą; nuolatinio sekimo nėra. Reikia objekto koordinačių.</p>
+            <p className="mt-2 text-xs text-muted-foreground">Pagal nutylėjimą išjungta. Jeigu adresui įjungta GPS apsauga, darbas ją paveldi automatiškai. GPS tikrinama tik paspaudus mygtuką.</p>
           </div>
           <Field label="Instrukcijos" hint="Palikus tuščią – naudojamos adreso instrukcijos.">
             <textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} />

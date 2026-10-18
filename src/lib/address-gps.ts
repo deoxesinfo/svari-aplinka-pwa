@@ -1,6 +1,6 @@
 import type { Address } from "./types";
 export type GeoTarget=Pick<Address,"street"|"city"|"latitude"|"longitude"|"gpsReference"|"gpsLocationConfirmed"|"gpsProtectionEnabled">;
-export const addressReference=(street:string,city:string)=>[street,city].map(v=>v.trim().toLocaleLowerCase("lt-LT").replace(/\\s+/g," ")).join("|");
+export const addressReference=(street:string,city:string)=>[street,city].map(v=>v.trim().toLocaleLowerCase("lt-LT").replace(/\s+/g," ")).join("|");
 export function hasConfirmedPin(a:Partial<GeoTarget>|undefined):boolean{
   return !!a?.gpsLocationConfirmed&&!!a?.street?.trim()&&!!a.city?.trim()
    &&a.gpsReference===addressReference(a.street,a.city)

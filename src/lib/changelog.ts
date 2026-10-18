@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0.6",category:"funkcija",
+   title:"GPS apsauga susieta su patvirtintu objekto adresu",
+   details:[
+     "GPS platumos ir ilgumos laukus adreso formoje pakeitė pažymimas GPS apsaugos jungiklis ir žemėlapio vietos patvirtinimas.",
+     "Žymeklį galima parinkti pagal adresą, pataisyti žemėlapyje ir patvirtinti. Pakeitus gatvę ar miestą patvirtinimas nebegalioja.",
+     "Kai adresui įjungta GPS apsauga, naujas darbas ją automatiškai paveldi; nuotraukų ir užbaigimo tikrinimas ruošiamas atskirame etape.",
+     "Adreso kortelės Google Maps vietos nuoroda naudoja tik patvirtintas koordinates. R2 kol kas išjungta.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V2.0.5",category:"funkcija",
    title:"Automatinė adreso vietos paieška ir patvirtinamas žymeklis – pagrindas",
    details:[
