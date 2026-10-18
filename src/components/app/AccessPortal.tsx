@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
 import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -97,7 +98,10 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
        <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm font-medium">Pakeisti slaptažodį</summary>
          <div className="mt-3">{passwordForm("Naujas paskyros slaptažodis")}</div>
        </details>
-       <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
+       <div className="flex flex-wrap gap-2">
+         <Button variant="outline" asChild><Link to="/">Grįžti į apžvalgą</Link></Button>
+         <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
+       </div>
      </div>
    </section>;
  }

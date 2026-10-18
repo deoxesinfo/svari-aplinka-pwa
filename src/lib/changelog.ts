@@ -9,6 +9,18 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7.4",category:"taisymas",
+    title:"Atskiras prisijungimo ir paskyros langas",
+    details:[
+      "Prisijungimo maršrutas /paskyra atskirtas nuo bendro AppShell: nerodomas kairysis meniu, mobilusis meniu ar DEMO juosta.",
+      "Prisijungus paskyros kortelėje galima grįžti į apžvalgą atskiru mygtuku.",
+      "Kol kas tik išdėstymo pataisa. Kiti PWA puslapiai tebėra vietinis DEMO; privalomas prisijungimas ir duomenų sinchronizavimas dar neįjungti.",
+      "DEMO duomenys naršyklėje ir Supabase paskyrų teisės nekeičiami.",
+    ],
+    commits:[],
+  },
+
+  {
     date:"2026-10-18",version:"V1.7 – 3 etapas",category:"infrastruktūra",
     title:"Patvirtinta pirmojo administratoriaus paskyra ir suteiktos teisės",
     details:[

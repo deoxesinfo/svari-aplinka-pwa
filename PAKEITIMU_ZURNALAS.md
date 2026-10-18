@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V1.7.4 | Prisijungimo langas be kairiojo meniu ir DEMO juostos; paskyros grįžimas į apžvalgą. Tik UI, be duomenų migracijos. | Įrašas šiame komite |
 | 2026-10-18 | V1.7 – 3 etapas | Patvirtinta Auth paskyra, susieta su „Švari Aplinka“ ir suteiktos aktyvios administratoriaus teisės; RLS patikra, atviras Auth slaptažodžių saugumo perspėjimas | Užfiksuota Supabase; GitHub įrašas šiame komite |
 | 2026-10-18 | V1.7 – 2 etapas | Paruošta pirma administratoriaus paskyra privačioje Supabase lentelėje (be aktyvių teisių), pakvietimo slaptažodžio nustatymas ir atkūrimo pataisa. Laukiama Supabase Auth kvietimo. | [89e01778](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/89e01778) |
 | 2026-10-18 | V1.7 – 1 etapas | Supabase 10 lentelių, RLS, 2 perspėjimų pataisa, papildomas tenant saugumas ir debesijos peržiūra; paruoštas neprivalomas login | [b4757ad5](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/b4757ad5) · [ac77a5c0](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/ac77a5c0) |
