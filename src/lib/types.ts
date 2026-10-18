@@ -11,6 +11,8 @@ export interface Address {
   city: string;
   type: AddressType;
   entrances: number;
+  stairwellVisitsPerWeek?: number;
+  territoryVisitsPerWeek?: number;
   instructions: string;
   accessCode: string;
   notes: string;

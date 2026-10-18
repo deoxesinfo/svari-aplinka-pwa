@@ -7,7 +7,7 @@ import { todayISO } from "@/lib/dates";
 import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, type Address, type Job } from "@/lib/types";
 import { Field, inputCls, textareaCls } from "./ui-bits";
 
-const emptyAddress: AddressInput = { street: "", city: "", type: "abu", entrances: 1, instructions: "", accessCode: "DEMO-", notes: "" };
+const emptyAddress: AddressInput = { street: "", city: "", type: "abu", entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
 
 export function AddressFormDialog({
   open, onOpenChange, address, onSaved,
@@ -21,12 +21,16 @@ export function AddressFormDialog({
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!v.street.trim() || !v.city.trim()) return toast.error("Įveskite gatvę ir miestą");
+    const saved: AddressInput = { ...v,
+      stairwellVisitsPerWeek: v.type === "teritorija" ? undefined : v.stairwellVisitsPerWeek,
+      territoryVisitsPerWeek: v.type === "laiptine" ? undefined : v.territoryVisitsPerWeek
+    };
     if (address) {
-      updateAddress(address.id, v);
+      updateAddress(address.id, saved);
       toast.success("Adresas išsaugotas");
-      onSaved?.({ ...address, ...v });
+      onSaved?.({ ...address, ...saved });
     } else {
-      const a = addAddress(v);
+      const a = addAddress(saved);
       toast.success("Adresas sukurtas");
       onSaved?.(a);
     }
@@ -53,6 +57,22 @@ export function AddressFormDialog({
             </Field>
             <Field label="Laiptinių skaičius"><input type="number" min={0} className={inputCls} value={v.entrances} onChange={(e) => up("entrances", Math.max(0, Number(e.target.value)))} /></Field>
           </div>
+          <div className="rounded-lg border bg-muted/30 p-3">
+  <p className="mb-3 text-sm font-semibold">Valymo kartai per savaitę</p>
+  <div className="grid gap-3 sm:grid-cols-2">
+    {v.type !== "teritorija" && <Field label="Laiptinių valymas">
+      <select className={inputCls} aria-label="Laiptinių valymo dažnumas" value={v.stairwellVisitsPerWeek ?? ""} onChange={e=>up("stairwellVisitsPerWeek", e.target.value ? Number(e.target.value) : undefined)}>
+        <option value="">Nenurodyta</option>{Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n} k. per savaitę</option>)}
+      </select>
+    </Field>}
+    {v.type !== "laiptine" && <Field label="Teritorijos valymas">
+      <select className={inputCls} aria-label="Teritorijos valymo dažnumas" value={v.territoryVisitsPerWeek ?? ""} onChange={e=>up("territoryVisitsPerWeek", e.target.value ? Number(e.target.value) : undefined)}>
+        <option value="">Nenurodyta</option>{Array.from({length:7},(_,i)=>i+1).map(n=><option key={n} value={n}>{n} k. per savaitę</option>)}
+      </select>
+    </Field>}
+  </div>
+  <p className="mt-2 text-xs text-muted-foreground">Tik informacinis dažnumas – automatinio darbų grafiko dar nesukuria.</p>
+</div>
           <Field label="Valymo instrukcijos"><textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} /></Field>
           <Field label="Patekimo kodas" hint="Tik DEMO – niekada neįveskite tikrų durų kodų.">
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
