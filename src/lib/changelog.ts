@@ -8,6 +8,17 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.3",category:"taisymas",
+   title:"Adresų Swipe ir saugus archyvas, nebaigtų darbų archyvavimas, personalo nuotraukos redagavime",
+   details:[
+    "Adresų kortelės perbraukiamos į kairę arba atveriamos trijų taškų mygtuku: Archyvuoti / Atkurti, Redaguoti ir Ištrinti. Adresų sąraše atskirai rodomi Aktyvūs ir Archyvas.",
+    "Archyvuojant adresą jo būsena tampa Sustabdytas, todėl nuolatinis darbų generatorius nustoja kurti naujas užduotis. Būsimi dar neatlikti darbai paslepiami iš aktyvių sąrašų, bet jų istorija lieka; atkūrus adresą jie grąžinami.",
+    "Adresų ištrynimas yra minkštasis: žymima deletedAt, įrašas dingsta iš sąrašo ir nebeatkuriamas per UI, tačiau visi susieti darbai, grafikai ir nuotraukų įrašai išsaugomi. Prieš trynimą būtinos administratoriaus teisės ir aiškus patvirtinimas.",
+    "Darbuose dabar galima archyvuoti tiek atliktą, tiek neatliktą užduotį ir vėliau ją atkurti, jei adresas vis dar aktyvus. Ištrynimo patvirtinimas lieka atskirame lange, tik administratoriui.",
+    "Darbuotojo nuotraukos pridėjimo / keitimo / šalinimo valdymas paliktas tik profilio Redaguoti formoje; pasikartojanti Profilio nuotrauka išskleidžiama skiltis iš darbuotojo kortelės pašalinta.",
+    "Cloudflare R2 neprijungta: nuotraukų įkėlimas Supabase debesijos režime vis dar išjungtas. Tikrą Swipe mobiliuose įrenginiuose ir įvairių paskyrų teises reikia patikrinti atskirai.",
+   ],commits:["30eb6c41","67810586","bf991dd7","095f2eb3"]},
+
   {date:"2026-10-19",version:"V2.2.2",category:"taisymas",title:"Darbų kortelių veiksmai, laiko išvalymas, A4 spausdinimas ir personalo UX",details:[
     "Darbų kortelėse Swipe veiksmai: archyvuoti atliktus darbus, redaguoti ir tik administratoriui patvirtinus pažymėti darbą ištrintu.",
     "Archyvavimas ir trynimas yra minkštieji: Supabase įrašai ir istorija išlieka; pasikartojantis generatorius neatkuria pašalintų datų.",
