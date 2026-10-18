@@ -1,6 +1,7 @@
 export type AddressType = "laiptine" | "teritorija" | "abu";
 export type JobType = "laiptine" | "teritorija" | "patikrinimas";
 export type JobStatus = "laukia" | "atlikta";
+export type PhotoTag = "pries" | "po" | "problema";
 export type Inspection = "patikrinta" | "taisyti" | null;
 export type Priority = "zema" | "vidutine" | "auksta";
 
@@ -54,7 +55,14 @@ export interface PhotoMeta {
   height: number;
   size: number;
   type: string;
+  tag?: PhotoTag;
 }
+
+export const PHOTO_TAG_LABEL: Record<PhotoTag, string> = {
+  pries: "Prieš",
+  po: "Po",
+  problema: "Problema",
+};
 
 export const ADDRESS_TYPE_LABEL: Record<AddressType, string> = {
   laiptine: "Laiptinė",

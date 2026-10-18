@@ -142,7 +142,7 @@ export async function processImage(file: File) {
     src.close?.();
     return { full, thumb, width: Math.round(src.w * scale) || w, height: Math.round(h * scale) };
   } catch {
-    // Graceful fallback: keep the original file.
-    return { full: file as Blob, thumb: file as Blob, width: 0, height: 0 };
+    // Never store the uncompressed original when conversion fails.
+    throw new Error("Nepavyko suspausti nuotraukos. Pabandykite kitą failą.");
   }
 }

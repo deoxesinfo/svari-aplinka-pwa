@@ -4,10 +4,10 @@ import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff } from "l
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { addPhotoMeta, removePhoto, useAppState } from "@/lib/store";
+import { addPhotoMeta, removePhoto, setPhotoTag, useAppState } from "@/lib/store";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
-import type { PhotoMeta } from "@/lib/types";
+import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Confirm } from "./ui-bits";
 
@@ -26,16 +26,18 @@ export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => voi
           {missing ? <ImageOff className="size-5" /> : <Loader2 className="size-5 animate-spin" />}
         </div>
       )}
+      {photo.tag && <span className="absolute bottom-1 left-1 rounded-md bg-slate-900/80 px-2 py-0.5 text-[11px] font-semibold text-white">{PHOTO_TAG_LABEL[photo.tag]}</span>}
     </button>
   );
 }
 
 function Lightbox({ photo, onClose }: { photo: PhotoMeta | null; onClose: () => void }) {
-  const { addresses, jobs } = useAppState();
+  const { addresses, jobs, photos } = useAppState();
   const [zoom, setZoom] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const full = usePhotoUrl(photo?.id ?? "none", "full");
   if (!photo) return null;
+  const current = photos.find((p) => p.id === photo.id) ?? photo;
   const adr = addresses.find((a) => a.id === photo.addressId);
   const job = jobs.find((j) => j.id === photo.jobId);
   return (
@@ -57,7 +59,13 @@ function Lightbox({ photo, onClose }: { photo: PhotoMeta | null; onClose: () => 
             {job && <Link to="/darbai/$jobId" params={{ jobId: job.id }} className="text-primary hover:underline" onClick={onClose}>Atidaryti darbą</Link>}
             {adr && <Link to="/adresai/$addressId" params={{ addressId: adr.id }} className="text-primary hover:underline" onClick={onClose}>Adresas</Link>}
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-1 text-xs text-muted-foreground">Žyma
+              <select aria-label="Nuotraukos žyma" className="rounded-md border border-input bg-card p-2 text-sm" value={current.tag ?? ""} onChange={(e) => setPhotoTag(photo.id, e.target.value ? e.target.value as PhotoTag : undefined)}>
+                <option value="">Be žymos</option>
+                {Object.entries(PHOTO_TAG_LABEL).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
+              </select>
+            </label>
             <Button variant="outline" size="sm" onClick={() => setZoom((z) => !z)}>
               {zoom ? <ZoomOut /> : <ZoomIn />} {zoom ? "Sumažinti" : "Padidinti"}
             </Button>
@@ -97,10 +105,18 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const cam = useRef<HTMLInputElement>(null);
   const gal = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
+  const [tag, setTag] = useState<PhotoTag>("po");
+  const { photos } = useAppState();
+  const count = photos.filter((photo) => photo.jobId === jobId && !!jobId).length;
+  const remaining = jobId ? Math.max(0, 12 - count) : Infinity;
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
-    const list = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
+    if (busy > 0) return;
+    const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
+    if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 12 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
+    const list = incoming.slice(0, remaining);
+    if (!list.length) return;
     setBusy(list.length);
     let ok = 0;
     for (const f of list) {
@@ -108,7 +124,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
         const r = await processImage(f);
         const id = crypto.randomUUID();
         await putPhotoBlobs(id, r.full, r.thumb);
-        addPhotoMeta({ id, addressId, jobId, createdAt: new Date().toISOString(), width: r.width, height: r.height, size: r.full.size, type: r.full.type });
+        addPhotoMeta({ id, addressId, jobId, tag, createdAt: new Date().toISOString(), width: r.width, height: r.height, size: r.full.size, type: r.full.type });
         ok++;
       } catch (e) {
         toast.error(isQuotaError(e) ? "Įrenginio atmintis pilna – ištrinkite senas nuotraukas." : "Nepavyko išsaugoti nuotraukos.");
@@ -124,23 +140,29 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {jobId && <div className="flex items-center justify-between text-sm"><span className="font-medium">Darbo nuotraukos</span><span className="text-muted-foreground">{count}/12</span></div>}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm text-muted-foreground">Naujų nuotraukų žyma:</span>
+        {Object.entries(PHOTO_TAG_LABEL).map(([k, label]) => <button key={k} type="button" onClick={() => setTag(k as PhotoTag)} aria-pressed={tag === k} className={`rounded-lg border px-3 py-2 text-sm ${tag === k ? "border-primary bg-primary/10 text-primary font-semibold" : "border-input text-muted-foreground"}`}>{label}</button>)}
+      </div>
       <div className="grid grid-cols-2 gap-2">
-        <Button type="button" size="lg" className="h-14 text-base" onClick={() => cam.current?.click()} disabled={busy > 0}>
+        <Button type="button" size="lg" className="h-14 text-base" onClick={() => cam.current?.click()} disabled={busy > 0 || remaining === 0}>
           <Camera className="!size-5" /> Fotografuoti
         </Button>
-        <Button type="button" size="lg" variant="outline" className="h-14 text-base" onClick={() => gal.current?.click()} disabled={busy > 0}>
+        <Button type="button" size="lg" variant="outline" className="h-14 text-base" onClick={() => gal.current?.click()} disabled={busy > 0 || remaining === 0}>
           <ImagePlus className="!size-5" /> Įkelti nuotraukas
         </Button>
       </div>
       <input ref={cam} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handle(e.target.files)} />
       <input ref={gal} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handle(e.target.files)} />
+      {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 12 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
       {busy > 0 ? (
         <p className="flex items-center gap-2 text-sm text-primary" role="status">
           <Loader2 className="size-4 animate-spin" /> Apdorojama nuotraukų: {busy}…
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">Nuotraukos sumažinamos iki 1600 px ir saugomos tik šiame įrenginyje (nesinchronizuojamos).</p>
+        <p className="text-xs text-muted-foreground">Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos.</p>
       )}
     </div>
   );

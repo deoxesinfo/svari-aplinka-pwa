@@ -182,6 +182,10 @@ export function deleteJob(id: string) {
 }
 
 // ---------- Photos ----------
+export function setPhotoTag(id: string, tag: PhotoMeta["tag"]) {
+  set((s) => ({ photos: s.photos.map((p) => p.id === id ? { ...p, tag } : p) }));
+}
+
 export function addPhotoMeta(meta: PhotoMeta) {
   set((s) => ({
     photos: [meta, ...s.photos],
