@@ -9,4 +9,4 @@ export const supabase=createClient(PROJECT_URL,PUBLISHABLE_KEY,{
 });
 
 /** Fail closed: do not gate a real production app until the admin account and cloud data flow are ready. */
-export const AUTH_ENFORCED=import.meta.env.VITE_SA_AUTH_ENFORCED === "true";
+export const AUTH_ENFORCED=true; // V1.7: no unauthenticated access to business pages

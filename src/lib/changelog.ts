@@ -9,6 +9,16 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7.6",category:"funkcija",
+    title:"Privalomas prisijungimas ir saugi tuščia įmonės bazė",
+    details:[
+      "Valdymo puslapiai prieinami tik patvirtintam Supabase administratoriui: prieš rodant duomenis tikrinamas Auth ir narystė.",
+      "Prisijungus adresų, darbų, personalo ir skelbimų duomenų šaltinis yra Supabase, ne vietinis DEMO; 12 DEMO darbų neperkeliami.",
+      "Duomenų pakeitimai eilėje siunčiami į Supabase, o nesėkmingą įrašymą aiškiai signalizuoja klaida. Pilnas kelių įrenginių veikimo ir konfliktų testas dar laukia.",
+      "Nuotraukų failų įkėlimas bus aktyvuotas tik po Cloudflare R2 integracijos; pranešimai ir GPS diegiami atskirais etapais.",
+    ],commits:[],
+  },
+  {
     date:"2026-10-18",version:"V1.7.5",category:"infrastruktūra",
     title:"Supabase duomenų sinchronizavimo sluoksnio paruošimas",
     details:[

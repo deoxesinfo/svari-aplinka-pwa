@@ -5,8 +5,31 @@ import { clearPhotoBlobs, deletePhotoBlobs } from "./photos";
 import { todayISO } from "./dates";
 import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person, RecruitmentLink, EmploymentPeriod } from "./types";
 import { INSPECTION_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "./types";
+import { loadCloudState,cloudMutations,saveCloudMutations } from "./cloud-sync";
 
 const KEY = "svari-aplinka-demo-v1";
+let backend:"demo"|"loading"|"cloud"="demo";
+let company:string|null=null;
+let saveQueue:Promise<void>=Promise.resolve();
+let saveError:string|null=null;
+export const isCloudMode=()=>backend!=="demo";
+export const getCloudSaveError=()=>saveError;
+export function leaveCloudWorkspace(){
+  backend="loading";company=null;saveError=null;state=EMPTY;listeners.forEach(l=>l());
+}
+export async function enterCloudWorkspace(org:string){
+  if(backend==="cloud"&&company===org&&state.loaded)return;
+  backend="loading";company=null;state=EMPTY;listeners.forEach(l=>l());
+  const fresh=await loadCloudState(org);
+  backend="cloud";company=org;saveQueue=Promise.resolve();saveError=null;
+  state={loaded:true,...fresh};listeners.forEach(l=>l());
+}
+export async function refreshCloudWorkspace(){
+  if(!company||backend!=="cloud"||saveError)return;
+  const org=company;await saveQueue;
+  const fresh=await loadCloudState(org);
+  if(company===org){state={loaded:true,...fresh};listeners.forEach(l=>l());}
+}
 
 export interface AppState {
   loaded: boolean;
@@ -46,6 +69,7 @@ function load() {
 }
 
 function persist() {
+  if(backend!=="demo")return;
   try {
     const { addresses, jobs, photos, people, recruitmentLinks } = state;
     localStorage.setItem(KEY, JSON.stringify({ addresses, jobs, photos, people, recruitmentLinks }));
@@ -55,9 +79,25 @@ function persist() {
 }
 
 function set(fn: (s: AppState) => Partial<AppState>) {
-  state = { ...state, ...fn(state) };
-  persist();
-  listeners.forEach((l) => l());
+  if(backend==="cloud"&&saveError){
+    toast.error("Išsaugojimas debesyje sustabdytas. Patikrinkite ryšį.");return;
+  }
+  const before=state,after={...before,...fn(before)};
+  if(backend==="cloud"&&company){
+    const org=company;
+    let changes;
+    try {changes=cloudMutations(before,after,org)}catch(err){
+      toast.error(err instanceof Error?err.message:"Netinkami duomenys");return;
+    }
+    if(changes.length){
+      saveQueue=saveQueue.then(()=>saveCloudMutations(org,changes)).catch(err=>{
+        saveError=err instanceof Error?err.message:"Nežinoma klaida";
+        toast.error("Supabase neišsaugojo pakeitimo. Neatnaujinkite puslapio, kol klaida neišspręsta.");
+        listeners.forEach(l=>l());
+      });
+    }
+  }
+  state=after;persist();listeners.forEach(l=>l());
 }
 
 const subscribe = (l: () => void) => {
@@ -65,7 +105,7 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 const getSnapshot = () => {
-  if (!state.loaded && typeof window !== "undefined") load();
+  if (!state.loaded && backend==="demo" && typeof window !== "undefined") load();
   return state;
 };
 const getServerSnapshot = () => EMPTY;
@@ -277,6 +317,7 @@ export async function removePhoto(id: string) {
 
 // ---------- Demo ----------
 export async function resetDemo() {
+  if(backend!=="demo")throw new Error("Debesijos duomenų valymo funkcija uždrausta");
   await clearPhotoBlobs().catch(() => {});
   localStorage.removeItem(KEY);
   state = EMPTY;

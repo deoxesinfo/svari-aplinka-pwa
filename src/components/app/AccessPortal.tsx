@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
+import { enterCloudWorkspace,leaveCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
 type Account={email:string;membership:Member|null};
@@ -18,6 +19,8 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const [password,setPassword]=useState("");
  const [recovery,setRecovery]=useState(false);
  const [newPassword,setNewPassword]=useState("");
+ const [workspaceReady,setWorkspaceReady]=useState(false);
+ const [workspaceError,setWorkspaceError]=useState("");
  useEffect(()=>{
    if(new URLSearchParams(window.location.search).get("sa_auth")==="recovery")setRecovery(true);
    let alive=true;
@@ -35,11 +38,21 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    void read();
    const {data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{
      if(event==="PASSWORD_RECOVERY")setRecovery(true);
+     if(event==="SIGNED_OUT"){leaveCloudWorkspace();setWorkspaceReady(false);}
      // Avoid querying Supabase synchronously inside the auth state callback.
      queueMicrotask(()=>{if(alive)void read();});
    });
    return ()=>{alive=false;subscription.unsubscribe()};
  },[]);
+ useEffect(()=>{
+   if(mode!=="gate"||!AUTH_ENFORCED||!account?.membership)return;
+   let active=true;
+   setWorkspaceReady(false);setWorkspaceError("");
+   void enterCloudWorkspace(account.membership.organization_id)
+     .then(()=>{if(active)setWorkspaceReady(true)})
+     .catch(err=>{if(active)setWorkspaceError(err instanceof Error?err.message:"Klaida")});
+   return()=>{active=false};
+ },[mode,account?.membership?.organization_id]);
  const signIn=async(e:FormEvent)=>{
    e.preventDefault();
    if(!email.trim()||!password)return;
@@ -87,7 +100,15 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      <p className="text-sm text-muted-foreground">Atidarykite patvirtintą slaptažodžio atkūrimo nuorodą iš savo el. pašto.</p>}
  </section>;
  if(account?.membership){
-   if(mode==="gate")return <>{children}</>;
+   if(mode==="gate"){
+     if(workspaceError)return <div className="mx-auto max-w-xl p-8 text-center">
+       <h2 className="font-semibold text-destructive">Debesijos duomenų nepavyko atverti</h2>
+       <p className="mt-2 text-sm">{workspaceError}</p>
+       <button onClick={()=>window.location.reload()} className="mt-4 text-primary underline">Bandyti dar kartą</button>
+     </div>;
+     if(!workspaceReady)return <div className="grid min-h-screen place-items-center text-muted-foreground">Kraunami įmonės duomenys…</div>;
+     return <>{children}</>;
+   }
    return <section className="mx-auto max-w-xl space-y-4 py-5">
      <h1 className="flex items-center gap-2 text-xl font-bold"><ShieldCheck className="size-6 text-primary"/> Mano paskyra</h1>
      <div className="card-surface space-y-3 p-5">

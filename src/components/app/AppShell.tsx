@@ -4,7 +4,7 @@ import {
   LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings, Users, ChartNoAxesCombined,
   PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History, UserCircle,
 } from "lucide-react";
-import { useAppState } from "@/lib/store";
+import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
 export const NAV = [
@@ -123,7 +123,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <DemoBanner />
+        {isCloudMode()?<div className="bg-primary/10 px-4 py-1.5 text-center text-xs font-semibold text-primary">
+          Supabase · bendri įmonės duomenys{getCloudSaveError()?" · NEIŠSAUGOTA: "+getCloudSaveError():""}
+        </div>:<DemoBanner />}
         <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card/90 px-4 backdrop-blur lg:hidden">
           <button onClick={() => setDrawer(true)} className="-ml-2 rounded-md p-2" aria-label="Atidaryti meniu">
             <Menu className="size-5" />
