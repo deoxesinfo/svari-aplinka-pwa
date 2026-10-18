@@ -9,6 +9,20 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18", version:"V1.6", category:"funkcija",
+    title:"Darbuotojų profilio nuotraukos ir kalendorinė analitika",
+    details:[
+      "Darbuotojų profilių nuotraukas galima įkelti, pakeisti ar pašalinti. Jos rodomos apskritame avatare ir saugomos tik vietinėje DEMO IndexedDB.",
+      "Perjungus nuotrauką galerijoje priartinimo būsena atstatoma.",
+      "Kiekviena analitikos diagrama turi atskirus datų nuo/iki filtrus ir dviejų laikotarpių palyginimą, perskaičiuojamą pagal datuotus įvykius.",
+      "Pridėti automatizuoti datos intervalo ir palyginimo skaičiavimo testai.",
+      "Supabase projektas aktyvus ir sveikas, viešų duomenų lentelių dar nėra. Read-only auditas aptiko 2 perspėjimus dėl public.rls_auto_enable() vykdymo teisių.",
+      "Supabase Auth, RLS prieigos politika, ilgalaikis duomenų saugojimas, GPS ir tikri push dar neįdiegti: jiems reikės atskiro konfigūracijos patvirtinimo.",
+    ],
+    commits:["18869926","098bf2a2","84522661","888c934d"],
+  },
+
+  {
     date:"2026-10-18", version:"V1.5", category:"funkcija",
     title:"Darbuotojų pareigos, darbo laikotarpių istorija ir skelbimų nuorodos",
     details:[
@@ -129,10 +143,12 @@ export const CHANGELOG: ChangeEntry[] = [
   },
 ];
 export const ROADMAP: PlannedEntry[] = [
-  {title:"Atskiras Supabase projektas",summary:"Supabase Auth, bendri adresai ir darbai tarp įrenginių, RLS teisės ir pakeitimų auditas. Prijungs naudotojas vėliau.",status:"Laukia",stage:"Toliau"},
+  {title:"Supabase konfigūracija ir integracija",summary:"Projektas jau sukurtas, bet be lentelių. Prieš integraciją sutvarkyti viešai vykdomos public.rls_auto_enable() saugumą, tada įvesti RLS, Auth, sinchronizaciją ir atsargines kopijas. Tik po atskiro patvirtinimo.",status:"Laukia",stage:"Reikia patvirtinimo"},
   {title:"Administratorius / vadybininkas / darbuotojas",summary:"Pagal rolę rodyti tik leistus adresus, patikrinimus ir analizę. Realios teisės tik su duomenų baze.",status:"Laukia",stage:"Po Supabase"},
   {title:"PWA pranešimai",summary:"Naujos, skubios ir vėluojančios užduotys; naudotojui leidus, įrenginio push pranešimai.",status:"Laukia",stage:"Po prisijungimų"},
   {title:"Privati foto saugykla",summary:"Cloudflare R2 arba kita uždara objektų saugykla; susieti nuotraukas su adresu ir darbu, taikyti leidimus ir saugojimo taisykles.",status:"Laukia",stage:"Po Supabase"},
+  {title:"Pasirenkama GPS darbo vietos patikra",summary:"Kuriant darbą atskirai įjungti arba išjungti GPS vietos patikrinimą ir leistiną nuokrypį, palikti tikslumo toleranciją bei administratoriaus išimtis.",status:"Vėlesnis etapas",stage:"Po Supabase"},
+  {title:"Ilgalaikis duomenų saugojimas",summary:"Datuotų objektų, darbų ir darbuotojų įvykių istorija, atsarginės kopijos ir privatumo apsauga 5–10 metų analitikai.",status:"Vėlesnis etapas",stage:"Po Supabase"},
   {title:"Inventoriaus apskaita",summary:"Priemonių likučiai, papildymai, išdavimas, perspėjimai ir sunaudojimo statistika.",status:"Vėlesnis etapas",stage:"Planuojama"},
   {title:"Automobiliai, kuras ir draudimai",summary:"Kuro išlaidos, litrai, rida, TA/draudimo datos bei priminimai.",status:"Vėlesnis etapas",stage:"Planuojama"},
   {title:"Analitikos gilinimas",summary:"Mėnesinės ataskaitos, objekto priežiūros kokybė ir dokumentų eksportas. Pajamų apskaita – ne dabartinis prioritetas.",status:"Vėlesnis etapas",stage:"Planuojama"},

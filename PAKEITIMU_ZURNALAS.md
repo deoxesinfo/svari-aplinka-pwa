@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V1.6 | Darbuotojų DEMO foto avatarai, galerijos mastelio atstatymas, diagramų kalendoriai ir Compare, Supabase read-only auditas | [18869926](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/18869926) · [098bf2a2](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/098bf2a2) · [84522661](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/84522661) · [888c934d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/888c934d) |
 | 2026-10-18 | V1.5 | Pareigų pasirinkimas; personalo archyvas, sugrįžimo istorija, kaitos diagrama ir skelbimų nuorodos | [1717d08d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1717d08d) · [5ea976cb](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5ea976cb) · [14e7d8a6](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/14e7d8a6) · [48c58e0c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/48c58e0c) |
 | 2026-10-18 | V1.4 | Prioritetinių namų žymėjimas adresų ir darbų kortelėse, filtravimas | [5b9f2411](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5b9f2411) |
 | 2026-10-18 | V1.3 | Personalo registras, vadybininkų paskyrimai, objektų statusai, analitika | [d2dc0ad2](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d2dc0ad2) · [d0509731](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d0509731) |
@@ -35,3 +36,6 @@
 
 ## Nuolatinis įrašymo procesas
 Visi nauji patvirtinti pakeitimai privalomai įrašomi lietuviškai į `src/lib/changelog.ts` (programėlė) ir šį failą (GitHub) pagal [AGENTS.md](./AGENTS.md) taisyklę. Istoriniai darbuotojų įrašai netrinami, o archyvuojami.
+
+## V1.6 Supabase auditas
+Naujas Švari Aplinka PWA projektas patikrintas tik skaitymui. Projektas ACTIVE_HEALTHY, public lentelių nėra. Security Advisor nustatė, kad public.rls_auto_enable() (SECURITY DEFINER) turi vykdymo teises anon ir authenticated. Duomenų bazės taisymai, autentifikacija, sinchronizavimas ir push neatlikti. [Saugumo patikra](./SUPABASE_SAUGUMO_PATIKRA.md).

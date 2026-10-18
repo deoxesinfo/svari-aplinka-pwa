@@ -126,7 +126,7 @@ function AnalyticsPage(){
   </div>
   {!valid?<p className="my-4 rounded-lg border p-3 text-sm text-destructive">Pasirinkite galiojantį laikotarpį.</p>:<>
     <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Tile icon={TrendingUp} label="Nauji objektai" value={stats?.newObjects??0} description="Pagal aptarnavimo pradžią"/>
+      <Tile icon={TrendingUp} label="Nauji objektai" value={stats?.newObjects??0} description="Pagal aptarnavimo arba įrašymo datą"/>
       <Tile icon={TrendingDown} label="Nebeteikiamos paslaugos" value={stats?.lostObjects??0} description="Pagal pabaigos datą"/>
       <Tile icon={ClipboardCheck} label="Aptarnauti unikalūs namai" value={stats?.uniqueBuildings??0} description="Turėjo užbaigtų darbų"/>
       <Tile icon={ClockAlert} label="Išėjo darbuotojai" value={stats?.leaves??0} description="Pagal darbo laikotarpius"/>
