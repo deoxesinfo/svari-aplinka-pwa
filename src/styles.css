@@ -138,3 +138,33 @@
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
+
+/* V2.2.1: A4 employee print view; keep the admin dashboard off paper. */
+@media screen {
+  #sa-print-document { display: none !important; }
+}
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  body { background: #fff !important; color: #17291e !important; }
+  body > *:not(#sa-print-document) { display: none !important; }
+  #sa-print-document {
+    display: block !important; font-family: Arial, sans-serif;
+    font-size: 9pt; line-height: 1.4; color: #17291e !important;
+  }
+  .sa-print-brand { font-size: 9pt; font-weight: 700; letter-spacing: .08em; color: #356c4d; }
+  .sa-print-heading { border-bottom: 2px solid #295d42; margin-bottom: 12px; padding-bottom: 12px; }
+  .sa-print-heading h1 { margin: 8px 0 3px; font-size: 18pt; font-weight: 700; }
+  .sa-print-heading p { margin: 0 0 10px; }
+  .sa-print-summary { display: flex; flex-wrap: wrap; gap: 18px; }
+  .sa-print-table { width: 100%; border-collapse: collapse; table-layout: auto; }
+  .sa-print-table thead { display: table-header-group; }
+  .sa-print-table th { text-align: left; background: #e8f1eb !important; font-weight: 700; }
+  .sa-print-table td,.sa-print-table th {
+    padding: 6px 5px; border: 1px solid #bfcac3;
+    vertical-align: top; overflow-wrap: anywhere;
+  }
+  .sa-print-table tr { break-inside: avoid; page-break-inside: avoid; }
+  .sa-print-empty { padding: 18px; font-style: italic; }
+  .sa-print-footer { border-top: 1px solid #aebdb3; margin-top: 12px;
+    padding-top: 8px; font-size: 8pt; color: #465e4e; }
+}
