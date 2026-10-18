@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { BusFront, Save } from "lucide-react";
+import { BusFront, Save, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Field, inputCls,textareaCls } from "./ui-bits";
@@ -111,8 +111,16 @@ export function WorkAssignmentDialog({address,open,onOpenChange,onSaved}:{
            </Field>
          </div>}
        <Field label="Darbo pradžios laikas (neprivalomas)">
-         <input type="time" className={inputCls} value={draft.start_time||""}
-           onChange={e=>update({start_time:e.target.value||null})}/>
+         <div className="flex items-center gap-2">
+           <input key={draft.start_time===null?"time-empty":"time-filled"} type="time" className={inputCls+" min-w-0 flex-1"}
+             value={draft.start_time||""} onChange={e=>update({start_time:e.target.value||null})}/>
+           <Button type="button" variant="outline" size="icon" className="min-h-11 min-w-11 shrink-0"
+             aria-label="Išvalyti darbo pradžios laiką" title="Išvalyti laiką"
+             onClick={()=>update({start_time:null})} disabled={!draft.start_time}><X className="size-5"/></Button>
+         </div>
+         <p className="mt-1 text-xs text-muted-foreground">
+           {draft.start_time?"Pasirinktas laikas: "+draft.start_time:"Laikas nenurodytas – darbas planuojamas be valandos."}
+         </p>
        </Field>
        <div className="space-y-2 rounded-xl border p-3">
          <p className="flex items-center gap-2 text-sm font-semibold"><BusFront className="size-4"/> Darbuotojo transportas</p>

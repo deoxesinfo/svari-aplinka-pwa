@@ -6,8 +6,8 @@ import { fmtLong } from "@/lib/dates";
 import { jobsWithinRange } from "@/lib/employee-calendar";
 
 const scheduledTime=(job:Job)=>(job as Job & {startTime?:string}).startTime||"";
-export function EmployeeSchedulePrint({person,jobs,addresses,range,includeDoorCodes}:{
- person:Person;jobs:Job[];addresses:Address[];range:DateRange;includeDoorCodes:boolean
+export function EmployeeSchedulePrint({person,jobs,addresses,range}:{
+ person:Person;jobs:Job[];addresses:Address[];range:DateRange
 }){
  if(typeof document==="undefined")return null;
  const addressById=new Map(addresses.map(a=>[a.id,a]));
@@ -24,7 +24,7 @@ export function EmployeeSchedulePrint({person,jobs,addresses,range,includeDoorCo
      </div>
    </header>
    <table className="sa-print-table">
-     <thead><tr><th>Data</th><th>Laikas</th><th>Adresas</th><th>Darbas</th><th>Būsena</th>{includeDoorCodes&&<th>Durų kodas</th>}</tr></thead>
+     <thead><tr><th>Data</th><th>Laikas</th><th>Adresas</th><th>Darbas</th><th>Būsena</th><th>Durų kodas</th></tr></thead>
      <tbody>{rows.map(job=>{
        const addr=addressById.get(job.addressId);
        return <tr key={job.id}>
@@ -33,13 +33,13 @@ export function EmployeeSchedulePrint({person,jobs,addresses,range,includeDoorCo
          <td>{addr?addr.street+", "+addr.city:"Nežinomas adresas"}</td>
          <td>{JOB_TYPE_LABEL[job.type]}</td>
          <td>{STATUS_LABEL[job.status]}</td>
-         {includeDoorCodes&&<td>{addr?.accessCode?.trim()||"—"}</td>}
+         <td>{addr?.accessCode?.trim()||"—"}</td>
        </tr>;
      })}</tbody>
    </table>
    {rows.length===0&&<p className="sa-print-empty">Šiam laikotarpiui darbų nėra.</p>}
    <footer className="sa-print-footer">
-     {includeDoorCodes?"KONFIDENCIALU · Durų kodai skirti tik įgaliotam asmeniui.":"Individualus grafikas · Durų kodai neįtraukti."}
+     KONFIDENCIALU · Durų kodai skirti tik įgaliotam darbuotojui.
    </footer>
  </section>,document.body);
 }

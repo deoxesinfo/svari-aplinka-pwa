@@ -168,29 +168,29 @@ function PeoplePage(){
         Išėję darbuotojai saugomi archyve su darbo laikotarpiais. Sugrįžus spaudžiama „Grįžo“ – neprarandama ankstesnė istorija.
       </p>}
       <div className="space-y-2">{filtered.length?filtered.map(p=>{
-        const workerJobs=jobs.filter(j=>p.role==="darbuotojas"&&j.worker===p.name);
-        const managerJobs=jobs.filter(j=>p.role==="vadybininkas"&&j.managerId===p.id);
+        const workerJobs=jobs.filter(j=>!j.archivedAt&&!j.deletedAt&&p.role==="darbuotojas"&&j.worker===p.name);
+        const managerJobs=jobs.filter(j=>!j.archivedAt&&!j.deletedAt&&p.role==="vadybininkas"&&j.managerId===p.id);
         const assigned=p.role==="darbuotojas"?workerJobs:managerJobs;
         const buildingCount=new Set(assigned.map(j=>j.addressId).filter(id=>addresses.some(a=>a.id===id))).size;
         const periods=p.employmentPeriods||[];
         const permanent=workAssignments.filter(x=>x.person_id===p.id);
         return <article className="card-surface p-4" key={p.id}>
-          <div className="flex flex-wrap items-start gap-3">
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)] items-start gap-3 sm:grid-cols-[3rem_minmax(0,1fr)_auto]">
             <PersonAvatar key={p.avatarPhotoId||"none"} person={p}/>
-            <div className="min-w-0 flex-1 space-y-1">
-              <p className="font-semibold">{p.name}</p>
+            <div className="min-w-0 space-y-1">
+              <p className="break-words text-base font-semibold leading-snug">{p.name}</p>
               <div className="flex flex-wrap gap-1.5">
                 <Pill>{PERSON_POSITION_LABEL[p.position||(p.role==="vadybininkas"?"vadybininkas":"kita")]}</Pill>
                 <Pill>{ROLES[p.role]}</Pill>
                 <Pill tone={p.status==="aktyvus"?"success":p.status==="nebedirba"?"danger":"neutral"}>{STATUSES[p.status]}</Pill>
               </div>
-              <p className="text-xs text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai · {permanent.length} priskyrimai</p>
-              <p className="text-xs text-muted-foreground">Pradėtas profilis: {p.createdAt.slice(0,10)} · Dirba nuo: {p.startedAt||"Nežinoma"} {p.endedAt&&p.status==="nebedirba"?" · Baigė: "+p.endedAt:""}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai · {permanent.length} priskyrimai</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">Dirba nuo: {p.startedAt||"Nežinoma"}{p.endedAt&&p.status==="nebedirba"?" · Baigė: "+p.endedAt:""}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
-              {tab==="archyvas"?<Button variant="outline" size="sm" onClick={()=>startRehire(p)}><RotateCcw className="size-4"/> Grįžo</Button>
-                :<Button variant="outline" size="sm" onClick={()=>{setArchiving(p);setArchiveDate(todayISO())}}><Archive className="size-4"/> Į archyvą</Button>}
-              <Button variant="ghost" size="sm" onClick={()=>openForm(p)}><Pencil className="size-4"/> Redaguoti</Button>
+            <div className="col-span-2 grid grid-cols-2 gap-2 pt-1 sm:col-span-1 sm:flex sm:items-start sm:justify-end sm:pt-0">
+              {tab==="archyvas"?<Button variant="outline" size="sm" className="min-h-10 w-full gap-1.5 sm:w-auto" onClick={()=>startRehire(p)}><RotateCcw className="size-4"/> Grįžo</Button>
+                :<Button variant="outline" size="sm" className="min-h-10 w-full gap-1.5 sm:w-auto" onClick={()=>{setArchiving(p);setArchiveDate(todayISO())}}><Archive className="size-4"/> Į archyvą</Button>}
+              <Button variant="outline" size="sm" className="min-h-10 w-full gap-1.5 sm:w-auto" onClick={()=>openForm(p)}><Pencil className="size-4"/> Redaguoti</Button>
             </div>
           </div>
           <details className="mt-3 rounded-lg border p-3">

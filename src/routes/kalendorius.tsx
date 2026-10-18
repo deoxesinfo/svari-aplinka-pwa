@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Plus, Printer, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,6 @@ function CalendarView(){
  const [mode,setMode]=useState<CalendarMode>("savaite");
  const [create,setCreate]=useState(false);
  const [personId,setPersonId]=useState("");
- const [includeCodes,setIncludeCodes]=useState(false);
  const [printing,setPrinting]=useState(false);
  const workers=useMemo(()=>people.filter(p=>p.role==="darbuotojas").sort((a,b)=>a.name.localeCompare(b.name,"lt")),[people]);
  const chosen=workers.find(p=>p.id===personId);
@@ -48,21 +47,27 @@ function CalendarView(){
  };
  const print=async()=>{
    if(!chosen||mode==="diena"||printing)return;
-   setPrinting(true);
    try{
-     if(!isCloudMode())throw Error("Individualus spausdinimas leidžiamas tik prisijungus į įmonės sistemą");
-     await currentAdminOrg();
-     if(includeCodes&&!window.confirm("Ar patvirtinate, kad durų kodus spausdinate tik įgaliotam darbuotojui?"))return;
-     window.print();
-   }catch(e){toast.error(e instanceof Error?e.message:"Nepavyko atidaryti spausdinimo")}
-   finally{setPrinting(false)}
+     if(!isCloudMode())throw Error("Spausdinimas prieinamas tik prisijungus į įmonės sistemą");
+     await currentAdminOrg(); // Require actual administrator membership for sensitive access codes.
+     setPrinting(true); // Render paper-only content AFTER role verification, not while browsing.
+   }catch(e){toast.error(e instanceof Error?e.message:"Nepavyko paruošti spausdinimo")}
  };
+ useEffect(()=>{
+   if(!printing)return;
+   const clear=()=>setPrinting(false);
+   window.addEventListener("afterprint",clear);
+   const frame=window.requestAnimationFrame(()=>window.print());
+   // iOS may omit afterprint; remove sensitive paper-only DOM on return.
+   const timer=window.setTimeout(clear,30000);
+   return()=>{window.cancelAnimationFrame(frame);window.clearTimeout(timer);window.removeEventListener("afterprint",clear)};
+ },[printing]);
  return <div>
    <PageHeader title="Kalendorius" subtitle="Dienos, savaitės ir mėnesio valymo grafikas" actions={<Button onClick={()=>setCreate(true)}><Plus/> Pridėti darbą</Button>}/>
    <div className="card-surface mb-4 space-y-3 p-4">
      <label className="block text-sm font-semibold" htmlFor="schedule-worker"><Users className="mr-2 inline size-4"/>Darbuotojo grafikas</label>
      <select id="schedule-worker" className="w-full rounded-lg border bg-background p-3 text-sm" value={personId}
-       onChange={e=>{setPersonId(e.target.value);setIncludeCodes(false)}}>
+       onChange={e=>setPersonId(e.target.value)}>
        <option value="">Visų darbuotojų darbai</option>
        {workers.map(p=><option value={p.id} key={p.id}>{p.name}{p.status==="nebedirba"?" (archyvas)":""}</option>)}
      </select>
@@ -73,14 +78,10 @@ function CalendarView(){
          {mode==="diena"&&<span className="text-xs text-muted-foreground">Spausdinimui pasirinkite savaitę arba mėnesį</span>}
        </div>
        {mode!=="diena"&&<>
-         <label className="flex items-start gap-2 text-sm">
-           <input type="checkbox" className="mt-0.5 size-4 accent-primary" checked={includeCodes}
-             onChange={e=>setIncludeCodes(e.target.checked)}/>
-           Į spausdinamą lapą įtraukti durų kodus (konfidencialu)
-         </label>
          <Button type="button" variant="outline" disabled={printing} onClick={()=>void print()}>
            <Printer className="size-4"/> {printing?"Ruošiama…":"Spausdinti grafiką (A4)"}
          </Button>
+         <p className="text-xs font-medium text-muted-foreground">Administratoriaus spausdinime automatiškai įtraukiami objekto durų kodai. Spausdintą lapą perduokite tik įgaliotam darbuotojui.</p>
        </>}
        <p className="text-xs text-muted-foreground">Spausdinami pagal datą suplanuoti darbai. Vėluojantys darbai ekrane matomi šiandien, tačiau lape lieka jų pirminė data. Nuolatiniai grafikai generuojami artimiausioms 4 savaitėms.</p>
      </div>}
@@ -123,7 +124,7 @@ function CalendarView(){
    <div className="space-y-2">{selected.length?selected.map(j=><JobRow key={j.id} job={j} showDate/>):
      <div className="card-surface p-7 text-center text-sm text-muted-foreground">Šiai dienai darbų nėra.</div>}</div>
    <JobFormDialog open={create} onOpenChange={setCreate} defaultDate={day}/>
-   {chosen&&mode!=="diena"&&<EmployeeSchedulePrint
-      person={chosen} jobs={filteredJobs} addresses={addresses} range={range} includeDoorCodes={includeCodes}/>}
+   {printing&&chosen&&mode!=="diena"&&<EmployeeSchedulePrint
+      person={chosen} jobs={filteredJobs} addresses={addresses} range={range}/>}
  </div>;
 }
