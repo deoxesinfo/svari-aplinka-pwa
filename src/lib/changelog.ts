@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.2",category:"taisymas",title:"Darbų kortelių veiksmai, laiko išvalymas, A4 spausdinimas ir personalo UX",details:[
+    "Darbų kortelėse Swipe veiksmai: archyvuoti atliktus darbus, redaguoti ir tik administratoriui patvirtinus pažymėti darbą ištrintu.",
+    "Archyvavimas ir trynimas yra minkštieji: Supabase įrašai ir istorija išlieka; pasikartojantis generatorius neatkuria pašalintų datų.",
+    "Darbo pradžios laukas turi X išvalymą, o tuščias laikas išsaugomas ir nenaudojamas grafike.",
+    "A4 durų kodai automatiškai įtraukiami po administratoriaus teisių patvirtinimo; checkbox pašalintas.",
+    "Personalo kortelių išdėstymas kompaktiškesnis, Redaguoti ir Į archyvą mygtukai vienodo rėmelio.",
+    "Standartinis telefono datos ir laiko pasirinkimo kalendorius nepakeistas; fiziniai iPhone testai dar laukiami.",
+  ],commits:[]},
+
   {
     date:"2026-10-18",version:"V2.2.1",category:"funkcija",
     title:"Individualus darbuotojo kalendorius, A4 grafikas ir formos tarpai",

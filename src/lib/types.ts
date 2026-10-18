@@ -97,6 +97,10 @@ export interface Job {
   comments: Comment[];
   history: HistoryEntry[];
   parentJobId?: string;
+  /** Retain history while hiding archived work. */
+  archivedAt?: string;
+  /** Tombstone prevents recurring generators from re-creating deleted dates. */
+  deletedAt?: string;
 }
 
 export interface PhotoMeta {

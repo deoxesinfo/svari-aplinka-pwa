@@ -359,11 +359,24 @@ export function addComment(id: string, text: string) {
   }));
 }
 
-export function deleteJob(id: string) {
-  set((s) => ({
-    jobs: s.jobs.filter((j) => j.id !== id),
-    photos: s.photos.map((p) => (p.jobId === id ? { ...p, jobId: undefined } : p)),
-  }));
+export function archiveJob(id:string):boolean {
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job||job.deletedAt||job.archivedAt||job.status!=="atlikta")return false;
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,archivedAt:nowIso()},"Darbas perkeltas į archyvą"):j)}));
+  return true;
+}
+export function restoreJob(id:string):boolean {
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job||!job.archivedAt||job.deletedAt)return false;
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,archivedAt:undefined},"Darbas grąžintas iš archyvo"):j)}));
+  return true;
+}
+/** Keep a tombstone instead of hard-deleting: recurring generation must not recreate this job. */
+export function deleteJob(id:string):boolean {
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job||job.deletedAt)return false;
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,deletedAt:nowIso()},"Administratoriaus sprendimu darbas pašalintas iš aktyvių įrašų"):j)}));
+  return true;
 }
 
 // ---------- Photos ----------

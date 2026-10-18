@@ -21,15 +21,26 @@ function Jobs() {
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
   const [open, setOpen] = useState(false);
+  const [showArchive,setShowArchive]=useState(false);
   const today = todayISO();
-  const list = sortJobs(jobs.filter((j) => {
+  const list = (showArchive
+    ? [...jobs.filter(j=>j.archivedAt&&!j.deletedAt)].sort((a,b)=>(b.archivedAt||"").localeCompare(a.archivedAt||""))
+    : sortJobs(jobs.filter((j) => {
     const a = addresses.find((x) => x.id === j.addressId);
     const hay = `${a?.street} ${a?.city} ${j.worker}`.toLowerCase();
     return hay.includes(q.toLowerCase()) && (!type || j.type === type) && (!status || j.status === status);
-  }), today);
+  }), today)).filter(j=>{
+    const a=addresses.find(x=>x.id===j.addressId);
+    const hay=[a?.street,a?.city,j.worker].join(" ").toLowerCase();
+    return !showArchive||(hay.includes(q.toLowerCase())&&(!type||j.type===type)&&(!status||j.status===status));
+  });
   return (
     <div>
-      <PageHeader title="Darbai" subtitle={`Iš viso: ${jobs.length}`} actions={<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>} />
+      <PageHeader title="Darbai" subtitle={`Aktyvių: ${jobs.filter(j=>!j.archivedAt&&!j.deletedAt).length} · Archyve: ${jobs.filter(j=>j.archivedAt&&!j.deletedAt).length}`} actions={<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>} />
+      <div className="mb-3 flex flex-wrap gap-2">
+        <Button type="button" size="sm" variant={showArchive?"outline":"default"} onClick={()=>setShowArchive(false)}>Aktyvūs darbai</Button>
+        <Button type="button" size="sm" variant={showArchive?"default":"outline"} onClick={()=>setShowArchive(true)}>Archyvas</Button>
+      </div>
       <div className="mb-4 grid gap-2 sm:grid-cols-[2fr_1fr_1fr]">
         <input className={inputCls} placeholder="Ieškoti pagal adresą ar darbuotoją…" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Paieška" />
         <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)} aria-label="Tipas">

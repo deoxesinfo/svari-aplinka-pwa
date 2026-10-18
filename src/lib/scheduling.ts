@@ -14,14 +14,14 @@ export function isCarryover(job: Job, day: string, today: string): boolean {
  * forward onto today (same record, original date untouched).
  */
 export function jobsForDay(jobs: Job[], day: string, today: string): Job[] {
-  return jobs.filter((j) => j.date === day || isCarryover(j, day, today));
+  return jobs.filter(j=>!j.archivedAt&&!j.deletedAt&&(j.date === day || isCarryover(j, day, today)));
 }
 
 const PRIO: Record<Priority, number> = { auksta: 0, vidutine: 1, zema: 2 };
 
 /** Overdue first (oldest first), then pending by priority, completed at the bottom. */
 export function sortJobs(jobs: Job[], today: string): Job[] {
-  return [...jobs].sort((a, b) => {
+  return jobs.filter(j=>!j.archivedAt&&!j.deletedAt).sort((a, b) => {
     const ra = a.status === "atlikta" ? 2 : isOverdue(a, today) ? 0 : 1;
     const rb = b.status === "atlikta" ? 2 : isOverdue(b, today) ? 0 : 1;
     if (ra !== rb) return ra - rb;
@@ -32,6 +32,7 @@ export function sortJobs(jobs: Job[], today: string): Job[] {
 }
 
 export function summarize(jobs: Job[], today: string) {
+  jobs=jobs.filter(j=>!j.archivedAt&&!j.deletedAt);
   const done = jobs.filter((j) => j.status === "atlikta").length;
   const overdue = jobs.filter((j) => isOverdue(j, today)).length;
   return { all: jobs.length, done, pending: jobs.length - done, overdue };
