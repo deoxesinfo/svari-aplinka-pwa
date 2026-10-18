@@ -9,6 +9,18 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7.5",category:"infrastruktūra",
+    title:"Supabase duomenų sinchronizavimo sluoksnio paruošimas",
+    details:[
+      "Sukurtas tik administratoriui skirtas saugaus debesijos duomenų skaitymo ir išsaugojimo modulis.",
+      "Duomenys filtruojami pagal įmonės ID ir Supabase RLS, saugojimo tvarka gerbia adresų bei darbų ryšius.",
+      "12 DEMO darbų ir demonstraciniai adresai neperkeliami: tuščia Supabase bazė laikoma šaltiniu.",
+      "Pridėti automatiniai UUID, mutacijų eiliškumo ir DEMO neperkėlimo testai.",
+      "Automatinis programėlės perjungimas į naują saugyklą, darbuotojų prisijungimai ir R2 dar tikrinami atskirai.",
+    ],
+    commits:[],
+  },
+  {
     date:"2026-10-18",version:"V1.7.4",category:"taisymas",
     title:"Atskiras prisijungimo ir paskyros langas",
     details:[
