@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/app/NotificationBell";
 
 export const NAV = [
   { to: "/", label: "Apžvalga", icon: LayoutDashboard },
@@ -135,6 +136,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-sm text-muted-foreground">· Darbų valdymas</span>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8">
+          <div className="mb-3 flex justify-end"><NotificationBell/></div>
           {state.loaded ? children : (
             <div className="grid min-h-[50vh] place-items-center text-sm text-muted-foreground">Kraunama…</div>
           )}

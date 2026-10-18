@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V1.9.1",category:"funkcija",
+   title:"Paskyros pranešimų varpelis ir įvykių istorija",
+   details:[
+     "Supabase pranešimai rodomi prisijungusio naudotojo varpelyje; matomas neperskaitytų pranešimų skaičius, istorija ir nuoroda į darbą.",
+     "Perskaitymo žyma saugiai įrašoma į konkretaus gavėjo pranešimą; duomenys atnaujinami periodiškai ir grįžus į naršyklę.",
+     "Supabase bazėje paruošti trigeriai naujiems priskyrimams, skubiems darbams, komentarams ir patikrinimams.",
+     "Telefono Push pranešimai, darbuotojų paskyrų paskirstymas ir tikri iOS/Android testai dar neatlikti.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V1.8.1",category:"funkcija",
    title:"Datuotas Supabase pakeitimų žurnalas ir CSV eksportas",
    details:[
