@@ -57,7 +57,7 @@ function PeoplePage(){
       ...d,role,
       position:role==="vadybininkas"?"vadybininkas":d.position==="vadybininkas"?"valytojas":d.position,
       status:role==="kandidatas"?"kandidatas":d.status==="kandidatas"?"aktyvus":d.status,
-      startedAt:role==="kandidatas"?d.startedAt||undefined:d.startedAt||todayISO()
+      startedAt:role==="kandidatas"?undefined:d.startedAt||todayISO()
     }));
   };
   const changeStatus=(status:PersonStatus)=>{
@@ -191,7 +191,7 @@ function PeoplePage(){
           <details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold"><History className="mr-2 inline size-4"/>Darbo laikotarpių istorija ({periods.length})</summary>
             <div className="mt-2 space-y-1 text-sm">
-              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt} → {item.endedAt||"Dirba dabar"}</p>)
+              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt||"Pradžia nežinoma"} → {item.endedAt||"Dirba dabar"}</p>)
                 :<p className="text-muted-foreground">Istorinio įdarbinimo pradžios duomenų nėra – įveskite rankiniu būdu, kad jie nebūtų išgalvoti.</p>}
             </div>
           </details>

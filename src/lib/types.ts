@@ -14,7 +14,7 @@ export const PERSON_POSITION_LABEL: Record<PersonPosition, string> = {
   vadybininkas: "Vadybininkas (-ė)",
   kita: "Kitos pareigos",
 };
-export type EmploymentPeriod = { startedAt: string; endedAt?: string };
+export type EmploymentPeriod = { startedAt?: string; endedAt?: string };
 export interface Person {
   id: string;
   name: string;

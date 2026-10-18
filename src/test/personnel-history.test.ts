@@ -24,6 +24,11 @@ describe("Darbo laikotarpių istorija",()=>{
     const old:Person={id:"old",name:"DEMO",role:"darbuotojas",status:"aktyvus",notes:"",createdAt:"2026-10-18T00:00:00Z"};
     expect(deriveEmploymentPeriods(old,{...sample,startedAt:undefined})).toEqual([]);
   });
+  it("istorinės nežinomos pradžios neišgalvoja, bet išėjimo datą išsaugo",()=>{
+    const old:Person={id:"old2",name:"Testas",role:"darbuotojas",status:"aktyvus",notes:"",createdAt:"2026-01-01T00:00:00Z"};
+    expect(deriveEmploymentPeriods(old,{...sample,startedAt:undefined,endedAt:"2026-10-18",status:"nebedirba"}))
+      .toEqual([{startedAt:undefined,endedAt:"2026-10-18"}]);
+  });
   it("mėnesinėje kaitoje skaičiuoja realias pradžias ir išėjimus, ne profilius",()=>{
     const p:Person={id:"p",createdAt:"2025-05-01T00:00:00Z",...sample,
       employmentPeriods:[{startedAt:"2026-07-02",endedAt:"2026-08-12"},{startedAt:"2026-10-05"}]};

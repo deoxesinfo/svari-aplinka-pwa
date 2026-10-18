@@ -98,7 +98,7 @@ export function deriveEmploymentPeriods(previous: Person | null, input: PersonIn
   } else if (!nowWorking && wasWorking) {
     const last = periods.at(-1);
     if (last && !last.endedAt) last.endedAt = input.endedAt;
-    else if (!last && start) periods.push({startedAt:start,endedAt:input.endedAt});
+    else if (!last) periods.push({startedAt:start||undefined,endedAt:input.endedAt});
   } else if (!nowWorking && input.endedAt && periods.length) {
     const last = periods.at(-1);
     if (last) last.endedAt = input.endedAt;

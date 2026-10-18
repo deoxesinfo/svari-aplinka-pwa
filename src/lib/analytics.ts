@@ -70,7 +70,8 @@ export function personnelMovementMonths(people:Person[],today:string) {
     const prefix=iso(date).slice(0,7);
     const month=date.toLocaleDateString("lt-LT",{month:"short",year:"2-digit",timeZone:"UTC"});
     const entries=people.flatMap(p=>p.employmentPeriods?.length
-      ? p.employmentPeriods : p.startedAt?[{startedAt:p.startedAt,endedAt:p.endedAt}]:[]);
+      ? p.employmentPeriods
+      : (p.role!=="kandidatas" && (p.startedAt||p.endedAt))?[{startedAt:p.startedAt,endedAt:p.endedAt}]:[]);
     rows.push({
       month,
       started:entries.filter(p=>p.startedAt?.slice(0,7)===prefix).length,
