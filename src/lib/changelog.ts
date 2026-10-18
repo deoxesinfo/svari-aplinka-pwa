@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V1.8.1",category:"funkcija",
+   title:"Datuotas Supabase pakeitimų žurnalas ir CSV eksportas",
+   details:[
+     "Adreso, darbo, personalo bei skelbimo pakeitimus automatiškai fiksuoja Supabase duomenų bazės trigeriai.",
+     "Administratoriui pridėta nauja „Istorija“ skiltis su datų nuo/iki pasirinkimu ir saugiu puslapiavimu po 100 įrašų.",
+     "Galima eksportuoti matomą istorijos puslapį į CSV; jautrūs duomenų laukai į auditą neįrašomi.",
+     "Daugiametės istorijos kaupimo mechanizmas paruoštas, tačiau 5–10 metų išsaugojimui dar reikės atsarginių kopijų ir atkūrimo testų.",
+   ],commits:[]},
+
   {
     date:"2026-10-18",version:"V1.7.7",category:"taisymas",
     title:"Debesijos atnaujinimas ir saugus nuotraukų atidėjimas",
