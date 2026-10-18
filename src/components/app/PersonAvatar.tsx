@@ -3,7 +3,7 @@ import { Camera, ImageOff, LoaderCircle, Trash2, UserRound } from "lucide-react"
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { processImage, putPhotoBlobs, deletePhotoBlobs, isQuotaError, usePhotoUrl } from "@/lib/photos";
-import { setPersonAvatar } from "@/lib/store";
+import { setPersonAvatar,isCloudMode } from "@/lib/store";
 import type { Person } from "@/lib/types";
 
 export function PersonAvatar({person,size="md"}: {person:Person,size?:"md"|"lg"}) {
@@ -44,6 +44,7 @@ export function PersonAvatarEditor({person}:{person:Person}) {
     await deletePhotoBlobs(old).catch(()=>{});
     toast.success("Profilio nuotrauka pašalinta");
   };
+  if(isCloudMode())return <p className="text-xs text-muted-foreground">Darbuotojo nuotraukų įkėlimas bus įjungtas prijungus privačią Cloudflare R2 saugyklą.</p>;
   return <div className="flex flex-wrap items-center gap-3">
     <PersonAvatar key={person.avatarPhotoId||"none"} person={person} size="lg"/>
     <div className="space-y-2">

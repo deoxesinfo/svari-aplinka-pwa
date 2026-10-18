@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
-import { enterCloudWorkspace,leaveCloudWorkspace } from "@/lib/store";
+import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
 type Account={email:string;membership:Member|null};
@@ -53,6 +53,13 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      .catch(err=>{if(active)setWorkspaceError(err instanceof Error?err.message:"Klaida")});
    return()=>{active=false};
  },[mode,account?.membership?.organization_id]);
+ useEffect(()=>{
+   if(mode!=="gate"||!workspaceReady)return;
+   const sync=()=>{if(document.visibilityState==="visible")void refreshCloudWorkspace().catch(()=>{});};
+   const id=window.setInterval(sync,60000);
+   window.addEventListener("focus",sync);
+   return()=>{window.clearInterval(id);window.removeEventListener("focus",sync)};
+ },[mode,workspaceReady]);
  const signIn=async(e:FormEvent)=>{
    e.preventDefault();
    if(!email.trim()||!password)return;

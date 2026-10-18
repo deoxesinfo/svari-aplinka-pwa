@@ -4,7 +4,7 @@ import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff, ChevronL
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { addPhotoMeta, removePhoto, setPhotoTag, useAppState } from "@/lib/store";
+import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode } from "@/lib/store";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
 import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
@@ -151,6 +151,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (gal.current) gal.current.value = "";
   };
 
+  if(isCloudMode())return <p className="rounded-lg border p-3 text-sm text-muted-foreground">Nuotraukas saugiai įkelsime prijungę privačią Cloudflare R2 saugyklą. Dabar įkėlimas išjungtas, kad neliktų nuotraukų tik viename telefone.</p>;
   return (
     <div className="space-y-3">
       {jobId && <div className="flex items-center justify-between text-sm"><span className="font-medium">Darbo nuotraukos</span><span className="text-muted-foreground">{count}/15</span></div>}

@@ -9,6 +9,17 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7.7",category:"taisymas",
+    title:"Debesijos atnaujinimas ir saugus nuotraukų atidėjimas",
+    details:[
+      "Įmonės duomenys atnaujinami iš Supabase kas 60 sekundžių ir grįžus prie naršyklės, jei nėra išsaugojimo klaidos.",
+      "Nustatymuose pridėtas atnaujinimas rankiniu būdu, o DEMO duomenų ištrynimo mygtukas debesijos režime paslėptas.",
+      "Darbuotojų ir darbų nuotraukų įkėlimas užblokuotas iki privačios Cloudflare R2 integracijos.",
+      "Adresų forma nebeprideda išgalvoto DEMO patekimo kodo.",
+      "Visos funkcijos priklauso nuo realios Auth paskyros; reikia praktinio kelių įrenginių bandymo.",
+    ],commits:[],
+  },
+  {
     date:"2026-10-18",version:"V1.7.6",category:"funkcija",
     title:"Privalomas prisijungimas ir saugi tuščia įmonės bazė",
     details:[

@@ -7,7 +7,7 @@ import { todayISO } from "@/lib/dates";
 import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, OBJECT_STATUS_LABEL, type Address, type Job } from "@/lib/types";
 import { Field, inputCls, textareaCls } from "./ui-bits";
 
-const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "DEMO-", notes: "" };
+const emptyAddress: AddressInput = { street: "", city: "", type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "", notes: "" };
 
 export function AddressFormDialog({
   open, onOpenChange, address, onSaved,
@@ -43,7 +43,7 @@ export function AddressFormDialog({
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{address ? "Redaguoti adresą" : "Naujas adresas"}</DialogTitle>
-          <DialogDescription>Naudokite tik fiktyvius demo duomenis.</DialogDescription>
+          <DialogDescription>Adresai išsaugomi prisijungusios įmonės Supabase saugykloje.</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
@@ -89,7 +89,7 @@ export function AddressFormDialog({
   <p className="mt-2 text-xs text-muted-foreground">Tik informacinis dažnumas – automatinio darbų grafiko dar nesukuria.</p>
 </div>
           <Field label="Valymo instrukcijos"><textarea className={textareaCls} value={v.instructions} onChange={(e) => up("instructions", e.target.value)} /></Field>
-          <Field label="Patekimo kodas" hint="Tik DEMO – niekada neįveskite tikrų durų kodų.">
+          <Field label="Patekimo kodas" hint="Neskelbkite prieigos kodų neįgaliotiems darbuotojams.">
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
           </Field>
           <Field label="Pastabos"><textarea className={textareaCls} value={v.notes} onChange={(e) => up("notes", e.target.value)} /></Field>
