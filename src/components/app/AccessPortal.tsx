@@ -18,6 +18,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const [recovery,setRecovery]=useState(false);
  const [newPassword,setNewPassword]=useState("");
  useEffect(()=>{
+   if(new URLSearchParams(window.location.search).get("sa_auth")==="recovery")setRecovery(true);
    let alive=true;
    const read=async()=>{
      const {data:auth,error:authError}=await supabase.auth.getUser();
@@ -52,7 +53,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    if(!email.trim()){toast.error("Pirmiausia įrašykite el. paštą");return}
    setBusy(true);
    try{
-     const redirectTo=window.location.origin+window.location.pathname;
+     const redirectTo=window.location.origin+window.location.pathname+"?sa_auth=recovery";
      const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo});
      if(error)toast.error("Nepavyko išsiųsti slaptažodžio atkūrimo laiško.");
      else toast.success("Jei toks el. paštas egzistuoja, gausite atkūrimo laišką.");
@@ -68,8 +69,22 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      else {toast.success("Slaptažodis pakeistas");setNewPassword("");setRecovery(false)}
    }finally{setBusy(false)}
  };
+ const passwordForm=(heading:string)=><form onSubmit={setNew} className="card-surface space-y-3 p-4">
+   <h2 className="text-sm font-semibold">{heading}</h2>
+   <label className="block text-sm font-medium">Naujas slaptažodis
+     <input className="mt-1 w-full rounded-lg border bg-background p-3" type="password"
+       autoComplete="new-password" minLength={12} required value={newPassword} onChange={e=>setNewPassword(e.target.value)}/>
+   </label>
+   <p className="text-xs text-muted-foreground">Bent 12 simbolių. Slaptažodžio niekam nesiųskite.</p>
+   <Button disabled={busy} type="submit">Išsaugoti slaptažodį</Button>
+ </form>;
  if(mode==="gate"&&!AUTH_ENFORCED)return <>{children}</>;
  if(loading)return <div className="grid min-h-[70vh] place-items-center p-6 text-sm text-muted-foreground">Tikrinama paskyra…</div>;
+ if(recovery)return <section className="mx-auto max-w-md space-y-4 py-10">
+   <h1 className="text-xl font-bold">Slaptažodžio atkūrimas</h1>
+   {account?passwordForm("Nustatyti naują slaptažodį"):
+     <p className="text-sm text-muted-foreground">Atidarykite patvirtintą slaptažodžio atkūrimo nuorodą iš savo el. pašto.</p>}
+ </section>;
  if(account?.membership){
    if(mode==="gate")return <>{children}</>;
    return <section className="mx-auto max-w-xl space-y-4 py-5">
@@ -79,6 +94,9 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
        <p className="text-sm"><strong>Rolė:</strong> {NAMES[account.membership.role]}</p>
        <p className="text-xs text-muted-foreground">Šiame etape paruošti saugūs prisijungimai ir RLS. DEMO duomenys dar nėra perkeliami į bendrą duomenų bazę; sinchronizacija bus įjungta atskirai.</p>
        <CloudReadStatus organizationId={account.membership.organization_id}/>
+       <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm font-medium">Pakeisti slaptažodį</summary>
+         <div className="mt-3">{passwordForm("Naujas paskyros slaptažodis")}</div>
+       </details>
        <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
      </div>
    </section>;
@@ -86,25 +104,22 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  if(account&&!account.membership){
    return <section className="mx-auto max-w-md space-y-4 py-10">
      <h1 className="flex items-center gap-2 text-lg font-bold"><LockKeyhole className="size-5"/> Paskyrai nepriskirtos teisės</h1>
-     <p className="text-sm text-muted-foreground">Prisijungta kaip {account.email}, tačiau paskyra dar nepriskirta „Švari Aplinka“ įmonei. Pasirinkus administratorių, tai atliksime saugiai Supabase.</p>
+     <p className="text-sm text-muted-foreground">Prisijungta kaip {account.email}, tačiau paskyra dar nepriskirta „Švari Aplinka“ įmonei. Pakviestam administratoriui narystė priskiriama tik patvirtinus el. paštą.</p>
+     {passwordForm("Susikurkite slaptažodį priėmę kvietimą")}
      <Button onClick={()=>void supabase.auth.signOut()} variant="outline"><LogOut className="size-4"/>Atsijungti</Button>
    </section>;
  }
  return <section className="mx-auto max-w-md space-y-4 py-8">
    <div className="text-center"><LockKeyhole className="mx-auto mb-3 size-10 text-primary"/><h1 className="text-xl font-bold">Švari Aplinka · Prisijungimas</h1>
    <p className="mt-2 text-sm text-muted-foreground">Tik pakviestiems darbuotojams. Viešos registracijos formos nėra.</p></div>
-   {recovery?<form onSubmit={setNew} className="card-surface space-y-3 p-5">
-     <label className="block text-sm font-medium">Naujas slaptažodis
-       <input className="mt-1 w-full rounded-lg border bg-background p-3" type="password" autoComplete="new-password" minLength={12} value={newPassword} onChange={e=>setNewPassword(e.target.value)}/></label>
-     <Button disabled={busy} type="submit">Pakeisti slaptažodį</Button>
-   </form>:<form onSubmit={signIn} className="card-surface space-y-4 p-5">
+   <form onSubmit={signIn} className="card-surface space-y-4 p-5">
      <label className="block text-sm font-medium">El. paštas
        <input className="mt-1 w-full rounded-lg border bg-background p-3" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)}/></label>
      <label className="block text-sm font-medium">Slaptažodis
        <input className="mt-1 w-full rounded-lg border bg-background p-3" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></label>
      <Button type="submit" disabled={busy} className="w-full"><LogIn className="size-4"/>Prisijungti</Button>
      <button type="button" disabled={busy} onClick={()=>void reset()} className="text-sm text-primary underline">Pamiršau slaptažodį</button>
-   </form>}
+   </form>
    <p className="text-center text-xs text-muted-foreground">Supabase autentifikacija. Duomenys prieinami tik paskyroms, turinčioms įmonės narystę.</p>
  </section>;
 }

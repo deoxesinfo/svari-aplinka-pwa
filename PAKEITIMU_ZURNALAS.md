@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V1.7 – 2 etapas | Paruošta pirma administratoriaus paskyra privačioje Supabase lentelėje (be aktyvių teisių), pakvietimo slaptažodžio nustatymas ir atkūrimo pataisa. Laukiama Supabase Auth kvietimo. | Bus papildyta po publikavimo |
 | 2026-10-18 | V1.7 – 1 etapas | Supabase 10 lentelių, RLS, 2 perspėjimų pataisa, papildomas tenant saugumas ir debesijos peržiūra; paruoštas neprivalomas login | [b4757ad5](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/b4757ad5) · [ac77a5c0](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/ac77a5c0) |
 | 2026-10-18 | V1.6 | Darbuotojų DEMO foto avatarai, galerijos mastelio atstatymas, diagramų kalendoriai ir Compare, Supabase read-only auditas | [18869926](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/18869926) · [098bf2a2](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/098bf2a2) · [84522661](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/84522661) · [888c934d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/888c934d) |
 | 2026-10-18 | V1.5 | Pareigų pasirinkimas; personalo archyvas, sugrįžimo istorija, kaitos diagrama ir skelbimų nuorodos | [1717d08d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1717d08d) · [5ea976cb](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5ea976cb) · [14e7d8a6](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/14e7d8a6) · [48c58e0c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/48c58e0c) |

@@ -37,3 +37,12 @@ testų ir pirmojo administratoriaus paskyros suaktyvinimo.
 - Debesijos duomenų skaitymo/rašymo integracijos ir senųjų DEMO duomenų migracijos.
 - Privalomo Login įjungimo ir realaus kelių įrenginių bandymo.
 - Cloudflare R2, ilgalaikių atsarginių kopijų ir push pranešimų.
+
+## 2026-10-18 – pirmos administratoriaus paskyros paruošimas
+- Privatioje Supabase DB schemoje sukurtas `private.sa_initial_admin_onboarding` (be anon/autentifikuotų naudotojų teisių). Supabase lentelėje įrašytas vartotojo pasirinktas pirmojo administratoriaus el. paštas; viešame GitHub kode jis neskelbiamas.
+- Sukurtas vienos „Švari Aplinka“ įmonės įrašas. Dar nesukurtas `auth.users` naudotojas ir nėra aktyvios `sa_memberships` narystės.
+- Supabase jungtis neturi Auth User invite/creation veiksmo. Supabase Dashboard paskyros savininkas turi pasirinkti Authentication → Users → Add User → Send invitation, nurodydamas savo el. paštą.
+- Prieš kvietimą patikrinti Authentication → URL Configuration, kad Site URL ir leidžiami Redirect URL būtų skirti dabartiniam `https://deoxesinfo.github.io/svari-aplinka-pwa/` adresui. Prieš tikrus duomenis išjungti viešas registracijas.
+- Po kvietimo priėmimo, el. pašto patvirtinimo ir Auth naudotojo ID patikros, SQL migracija gali susieti tą ID su organizacija ir priskirti `role=admin`. Neturi būti savarankiško admin teisių suteikimo vien pagal įvestą el. paštą.
+- Pakvietus naudotoją, PWA `#/paskyra` leidžia prisijungus nusistatyti asmeninį slaptažodį, nesidalijant juo su asistentu.
+- Kol nenustatyta ir neišbandyta veiksminga cloud sinchronizacija, `VITE_SA_AUTH_ENFORCED` paliekamas išjungtas.

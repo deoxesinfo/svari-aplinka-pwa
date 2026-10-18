@@ -9,6 +9,18 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7 – 2 etapas",category:"infrastruktūra",
+    title:"Pirmosios administratoriaus paskyros paruošimas",
+    details:[
+      "Supabase privačioje schemoje sukurtas pirmos administratoriaus paskyros paruošimo įrašas ir atskiras „Švari Aplinka“ įmonės įrašas. Viešai nėra pateikiamas būsimo administratoriaus el. paštas.",
+      "Administratoriaus teisės dar nepriskirtos: Supabase Auth naudotojas turi būti sukurtas saugiu pakvietimu, o jo el. paštas patvirtintas.",
+      "Paskyros ekrane pridėtas slaptažodžio nustatymas priėmus kvietimą ir pataisytas slaptažodžio atkūrimo ekranas.",
+      "Privatus administratoriaus paruošimo įrašas neprieinamas viešiems ar paprastiems prisijungusiems naudotojams. Supabase Security Advisor – 0 perspėjimų.",
+      "Privalomas prisijungimas ir debesijos sinchronizacija neįjungti, esami DEMO duomenys nepakeisti. Cloudflare R2 lieka vėlesniam etapui.",
+    ],
+    commits:[],
+  },
+  {
     date:"2026-10-18",version:"V1.7 – 1 etapas",category:"infrastruktūra",
     title:"Supabase saugumo pagrindas ir prisijungimo sąsaja",
     details:[
