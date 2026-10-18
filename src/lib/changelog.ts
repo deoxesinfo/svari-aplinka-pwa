@@ -9,6 +9,19 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18",version:"V1.7 – 3 etapas",category:"infrastruktūra",
+    title:"Patvirtinta pirmojo administratoriaus paskyra ir suteiktos teisės",
+    details:[
+      "Supabase Auth el. paštas patvirtintas ir prisijungimas atliktas. Patikrinta, kad paskyra atitinka privačiame įmonės paruošimo įraše numatytą administratorių.",
+      "Šiai patvirtintai paskyrai sukurtas aktyvus Švari Aplinka narystės įrašas su role=admin; onboarding būsena tapo active. Antro administratoriaus ir kitų paskyrų nėra.",
+      "Patikrinta, kad visoms 10 programėlės lentelių įjungta RLS ir anon neturi skaitymo teisių.",
+      "Supabase Security Advisor likęs vienas Auth perspėjimas: išjungta nutekėjusių slaptažodžių tikrinimo funkcija. Įjungimą reikės patikrinti Dashboard; šiame etape Auth nustatymai nekeisti.",
+      "Privalomas prisijungimas prie PWA, DEMO duomenų perkėlimas ir Cloudflare R2 dar neįjungti, todėl kelių įrenginių sinchronizacija dar neveikia.",
+    ],
+    commits:[],
+  },
+
+  {
     date:"2026-10-18",version:"V1.7 – 2 etapas",category:"infrastruktūra",
     title:"Pirmosios administratoriaus paskyros paruošimas",
     details:[

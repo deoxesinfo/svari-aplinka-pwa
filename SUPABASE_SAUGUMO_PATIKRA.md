@@ -31,3 +31,10 @@ Kol nėra Auth/RLS, tikrų darbuotojų nuotraukų, asmens duomenų ir durų kod�
 - Prieš tikrus prisijungimus būtina užblokuoti viešą Auth registraciją, pakviesti administratorių ir peržiūrėti el. pašto/URL nustatymus.
 
 Tolimesni žingsniai: [Supabase paruošimo instrukcija](./SUPABASE_PRISIJUNGIMU_PLANAS.md).
+
+## 2026-10-18 – būsenos atnaujinimas po Auth pakvietimo
+- Auth patvirtinimas ir administratoriaus narystė patikrinti; pirmoji paskyra aktyvi.
+- Pagrindiniai duomenys: 10/10 lentelių su RLS, 0 anon SELECT suteiktų teisių; 1 aktyvus administratorius.
+- **Dabartinis** Supabase Security Advisor rodo **1 naują WARN**, nes išjungta nutekėjusių slaptažodžių apsauga (Leaked Password Protection). Ankstesnis „0 perspėjimų“ atitiko ankstesnį patikros momentą prieš pirmos Auth paskyros aktyvavimą.
+- Gairės: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+- Funkcijos įjungimas Auth valdymo skydelyje dar neatliktas.

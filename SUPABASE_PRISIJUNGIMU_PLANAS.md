@@ -33,7 +33,7 @@ testų ir pirmojo administratoriaus paskyros suaktyvinimo.
 - R2 nuotraukoms – atskiras etapas po vartotojo Cloudflare prijungimo.
 
 ## Dar laukiama
-- Vienos administratoriaus paskyros patvirtinimo.
+- **Pirmoji administratoriaus paskyra patvirtinta ir susieta su įmone** (žr. 2026-10-18 vėlesnį įrašą žemiau).
 - Debesijos duomenų skaitymo/rašymo integracijos ir senųjų DEMO duomenų migracijos.
 - Privalomo Login įjungimo ir realaus kelių įrenginių bandymo.
 - Cloudflare R2, ilgalaikių atsarginių kopijų ir push pranešimų.
@@ -46,3 +46,13 @@ testų ir pirmojo administratoriaus paskyros suaktyvinimo.
 - Po kvietimo priėmimo, el. pašto patvirtinimo ir Auth naudotojo ID patikros, SQL migracija gali susieti tą ID su organizacija ir priskirti `role=admin`. Neturi būti savarankiško admin teisių suteikimo vien pagal įvestą el. paštą.
 - Pakvietus naudotoją, PWA `#/paskyra` leidžia prisijungus nusistatyti asmeninį slaptažodį, nesidalijant juo su asistentu.
 - Kol nenustatyta ir neišbandyta veiksminga cloud sinchronizacija, `VITE_SA_AUTH_ENFORCED` paliekamas išjungtas.
+
+## 2026-10-18 – pakvietimas priimtas, pirmasis administratorius aktyvus
+- Patikrinta Auth paskyra: kvietimas išsiųstas, el. paštas patvirtintas ir prisijungimas atliktas.
+- `public.sa_memberships`: viena aktyvi narystė su `role=admin`, susieta su tikslia patvirtinta Auth paskyra.
+- `private.sa_initial_admin_onboarding`: būsena `active`, sutampa įmonės ID ir Auth vartotojo ID.
+- Kitų administratorių, vadybininkų ar darbuotojų narystės kol kas nėra.
+- Visos 10 `sa_*` public lentelių: RLS įjungtas, `anon` neturi SELECT teisių. Biznio įrašų (adresų/darbų) nėra.
+- **Svarbu:** prisijungimas kaip privalomas PWA dar neaktyvuotas; DEMO localStorage/IndexedDB nėra sinchronizuojami. Tai ne production parengtumo patvirtinimas.
+- Supabase Auth Security Advisor šiuo metu rodo perspėjimą dėl **Leaked Password Protection Disabled**. Tikrinti Dashboard > Authentication > Settings / Security and Protection ir įjungti, jei leidžia planas.
+- Jokie slaptažodžiai ir el. pašto adresai neįrašyti į viešus GitHub failus.
