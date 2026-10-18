@@ -8,6 +8,9 @@ import { PageHeader, Field, Pill, Confirm, EmptyState, inputCls, textareaCls } f
 import { useAppState, addPerson, updatePerson, archivePerson, addRecruitmentLink, removeRecruitmentLink, type PersonInput } from "@/lib/store";
 import { todayISO } from "@/lib/dates";
 import { PersonAvatar, PersonAvatarEditor } from "@/components/app/PersonAvatar";
+import { useSchedules } from "@/components/app/AssignedSchedules";
+import { formatDays,travelModes } from "@/lib/work-assignments";
+import { Link } from "@tanstack/react-router";
 import { PERSON_POSITION_LABEL, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
 
 export const Route = createFileRoute("/darbuotojai")({ component: PeoplePage });
@@ -24,6 +27,7 @@ const newPerson=():PersonInput=>({
 });
 function PeoplePage(){
   const {people,jobs,addresses,recruitmentLinks}=useAppState();
+  const {items:workAssignments}=useSchedules();
   const [tab,setTab]=useState<Tab>("personalas");
   const [search,setSearch]=useState("");
   const [filter,setFilter]=useState("visi");
@@ -110,7 +114,7 @@ function PeoplePage(){
   };
 
   return <div>
-    <PageHeader title="Darbuotojai" subtitle="Personalo apskaita, darbo laikotarpių istorija ir įdarbinimo nuorodos · DEMO"
+    <PageHeader title="Darbuotojai" subtitle="Personalas, priskirti objektai ir darbo laikotarpių istorija"
       actions={<Button onClick={()=>openForm()}><Plus/> Pridėti asmenį</Button>}/>
     <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
       {[
@@ -169,6 +173,7 @@ function PeoplePage(){
         const assigned=p.role==="darbuotojas"?workerJobs:managerJobs;
         const buildingCount=new Set(assigned.map(j=>j.addressId).filter(id=>addresses.some(a=>a.id===id))).size;
         const periods=p.employmentPeriods||[];
+        const permanent=workAssignments.filter(x=>x.person_id===p.id);
         return <article className="card-surface p-4" key={p.id}>
           <div className="flex flex-wrap items-start gap-3">
             <PersonAvatar key={p.avatarPhotoId||"none"} person={p}/>
@@ -179,7 +184,7 @@ function PeoplePage(){
                 <Pill>{ROLES[p.role]}</Pill>
                 <Pill tone={p.status==="aktyvus"?"success":p.status==="nebedirba"?"danger":"neutral"}>{STATUSES[p.status]}</Pill>
               </div>
-              <p className="text-xs text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai</p>
+              <p className="text-xs text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai · {permanent.length} priskyrimai</p>
               <p className="text-xs text-muted-foreground">Pradėtas profilis: {p.createdAt.slice(0,10)} · Dirba nuo: {p.startedAt||"Nežinoma"} {p.endedAt&&p.status==="nebedirba"?" · Baigė: "+p.endedAt:""}</p>
             </div>
             <div className="flex flex-wrap gap-2">
@@ -192,6 +197,22 @@ function PeoplePage(){
             <summary className="cursor-pointer text-sm font-semibold"><Camera className="mr-2 inline size-4"/>Profilio nuotrauka</summary>
             <div className="mt-3"><PersonAvatarEditor person={p}/></div>
           </details>
+          {permanent.length>0&&<details className="mt-3 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-semibold">Priskirti objektai ({permanent.length})</summary>
+            <div className="mt-2 space-y-2">
+              {permanent.map(item=>{
+                const address=addresses.find(a=>a.id===item.address_id);
+                return <div key={item.id} className="rounded-md bg-muted/40 p-2 text-xs">
+                  {address?<Link to="/adresai/$addressId" params={{addressId:address.id}}
+                    className="font-semibold text-primary underline">{address.street}, {address.city}</Link>:
+                    <strong>Objektas archyve</strong>}
+                  <p className="mt-1">{item.service_types.map(t=>t==="laiptine"?"Laiptinės":"Teritorija").join(" + ")} · {item.recurrence==="once"?item.single_date:"Nuolatinis"}</p>
+                  {item.recurrence==="weekly"&&<p className="mt-1 text-muted-foreground">{item.service_types.includes("laiptine")?"Laiptinės: "+formatDays(item.stair_days)+" · ":""}{item.service_types.includes("teritorija")?"Teritorija: "+formatDays(item.yard_days):""}</p>}
+                  <p className="mt-1 text-muted-foreground">{travelModes[item.travel_mode]}{item.company_pass?" · suteiktas nuolatinis":""}</p>
+                </div>;
+              })}
+            </div>
+          </details>}
           {p.notes&&<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{p.notes}</p>}
           <details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold"><History className="mr-2 inline size-4"/>Darbo laikotarpių istorija ({periods.length})</summary>
@@ -206,7 +227,7 @@ function PeoplePage(){
     <Dialog open={opened} onOpenChange={setOpened}>
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogHeader><DialogTitle>{editing?"Redaguoti personalo profilį":"Naujas personalo profilis"}</DialogTitle>
-          <DialogDescription>DEMO – duomenys išsaugomi tik šioje naršyklėje. Vartotojų prisijungimų kol kas nėra.</DialogDescription></DialogHeader>
+          <DialogDescription>Darbuotojo profilis saugomas Supabase. Atskira darbuotojo prisijungimo paskyra ir pranešimai pridedami vėliau.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Vardas ir pavardė"><input className={inputCls} value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Tik fiktyvus DEMO vardas"/></Field>
           <div className="grid gap-3 sm:grid-cols-2">
