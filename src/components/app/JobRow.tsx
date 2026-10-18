@@ -10,7 +10,7 @@ import { Pill } from "./ui-bits";
 import { MapsLink } from "./MapsLink";
 
 export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
-  const { addresses, photos } = useAppState();
+  const { addresses, photos, people } = useAppState();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const today = todayISO();
   const address = addresses.find(a => a.id === job.addressId);
@@ -56,6 +56,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1"><User className="size-3.5" />{job.worker || "Nepriskirta"}</span>
+          {job.managerId && <span className="inline-flex items-center gap-1 text-primary"><User className="size-3.5" />Vadyba: {people.find(p=>p.id===job.managerId)?.name || "Nežinoma"}</span>}
           <span className="inline-flex items-center gap-1"><Camera className="size-3.5" />{count}/15</span>
           <span className="inline-flex items-center gap-1"><MessageSquare className="size-3.5" />{job.comments.length}</span>
           {done && <span className="inline-flex items-center gap-1 text-primary"><Check className="size-3.5" />Atlikta</span>}

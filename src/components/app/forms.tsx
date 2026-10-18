@@ -99,16 +99,18 @@ export function AddressFormDialog({
 }
 
 export function JobFormDialog({
-  open, onOpenChange, job, defaultAddressId, defaultDate, onSaved,
+  open, onOpenChange, job, defaultAddressId, defaultDate, defaultType, onSaved,
 }: {
-  open: boolean; onOpenChange: (o: boolean) => void; job?: Job; defaultAddressId?: string; defaultDate?: string; onSaved?: (j: Job) => void;
+  open: boolean; onOpenChange: (o: boolean) => void; job?: Job; defaultAddressId?: string; defaultDate?: string; defaultType?: JobInput["type"]; onSaved?: (j: Job) => void;
 }) {
-  const { addresses, workers, people } = useAppState();
+  const { addresses, people } = useAppState();
+  const workerChoices=people.filter(p=>p.role==="darbuotojas" && p.status!=="nebedirba" && p.status!=="kandidatas").map(p=>p.name);
+  if(job?.worker && !workerChoices.includes(job.worker)) workerChoices.push(job.worker);
   const managers=people.filter(p=>p.role==="vadybininkas" && p.status!=="nebedirba");
   const blank = (): JobInput => ({
     addressId: defaultAddressId ?? addresses[0]?.id ?? "",
-    type: "laiptine",
-    worker: workers[0] ?? "",
+    type: defaultType ?? "laiptine",
+    worker: workerChoices[0] ?? "",
     managerId: "",
     date: defaultDate ?? todayISO(),
     priority: "vidutine",
@@ -160,9 +162,10 @@ export function JobFormDialog({
                 {Object.entries(JOB_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
               </select>
             </Field>
-            <Field label="Darbuotojas">
+            <Field label="Valymo darbuotojas">
               <select className={inputCls} value={v.worker} onChange={(e) => up("worker", e.target.value)}>
-                {workers.map((w) => <option key={w}>{w}</option>)}
+                <option value="">Nepriskirtas</option>
+                {workerChoices.map((w) => <option key={w} value={w}>{w}</option>)}
               </select>
             </Field>
             <Field label="Atsakingas vadybininkas">

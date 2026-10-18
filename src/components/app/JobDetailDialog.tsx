@@ -30,7 +30,7 @@ export function JobDetailDialog({ jobId, open, onOpenChange }: Props) {
 }
 
 function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => void }) {
-  const { jobs, addresses, photos } = useAppState();
+  const { jobs, addresses, photos, people } = useAppState();
   const job = jobs.find(j => j.id === jobId);
   const address = addresses.find(a => a.id === job?.addressId);
   const [draft, setDraft] = useState("");
@@ -89,6 +89,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         <Pill tone={done ? "success" : "warning"}>{done ? "Atlikta" : "Laukia atlikimo"}</Pill>
         {!done && job.date < todayISO() && <Pill tone="danger">{overdueLabel(job.date, todayISO())}</Pill>}
         <Pill>{job.worker || "Nepriskirta"}</Pill>
+        {job.managerId && <Pill>Vadybininkas: {people.find(p=>p.id===job.managerId)?.name || "Nežinomas"}</Pill>}
         {job.inspection === "patikrinta" && <Pill tone="success">Patikrinta</Pill>}
         {job.inspection === "taisyti" && <Pill tone="danger">Reikia taisyti</Pill>}
       </div>

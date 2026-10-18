@@ -15,6 +15,6 @@ function Inspections(){
  return <div><PageHeader title="Patikrinimai" subtitle="Darbų kokybės vertinimas ir papildomos patikros" actions={<Button onClick={()=>setCreate(true)}><Plus/> Naujas patikrinimas</Button>}/>
  <div className="mb-4 flex flex-wrap gap-2"><Pill tone="success">{jobs.filter(j=>j.inspection==="patikrinta").length} patikrinta</Pill><Pill tone="danger">{jobs.filter(j=>j.inspection==="taisyti").length} reikia taisyti</Pill></div>
  <div className="space-y-2">{list.length?list.map(j=><JobRow key={j.id} job={j} showDate/>):<EmptyState icon={<ClipboardCheck className="size-8"/>} title="Patikrinimų dar nėra" text="Atidarykite darbą ir pasirinkite „Patikrinta“ arba „Reikia taisyti“."/ >}</div>
- <JobFormDialog open={create} onOpenChange={setCreate}/>
+ <JobFormDialog open={create} onOpenChange={setCreate} defaultType="patikrinimas"/>
  </div>;
 }
