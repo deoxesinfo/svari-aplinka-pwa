@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V2.1 | Priskyrimai iš adreso, darbuotojas iš Personalo, dvi valymo rūšys ir savaitės dienos, vienkartinis / nuolatinis, transportas, nuolatinis bilietas; Supabase 4 sav. darbų generavimas be dublikatų, susiejimas darbuotojų skiltyje. Be R2 ir papildomų funkcijų. | [e9e914ec](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/e9e914ec) · [320e545d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/320e545d) · [b19d46ce](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/b19d46ce) · [18d00799](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/18d00799) |
 | 2026-10-18 | V2.0.9 | Maps URL testo pataisa ir V2.0.4–V2.0.8 ataskaitų galutinis suvedimas | Šiame etape |
 | 2026-10-18 | V2.0.8 | GPS žymeklio rodymas po geokodavimo, vienkartinė automatinė paieška įjungus apsaugą, Google Maps nuorodų testai | [e5c5578c](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/e5c5578c) |
 | 2026-10-18 | V2.0.7 | GPS patikra prie fotografavimo, 10 min galiojimas, užraktas; R2 debesijos įkėlimas vis dar išjungtas | [89c2bef3](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/89c2bef3) |
@@ -60,3 +61,6 @@ Visi nauji patvirtinti pakeitimai privalomai įrašomi lietuviškai į `src/lib/
 
 ## V1.6 Supabase auditas
 Naujas Švari Aplinka PWA projektas patikrintas tik skaitymui. Projektas ACTIVE_HEALTHY, public lentelių nėra. Security Advisor nustatė, kad public.rls_auto_enable() (SECURITY DEFINER) turi vykdymo teises anon ir authenticated. Duomenų bazės taisymai, autentifikacija, sinchronizavimas ir push neatlikti. [Saugumo patikra](./SUPABASE_SAUGUMO_PATIKRA.md).
+
+## V2.1 vykdymo ribos
+Darbuotojo priskyrimas veikia pagal esamo Personalo įrašo ID, nepriklausomai nuo to, ar jis turi atskirą prisijungimą. Individualūs pranešimai gaunami tik vėliau susiejus Auth vartotoją. Nuolatinės užduotys generuojamos į kalendorių artimiausioms 4 savaitėms ir papildomos, kai atidaroma / atnaujinama PWA. Jei niekas neprisijungia, serveris be papildomo planavimo automatiškai naujų datų nekuria. Priskyrimų keitimas, automobilio pasirinkimas ir kitos papildomos funkcijos atidėtos – pagal vartotojo prašymą nedarėme sudėtingesnės sistemos. Cloudflare R2 neprijungta.

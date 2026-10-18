@@ -42,3 +42,12 @@
 - Patvirtintą žymeklį galima atverti Google Maps; jei vieta nepatvirtinta, naudojama adreso paieška.
 - GPS reikalaujamiems darbams ir adresams sukurtas foto įkėlimo užraktas, vietos patikra su 10 min galiojimu bei atstumo/tikslumo vertinimu. **Cloudflare R2 neprijungta: nuotraukų įkėlimas debesijoje vis dar išjungtas visiems**, nepriklausomai nuo GPS rezultato.
 - GPS nėra neklastojamas darbo įrodymas. Serverinė įkėlimo autorizacija, iOS / Android bandymai, dviejų įrenginių sinchronizavimo ir privatumo patikra lieka vėlesniam etapui.
+
+## V2.1 – minimalūs darbuotojų grafikai
+Patvirtintas paprastas ankstesnio pavyzdžio variantas; vėlesni 10 papildomų pasiūlymų sąmoningai neįgyvendinti.
+- Adresų kortelės → „Sukurti darbą“; personalo profilio ID naudojamas priskyrimui (jokios dubliuojamos darbuotojų lentelės).
+- Laiptinės / teritorija (galimi abu); po kelias atskiras savaitės dienas; vienkartinis arba pasikartojantis; darbuotojas; laikas; transportas; nuolatinis bilietas; pastabos.
+- Nauja `public.sa_work_schedules` lentelė su RLS, org/address/person FK; darbuose papildomi tvarkaraščio ryšio laukai ir unikalaus (tvarkaraštis, data, valymo tipas) indeksas.
+- `sa_fill_work_schedule_horizon` atlieka generavimą tik pagal patvirtinto administratoriaus teises (**SECURITY INVOKER**, ne DEFINER). Pirmas generavimas sukūrus priskyrimą, vėlesnis – programėlės atidarymo/atnaujinimo metu; ne foninis cron.
+- Testas rollback transakcijoje sukūrė 8 būsimas užduotis iš 2 valymo tipų ir atskirų savaitės dienų; transakcija atšaukta. Tikrų testinių darbuotojų nedėjome.
+- Darbuotojų paskyros/pranešimai, serverio cron, redagavimas ir transporto priemonių registras bus svarstomi vėliau. R2 liko neprijungta.

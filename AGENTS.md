@@ -9,6 +9,6 @@
 5. Neįrašinėti asmens duomenų, tikrų durų kodų ar prisijungimo informacijos nei į kodą, nei į žurnalą.
 6. Neprarasti darbo įrašų, nuotraukų, darbuotojų istorijos; migruojant schemą išlaikyti ankstesnius laukus. Naujų darbo pradžios datų senuose profiliuose **neišgalvoti**.
 7. Vykdyti GitHub Actions Build ir testus, patikrinti Deploy rezultatą. Viešos „Švari Aplinka“ svetainės repozitorijos \`deoxesinfo/svari-aplinka\` nekeisti.
-8. V1.7–V2.0 darbų planas patvirtintas 2026-10-18; demo duomenų į Supabase neperkelti. R2 integracija ir mokamos paslaugos atidėtos iki naujo patvirtinimo. Bet kokius papildomus prisijungimus ir migracijas derinti atskirai.
+8. V1.7–V2.0 darbų planas patvirtintas 2026-10-18; V2.1 supaprastinti darbuotojų priskyrimai patvirtinti atskirai. DEMO duomenų į Supabase neperkelti. R2 integracija ir mokamos paslaugos atidėtos iki naujo patvirtinimo. Bet kokius papildomus prisijungimus ir migracijas derinti atskirai.
 
 Tikslas: po metų aiškiai atkurti, kas, kada ir kodėl buvo pakeista.

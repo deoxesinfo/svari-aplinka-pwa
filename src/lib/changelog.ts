@@ -8,6 +8,22 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {
+    date:"2026-10-18",version:"V2.1",category:"funkcija",
+    title:"Paprasti vienkartiniai ir pasikartojantys darbų priskyrimai",
+    details:[
+      "Prie adreso kortelės įdėtas „Sukurti darbą“ mygtukas. Forma leidžia pasirinkti vieną arba abu valymo tipus, darbuotoją iš esamo personalo sąrašo, vienkartinį ar nuolatinį darbą.",
+      "Nuolatiniam darbui laiptinių ir teritorijos dienos parenkamos nepriklausomai (galima kelias per savaitę). Darbo pradžios laikas neprivalomas.",
+      "Transportas: savarankiškai, viešasis transportas ir įmonės automobilis. Viešajam transportui pažymimas įmonės nuolatinis bilietas, jo galiojimas neprivalomas. Automobilių registras kol kas nekuriamas.",
+      "Priskyrimai saugomi Supabase su RLS ir susieti su objekto bei personalo įrašais. Juos galima matyti prie adreso ir darbuotojo profilyje.",
+      "Serverio funkcija sugeneruoja būsimas kalendoriaus užduotis artimiausioms 4 savaitėms; atidarius programėlę langas papildomas, o unikalus tvarkaraščio/datos/tipo indeksas neleidžia dublikatų.",
+      "Supabase generatorius išbandytas ROLLBACK transakcijoje su fiktyviais testiniais įrašais: 8 būsimi darbai dviejų savaičių intervale; testiniai įrašai neišsaugoti.",
+      "Kol nesukurtos darbuotojų Auth paskyros, individualūs pranešimai jiems nesiunčiami. R2, transporto priemonių registras ir papildomos 10 funkcijų neįtraukti.",
+      "Automatinis foninis grafiko generavimas nesukonfigūruotas: būsimos užduotys papildomos prisijungus arba atnaujinus PWA. Praktinio kelių įrenginių bandymo dar nėra.",
+    ],
+    commits:["e9e914ec","320e545d","b19d46ce","18d00799"],
+  },
+
   {date:"2026-10-18",version:"V2.0.9",category:"taisymas",
    title:"Maps nuorodų testų ir pakeitimų žurnalo patikslinimas",
    details:[
