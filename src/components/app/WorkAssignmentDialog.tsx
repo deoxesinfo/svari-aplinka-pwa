@@ -145,7 +145,7 @@ export function WorkAssignmentDialog({address,open,onOpenChange,onSaved}:{
          Darbai sugeneruojami artimiausioms 4 savaitėms. Atidarant programėlę grafikas bus papildomas.
          Atliekami darbai išsaugomi atskirai, jų istorija lieka.
        </p>}
-       <DialogFooter className="mt-3 border-t pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+       <DialogFooter className="mt-3 flex flex-col-reverse gap-4 border-t pt-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:gap-4 sm:space-x-0 [&>button]:min-h-11">
          <Button type="button" variant="outline" disabled={busy} onClick={()=>onOpenChange(false)}>Atšaukti</Button>
          <Button type="submit" disabled={busy||!workers.length}><Save className="size-4"/>
            {busy?"Saugoma…":"Išsaugoti priskyrimą"}
