@@ -17,9 +17,10 @@ export function calendarRange(day:string,mode:CalendarMode):DateRange{
 
 /** IDs are authoritative. Name fallback exists only for legacy jobs without a person ID. */
 export function employeeJobs(jobs:Job[],person:Person|undefined,allPeople:Person[]=[]):Job[]{
-  if(!person)return jobs;
+  if(!person)return jobs.filter(j=>!j.archivedAt&&!j.deletedAt);
   const sameNameCount=allPeople.filter(p=>p.role==="darbuotojas"&&p.name===person.name).length;
   return jobs.filter(job=>{
+    if(job.archivedAt||job.deletedAt)return false;
     const assigned=(job as Job & {assignedPersonId?:string}).assignedPersonId;
     if(assigned)return assigned===person.id;
     // Legacy assignments use names; don't guess when workers have identical names.
@@ -27,7 +28,7 @@ export function employeeJobs(jobs:Job[],person:Person|undefined,allPeople:Person
   });
 }
 export function jobsWithinRange(jobs:Job[],range:DateRange):Job[]{
-  return jobs.filter(j=>j.date>=range.from&&j.date<=range.to)
+  return jobs.filter(j=>!j.archivedAt&&!j.deletedAt&&j.date>=range.from&&j.date<=range.to)
     .sort((a,b)=>a.date.localeCompare(b.date)
       ||String((a as Job & {startTime?:string}).startTime||"").localeCompare(String((b as Job & {startTime?:string}).startTime||""))
       ||a.addressId.localeCompare(b.addressId));

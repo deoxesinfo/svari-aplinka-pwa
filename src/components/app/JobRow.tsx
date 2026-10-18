@@ -125,7 +125,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
     </div>
     {address&&<div className="-mt-1 mb-2 flex justify-end"><MapsLink street={address.street} city={address.city} compact/></div>}
     {detailsOpen&&<JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen}/>}
-    <JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>
+    {editing&&<JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>}
     <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
       text="Tik administratoriui. Darbas bus paslėptas iš aktyvių sąrašų, tačiau istorija išsaugota auditui. Tai nėra fizinis duomenų ištrynimas."
       onConfirm={()=>void confirmDelete()}/>

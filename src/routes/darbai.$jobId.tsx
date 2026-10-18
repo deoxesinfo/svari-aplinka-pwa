@@ -12,6 +12,7 @@ import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink } from "@/components/app/MapsLink";
 import { useAppState, setJobStatus, addComment, setInspection, deleteJob, verifyJobGPS, overrideJobGPS } from "@/lib/store";
 import { validGpsForCompletion } from "@/lib/gps";
+import { currentAdminOrg } from "@/lib/work-assignments";
 import { JOB_TYPE_LABEL } from "@/lib/types";
 import { fmtLong, fmtDateTime, todayISO, overdueLabel } from "@/lib/dates";
 
@@ -199,8 +200,8 @@ function JobDetail() {
       title="Užbaigti darbą?" text="Bus išsaugotos visos pridėtos nuotraukos ir pastaba (jei parašyta). Darbas bus perkeltas į atliktų darbų sąrašo apačią."
       confirmLabel="Užbaigti darbą" onConfirm={finish} />
     <Confirm open={remove} onOpenChange={setRemove}
-      title="Ištrinti darbą?" text="Nuotraukos liks susietos su adresu."
-      onConfirm={() => { deleteJob(job.id); toast.success("Darbas ištrintas"); navigate({ to: "/darbai" }); }} />
+      title="Ištrinti darbą?" text="Tik administratoriui. Darbas bus paslėptas, jo istorija liks išsaugota."
+      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pažymėtas ištrintu");navigate({to:"/darbai"})}}).catch(()=>toast.error("Tik administratorius gali ištrinti darbą")); }} />
     <Confirm open={fixConfirm} onOpenChange={setFixConfirm}
       title="Sukurti taisymo darbą?" text="Bus pridėtas atskiras skubus darbas šiandienai."
       confirmLabel="Sukurti" onConfirm={() => { setInspection(job.id, "taisyti"); toast.success("Sukurtas taisymo darbas"); }} />

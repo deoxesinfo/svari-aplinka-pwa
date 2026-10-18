@@ -93,7 +93,7 @@ function AnalyticsPage(){
  const today=todayISO();
  const [period,setPeriod]=useState<Period>({start:todayMinusDays(today,29),end:today});
  const [kind,setKind]=useState<"visos"|"laiptine"|"teritorija"|"patikrinimas">("visos");
- const filtered=useMemo(()=>jobs.filter(j=>kind==="visos"||j.type===kind),[jobs,kind]);
+ const filtered=useMemo(()=>jobs.filter(j=>!j.archivedAt&&!j.deletedAt&&(kind==="visos"||j.type===kind)),[jobs,kind]);
  const valid=validPeriod(period);
  const stats=useMemo(()=>valid?periodSummary(addresses,filtered,people,period):undefined,[valid,addresses,filtered,people,period]);
  const workers=useMemo(()=>people.filter(p=>p.role==="darbuotojas").map(p=>({

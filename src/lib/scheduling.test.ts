@@ -28,6 +28,14 @@ describe("scheduling", () => {
   it("summary counts overdue", () => {
     expect(summarize([job("a", "2026-10-16"), job("b", today, "atlikta")], today)).toEqual({ all: 2, done: 1, pending: 1, overdue: 1 });
   });
+  it("archived and deleted jobs do not appear in active calendar or counts", () => {
+    const archived={...job("a",today,"atlikta"),archivedAt:"2026-10-18T18:00:00Z"};
+    const deleted={...job("d",today),deletedAt:"2026-10-18T18:00:00Z"};
+    const active=job("keep",today);
+    expect(sortJobs([archived,deleted,active],today).map(j=>j.id)).toEqual(["keep"]);
+    expect(jobsForDay([archived,deleted,active],today,today).map(j=>j.id)).toEqual(["keep"]);
+    expect(summarize([archived,deleted,active],today).all).toBe(1);
+  });
   it("overdue label uses weekday", () => {
     expect(overdueLabel("2026-10-17", today)).toBe("Iš vakar");
     expect(overdueLabel("2026-10-12", today)).toBe("Iš pirmadienio");

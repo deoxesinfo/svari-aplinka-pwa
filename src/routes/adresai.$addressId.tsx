@@ -23,7 +23,7 @@ function AddressDetail(){
   const [assign,setAssign]=useState(false),[assignmentRefresh,setAssignmentRefresh]=useState(0);
   const a=addresses.find(x=>x.id===addressId);
   if(!a)return <div className="space-y-4"><Link to="/adresai" className="text-primary underline">← Atgal į adresus</Link><EmptyState title="Adresas nerastas"/></div>;
-  const related=sortJobs(jobs.filter(j=>j.addressId===a.id),todayISO());
+  const related=sortJobs(jobs.filter(j=>j.addressId===a.id&&!j.archivedAt&&!j.deletedAt),todayISO());
   const pictures=photos.filter(p=>p.addressId===a.id);
   return <div>
     <Link to="/adresai" className="mb-4 inline-flex gap-2 items-center text-sm text-muted-foreground hover:text-primary"><ArrowLeft className="size-4"/> Visi adresai</Link>

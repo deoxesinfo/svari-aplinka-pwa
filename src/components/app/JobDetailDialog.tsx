@@ -13,6 +13,7 @@ import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink } from "./MapsLink";
 import { useAppState, addComment, setJobStatus, setInspection, deleteJob } from "@/lib/store";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
+import { currentAdminOrg } from "@/lib/work-assignments";
 import { fmtDateTime, fmtLong, overdueLabel, todayISO } from "@/lib/dates";
 
 type Props = { jobId: string; open: boolean; onOpenChange: (open: boolean) => void };
@@ -189,7 +190,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
       text="Bus sukurtas atskiras skubus darbas šiandienai." confirmLabel="Sukurti"
       onConfirm={() => { setInspection(job.id, "taisyti"); toast.success("Sukurtas taisymo darbas"); }} />
     <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
-      text="Darbas bus pašalintas iš naršyklės. Nuotraukos liks susietos su adresu."
-      onConfirm={() => { deleteJob(job.id); toast.success("Darbas ištrintas"); onClose(); }} />
+      text="Tik administratoriui. Darbas bus paslėptas, jo istorija liks išsaugota."
+      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pažymėtas ištrintu");onClose()}}).catch(()=>toast.error("Tik administratorius gali ištrinti darbą")); }} />
   </>;
 }
