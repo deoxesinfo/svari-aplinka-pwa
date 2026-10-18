@@ -1,66 +1,86 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { Building2, Plus, Search, MapPin, Pencil, Trash2, Star } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useMemo,useState } from "react";
+import { Building2,Plus,Search } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AddressFormDialog } from "@/components/app/forms";
 import { WorkAssignmentDialog } from "@/components/app/WorkAssignmentDialog";
-import { Confirm, EmptyState, PageHeader, Pill, inputCls } from "@/components/app/ui-bits";
-import { useAppState, deleteAddress } from "@/lib/store";
-import { ADDRESS_TYPE_LABEL, OBJECT_STATUS_LABEL, type Address } from "@/lib/types";
-import { MapsLink, MapPinLink } from "@/components/app/MapsLink";
-export const Route = createFileRoute("/adresai")({ component: Addresses });
-function Addresses() {
-  const { addresses, jobs, photos } = useAppState();
-  const [term, setTerm] = useState("");
-  const [priorityOnly, setPriorityOnly] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [edit, setEdit] = useState<Address | undefined>();
-  const [remove, setRemove] = useState<Address | null>(null);
-  const [assignTo,setAssignTo]=useState<Address|null>(null);
-  const filtered = useMemo(() => addresses.filter(a => (a.street+" "+a.city).toLocaleLowerCase("lt").includes(term.toLocaleLowerCase("lt")) && (!priorityOnly || Boolean(a.isPriority))).sort((a,b)=>Number(Boolean(b.isPriority))-Number(Boolean(a.isPriority))), [addresses,term,priorityOnly]);
-  return <div>
-    <PageHeader title="Adresai" subtitle={"Objektų sąrašas · "+addresses.length} actions={<Button onClick={()=>{setEdit(undefined);setOpen(true)}}><Plus/> Pridėti adresą</Button>}/>
-    <div className="relative mb-5"><Search className="absolute left-3 top-3 size-4 text-muted-foreground"/><input aria-label="Ieškoti adresų" className={inputCls+" pl-10"} placeholder="Ieškoti pagal gatvę arba miestą…" value={term} onChange={e=>setTerm(e.target.value)}/></div>
-    <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm font-medium">
-      <input type="checkbox" checked={priorityOnly} onChange={e=>setPriorityOnly(e.target.checked)} className="size-4 accent-amber-600"/> Tik prioritetiniai objektai
-    </label>
-    <div className="space-y-3">{filtered.length?filtered.map(a=><article className="card-surface min-w-0 overflow-hidden p-4 sm:p-5" key={a.id}>
-      <div className="flex items-start gap-3 sm:gap-4">
-        <div className="hidden size-11 shrink-0 place-items-center rounded-xl bg-primary/10 sm:grid">
-          <Building2 className="size-5 text-primary"/>
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <div>
-            <Link to="/adresai/$addressId" params={{addressId:a.id}}
-              className="block break-words text-base font-semibold leading-tight text-foreground hover:text-primary hover:underline">{a.street}</Link>
-            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><MapPin className="size-4 shrink-0"/>{a.city}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <Pill>{ADDRESS_TYPE_LABEL[a.type]}</Pill>
-            {a.isPriority&&<Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}
-            <Pill tone={a.status==="nebeaptarnaujamas"?"danger":a.status==="naujas"?"success":"neutral"}>
-              {OBJECT_STATUS_LABEL[a.status||"aktyvus"]}
-            </Pill>
-          </div>
-          <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-            {a.type!=="teritorija"&&a.stairwellVisitsPerWeek!=null&&<span>Laiptinės: {a.stairwellVisitsPerWeek} k./sav.</span>}
-            {a.type!=="laiptine"&&a.territoryVisitsPerWeek!=null&&<span>Teritorija: {a.territoryVisitsPerWeek} k./sav.</span>}
-            <span>{jobs.filter(j=>j.addressId===a.id).length} darbai</span>
-            <span>{photos.filter(p=>p.addressId===a.id).length} nuotr.</span>
-          </div>
-        </div>
-      </div>
-      <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-3">
-        <Button size="sm" className="mr-auto min-h-10" onClick={()=>setAssignTo(a)}><Plus className="size-4"/> Sukurti darbą</Button>
-        <MapPinLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)}/>
-        <MapsLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)} compact/>
-        <Button size="icon" variant="outline" title="Redaguoti" aria-label={"Redaguoti "+a.street} onClick={()=>{setEdit(a);setOpen(true)}}><Pencil className="size-4"/></Button>
-        <Button size="icon" variant="ghost" title="Ištrinti" aria-label={"Ištrinti "+a.street} onClick={()=>setRemove(a)}><Trash2 className="size-4"/></Button>
-      </div>
-    </article>):<EmptyState icon={<Building2 className="size-8"/>} title="Adresų nerasta" text="Pabandykite kitą paiešką arba pridėkite adresą."/>}</div>
-    <AddressFormDialog open={open} onOpenChange={setOpen} address={edit}/>
-    <WorkAssignmentDialog address={assignTo} open={Boolean(assignTo)} onOpenChange={opened=>!opened&&setAssignTo(null)}/>
-    <Confirm open={!!remove} onOpenChange={o=>!o&&setRemove(null)} title="Ištrinti adresą?" text="Bus ištrinti ir šio adreso darbai bei nuotraukos šiame įrenginyje." onConfirm={()=>{if(remove){deleteAddress(remove.id);toast.success("Adresas ištrintas")}setRemove(null)}}/>
-  </div>;
+import { AddressCard } from "@/components/app/AddressCard";
+import { Confirm,EmptyState,PageHeader,inputCls } from "@/components/app/ui-bits";
+import { useAppState,archiveAddress,restoreAddress,deleteAddress } from "@/lib/store";
+import { currentAdminOrg } from "@/lib/work-assignments";
+import type { Address } from "@/lib/types";
+export const Route=createFileRoute("/adresai")({component:Addresses});
+function Addresses(){
+ const {addresses,jobs,photos}=useAppState();
+ const [term,setTerm]=useState("");
+ const [priorityOnly,setPriorityOnly]=useState(false);
+ const [archived,setArchived]=useState(false);
+ const [open,setOpen]=useState(false);
+ const [edit,setEdit]=useState<Address|undefined>();
+ const [remove,setRemove]=useState<Address|null>(null);
+ const [archiveConfirm,setArchiveConfirm]=useState<Address|null>(null);
+ const [assignTo,setAssignTo]=useState<Address|null>(null);
+ const [busy,setBusy]=useState(false);
+ const active=addresses.filter(a=>!a.archivedAt&&!a.deletedAt);
+ const archivedAddresses=addresses.filter(a=>a.archivedAt&&!a.deletedAt);
+ const filtered=useMemo(()=>addresses.filter(a=>!a.deletedAt&&Boolean(a.archivedAt)===archived
+   &&(a.street+" "+a.city).toLocaleLowerCase("lt").includes(term.toLocaleLowerCase("lt"))
+   &&(!priorityOnly||Boolean(a.isPriority)))
+   .sort((a,b)=>Number(Boolean(b.isPriority))-Number(Boolean(a.isPriority))),[addresses,term,priorityOnly,archived]);
+ const submitArchive=async()=>{
+   const a=archiveConfirm;if(!a||busy)return;
+   setBusy(true);
+   try{
+    await currentAdminOrg();
+    const ok=a.archivedAt?restoreAddress(a.id):archiveAddress(a.id);
+    if(!ok)throw Error("Adreso būsena jau pakeista");
+    toast.success(a.archivedAt?"Adresas atkurtas":"Adresas archyvuotas, būsimi darbai sustabdyti");
+    setArchiveConfirm(null);
+   }catch(e){toast.error(e instanceof Error?e.message:"Veiksmas negalimas")}
+   finally{setBusy(false)}
+ };
+ const submitDelete=async()=>{
+   const a=remove;if(!a||busy)return;
+   setBusy(true);
+   try{
+     await currentAdminOrg();
+     if(!deleteAddress(a.id))throw Error("Adresas jau pašalintas");
+     toast.success("Adresas pažymėtas ištrintu. Susiję duomenys išsaugoti.");
+     setRemove(null);
+   }catch(e){toast.error(e instanceof Error?e.message:"Tik administratorius gali ištrinti adresą")}
+   finally{setBusy(false)}
+ };
+ return <div>
+  <PageHeader title="Adresai" subtitle={"Objektai: "+active.length+" · Archyve: "+archivedAddresses.length}
+   actions={<Button onClick={()=>{setEdit(undefined);setOpen(true)}}><Plus/>Pridėti adresą</Button>}/>
+  <div className="relative mb-4"><Search className="absolute left-3 top-3 size-4 text-muted-foreground"/>
+   <input aria-label="Ieškoti adresų" className={inputCls+" pl-10"} placeholder="Ieškoti pagal gatvę arba miestą…"
+    value={term} onChange={e=>setTerm(e.target.value)}/></div>
+  <div className="mb-3 flex flex-wrap gap-2">
+   <Button type="button" size="sm" variant={archived?"outline":"default"} onClick={()=>setArchived(false)}>Aktyvūs ({active.length})</Button>
+   <Button type="button" size="sm" variant={archived?"default":"outline"} onClick={()=>setArchived(true)}>Archyvas ({archivedAddresses.length})</Button>
+  </div>
+  <label className="mb-3 flex w-fit cursor-pointer items-center gap-2 text-sm font-medium">
+   <input type="checkbox" checked={priorityOnly} onChange={e=>setPriorityOnly(e.target.checked)} className="size-4 accent-amber-600"/>Tik prioritetiniai objektai
+  </label>
+  <div className="space-y-3">{filtered.length?filtered.map(a=><AddressCard key={a.id} address={a}
+   jobCount={jobs.filter(j=>j.addressId===a.id&&!j.deletedAt).length}
+   photoCount={photos.filter(p=>p.addressId===a.id).length}
+   onAssign={()=>setAssignTo(a)} onEdit={()=>{setEdit(a);setOpen(true)}} onRemove={()=>setRemove(a)} onArchive={()=>setArchiveConfirm(a)}/>):
+   <EmptyState icon={<Building2 className="size-8"/>} title={archived?"Archyvas tuščias":"Adresų nerasta"}
+    text="Pabandykite pakeisti paiešką arba pridėti adresą."/>}</div>
+  <AddressFormDialog open={open} onOpenChange={setOpen} address={edit}/>
+  <WorkAssignmentDialog address={assignTo} open={Boolean(assignTo)} onOpenChange={v=>!v&&setAssignTo(null)}/>
+  <Confirm open={Boolean(archiveConfirm)} onOpenChange={v=>!v&&setArchiveConfirm(null)}
+   title={archiveConfirm?.archivedAt?"Atkurti adresą?":"Archyvuoti adresą?"}
+   text={archiveConfirm?.archivedAt
+    ?"Atkūrus adresą "+archiveConfirm.street+" bus galima tęsti grafikų generavimą."
+    :"Archyvuoti "+(archiveConfirm?.street||"")+"? Naujų darbų generavimas bus sustabdytas, jau sukurti būsimi neatlikti darbai paslėpti. Istorija bei nuotraukos išliks."}
+   confirmLabel={archiveConfirm?.archivedAt?"Atkurti":"Archyvuoti"} onConfirm={()=>void submitArchive()}/>
+  <Confirm open={Boolean(remove)} onOpenChange={v=>!v&&setRemove(null)}
+   title="Ištrinti adresą?"
+   text={"Tik administratoriui. "+(remove?.street||"")+" bus paslėptas be atkūrimo mygtuko; darbų, grafikų ir nuotraukų įrašai išliks. Būsimi darbai sustabdomi. Patvirtinate?"}
+   confirmLabel="Ištrinti" onConfirm={()=>void submitDelete()}/>
+ </div>;
 }
