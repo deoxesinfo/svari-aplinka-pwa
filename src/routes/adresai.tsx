@@ -4,6 +4,7 @@ import { Building2, Plus, Search, MapPin, Pencil, Trash2, Star } from "lucide-re
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AddressFormDialog } from "@/components/app/forms";
+import { WorkAssignmentDialog } from "@/components/app/WorkAssignmentDialog";
 import { Confirm, EmptyState, PageHeader, Pill, inputCls } from "@/components/app/ui-bits";
 import { useAppState, deleteAddress } from "@/lib/store";
 import { ADDRESS_TYPE_LABEL, OBJECT_STATUS_LABEL, type Address } from "@/lib/types";
@@ -16,6 +17,7 @@ function Addresses() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Address | undefined>();
   const [remove, setRemove] = useState<Address | null>(null);
+  const [assignTo,setAssignTo]=useState<Address|null>(null);
   const filtered = useMemo(() => addresses.filter(a => (a.street+" "+a.city).toLocaleLowerCase("lt").includes(term.toLocaleLowerCase("lt")) && (!priorityOnly || Boolean(a.isPriority))).sort((a,b)=>Number(Boolean(b.isPriority))-Number(Boolean(a.isPriority))), [addresses,term,priorityOnly]);
   return <div>
     <PageHeader title="Adresai" subtitle={"Objektų sąrašas · "+addresses.length} actions={<Button onClick={()=>{setEdit(undefined);setOpen(true)}}><Plus/> Pridėti adresą</Button>}/>
@@ -50,6 +52,7 @@ function Addresses() {
         </div>
       </div>
       <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t pt-3">
+        <Button size="sm" className="mr-auto min-h-10" onClick={()=>setAssignTo(a)}><Plus className="size-4"/> Sukurti darbą</Button>
         <MapPinLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)}/>
         <MapsLink street={a.street} city={a.city} latitude={a.latitude} longitude={a.longitude} confirmed={Boolean(a.gpsLocationConfirmed)} compact/>
         <Button size="icon" variant="outline" title="Redaguoti" aria-label={"Redaguoti "+a.street} onClick={()=>{setEdit(a);setOpen(true)}}><Pencil className="size-4"/></Button>
@@ -57,6 +60,7 @@ function Addresses() {
       </div>
     </article>):<EmptyState icon={<Building2 className="size-8"/>} title="Adresų nerasta" text="Pabandykite kitą paiešką arba pridėkite adresą."/>}</div>
     <AddressFormDialog open={open} onOpenChange={setOpen} address={edit}/>
+    <WorkAssignmentDialog address={assignTo} open={Boolean(assignTo)} onOpenChange={opened=>!opened&&setAssignTo(null)}/>
     <Confirm open={!!remove} onOpenChange={o=>!o&&setRemove(null)} title="Ištrinti adresą?" text="Bus ištrinti ir šio adreso darbai bei nuotraukos šiame įrenginyje." onConfirm={()=>{if(remove){deleteAddress(remove.id);toast.success("Adresas ištrintas")}setRemove(null)}}/>
   </div>;
 }

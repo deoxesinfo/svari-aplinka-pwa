@@ -1,4 +1,5 @@
 import { supabase } from "./supabase-client";
+import { fillAssignments } from "./work-assignments";
 import type { AppState } from "./store";
 import type { Address, Job, Person, RecruitmentLink } from "./types";
 
@@ -27,6 +28,9 @@ export async function loadCloudState(org:string):Promise<Pick<AppState,"addresse
   const verified=await supabase.from("sa_memberships").select("role").eq("organization_id",org)
     .eq("user_id",data.user.id).eq("active",true).single();
   if(verified.error||verified.data?.role!=="admin")throw new Error("Šiame etape debesijos valdymas leidžiamas tik administratoriui");
+  // Rolling 28-day window. Unique index prevents repeated jobs on every login/refresh.
+  // When no one opens the app, nothing runs; a true daily background task is a later option.
+  await fillAssignments(org);
   const [addresses,jobs,people,recruitmentLinks]=await Promise.all([
     fetchCollection<Address>(org,"addresses"),fetchCollection<Job>(org,"jobs"),
     fetchCollection<Person>(org,"people"),fetchCollection<RecruitmentLink>(org,"recruitmentLinks")
