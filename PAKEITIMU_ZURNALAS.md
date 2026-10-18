@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V1.5 | Pareigų pasirinkimas; personalo archyvas, sugrįžimo istorija, skelbimų nuorodos | [1717d08d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1717d08d) · [5ea976cb](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5ea976cb) |
 | 2026-10-18 | V1.4 | Prioritetinių namų žymėjimas adresų ir darbų kortelėse, filtravimas | [5b9f2411](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/5b9f2411) |
 | 2026-10-18 | V1.3 | Personalo registras, vadybininkų paskyrimai, objektų statusai, analitika | [d2dc0ad2](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d2dc0ad2) · [d0509731](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/d0509731) |
 | 2026-10-18 | V1.2 | Google Maps maršrutas, 15 nuotraukų darbui | [1c816758](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/1c816758) |
@@ -31,3 +32,6 @@
 3. Nesakyti, kad planuojama funkcija jau veikia. Planuojamus darbus laikyti atskirai.
 4. Niekada neįrašyti tikrų darbuotojų asmens duomenų ar durų kodų į žurnalą.
 5. Kol nėra Supabase, pats žurnalas yra bendras visiems, o darbų ir nuotraukų įrašai lieka konkrečiame įrenginyje.
+
+## Nuolatinis įrašymo procesas
+Visi nauji patvirtinti pakeitimai privalomai įrašomi lietuviškai į `src/lib/changelog.ts` (programėlė) ir šį failą (GitHub) pagal [AGENTS.md](./AGENTS.md) taisyklę. Istoriniai darbuotojų įrašai netrinami, o archyvuojami.

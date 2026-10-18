@@ -9,6 +9,20 @@ export type PlannedEntry = { title: string; summary: string; status: "Laukia" | 
 
 export const CHANGELOG: ChangeEntry[] = [
   {
+    date:"2026-10-18", version:"V1.5", category:"funkcija",
+    title:"Darbuotojų pareigos, darbo laikotarpių istorija ir skelbimų nuorodos",
+    details:[
+      "Išsaugotos esamos personalo grupės ir pridėtas atskiras pareigų pasirinkimas: „Valytojas (-a)“, „Kiemsargis (-ė)“, „Vadybininkas (-ė)“, „Kitos pareigos“.",
+      "Pridedant naują darbuotoją darbo pradžia siūloma automatiškai pagal šiandienos datą, bet ją galima pakeisti; profilio sukūrimo data saugoma atskirai.",
+      "Vietoje profilį naikinančio trynimo veikia „Archyvas“; išėjusiam fiksuojama pabaigos data, sugrįžus – naujas darbo laikotarpis tame pačiame profilyje.",
+      "Rodoma darbo laikotarpių istorija ir personalo kaitai skirti skaitikliai. Seniems profiliams be pradžios datos ji neišgalvojama.",
+      "Pridėtas „Skelbimai“ skirtukas su redaguojamomis HTTPS nuorodomis, kurias galima atidaryti vienu paspaudimu. Automatinio paskelbimo nėra.",
+      "Nuolatinė taisyklė: kiekvienas atliktas pakeitimas aprašomas lietuviškai programėlės žurnale ir GitHub dokumente, planai išskiriami.",
+    ],
+    commits:["1717d08d","5ea976cb"],
+  },
+
+  {
     date:"2026-10-18", version:"V1.4", category:"funkcija",
     title:"Prioritetiniai objektai",
     details:[
