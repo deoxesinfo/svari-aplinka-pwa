@@ -45,7 +45,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const changeArchive=()=>{
     const ok=job.archivedAt?restoreJob(job.id):archiveJob(job.id);
     if(ok)toast.info(job.archivedAt?"Darbas grąžintas iš archyvo":"Darbas perkeltas į archyvą");
-    else toast.error("Archyvuoti galima tik atliktus darbus");
+    else toast.error("Darbo archyvuoti nepavyko");
     setActionsOpen(false);
   };
   const confirmDelete=async()=>{
@@ -64,7 +64,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
     <div className="relative overflow-hidden rounded-xl" onTouchStart={startTouch} onTouchEnd={endTouch}>
       <div aria-hidden={!actionsOpen} className="absolute inset-y-0 right-0 flex w-[186px] items-stretch justify-end gap-px bg-muted/80 p-1">
         <button type="button" className="flex w-[61px] flex-col items-center justify-center gap-1 rounded-lg bg-card px-1 text-[11px] font-semibold text-primary disabled:opacity-40"
-          disabled={!done&&!job.archivedAt} tabIndex={actionsOpen?0:-1} onClick={changeArchive} aria-label={job.archivedAt?"Atkurti darbą":"Archyvuoti atliktą darbą"}>
+          disabled={false} tabIndex={actionsOpen?0:-1} onClick={changeArchive} aria-label={job.archivedAt?"Atkurti darbą":"Archyvuoti darbą"}>
           {job.archivedAt?<ArchiveRestore className="size-5"/>:<Archive className="size-5"/>}
           {job.archivedAt?"Atkurti":"Archyvas"}
         </button>

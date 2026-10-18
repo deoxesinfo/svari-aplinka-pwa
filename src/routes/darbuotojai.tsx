@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
-import { Archive, BriefcaseBusiness, CalendarDays, Camera, ExternalLink, History, Pencil, Plus, RotateCcw, Search, Trash2, Users } from "lucide-react";
+import { Archive, BriefcaseBusiness, CalendarDays, ExternalLink, History, Pencil, Plus, RotateCcw, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -193,10 +193,6 @@ function PeoplePage(){
               <Button variant="outline" size="sm" className="min-h-10 w-full gap-1.5 sm:w-auto" onClick={()=>openForm(p)}><Pencil className="size-4"/> Redaguoti</Button>
             </div>
           </div>
-          <details className="mt-3 rounded-lg border p-3">
-            <summary className="cursor-pointer text-sm font-semibold"><Camera className="mr-2 inline size-4"/>Profilio nuotrauka</summary>
-            <div className="mt-3"><PersonAvatarEditor person={p}/></div>
-          </details>
           {permanent.length>0&&<details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold">Priskirti objektai ({permanent.length})</summary>
             <div className="mt-2 space-y-2">

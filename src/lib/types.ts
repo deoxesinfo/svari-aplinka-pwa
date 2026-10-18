@@ -50,6 +50,10 @@ export interface Address {
   street: string;
   city: string;
   status?: ObjectStatus;
+  /** Archived addresses are recoverable; soft-deleted addresses are not in app. */
+  archivedAt?: string;
+  deletedAt?: string;
+  preArchiveStatus?: ObjectStatus;
   /** Nuolatinis objekto prioritetas, nesusijęs su konkretaus darbo skubumu. */
   isPriority?: boolean;
   serviceStartedAt?: string; // YYYY-MM-DD
@@ -99,6 +103,8 @@ export interface Job {
   parentJobId?: string;
   /** Retain history while hiding archived work. */
   archivedAt?: string;
+  /** Set only for future pending jobs suspended by an address archive. */
+  archivedByAddressAt?: string;
   /** Tombstone prevents recurring generators from re-creating deleted dates. */
   deletedAt?: string;
 }

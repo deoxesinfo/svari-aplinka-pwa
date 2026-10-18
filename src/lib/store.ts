@@ -199,14 +199,44 @@ export function addAddress(input: AddressInput): Address {
 export function updateAddress(id: string, input: AddressInput) {
   set((s) => ({ addresses: s.addresses.map((a) => (a.id === id ? { ...a, ...input } : a)) }));
 }
-export function deleteAddress(id: string) {
-  const photoIds = state.photos.filter((p) => p.addressId === id).map((p) => p.id);
-  photoIds.forEach((pid) => deletePhotoBlobs(pid).catch(() => {}));
-  set((s) => ({
-    addresses: s.addresses.filter((a) => a.id !== id),
-    jobs: s.jobs.filter((j) => j.addressId !== id),
-    photos: s.photos.filter((p) => p.addressId !== id),
+/** Stop future schedules without losing linked jobs, assignments, or photos. */
+function suspendAddressJobs(jobs:Job[],addressId:string,at:string):Job[]{
+  const today=todayISO();
+  return jobs.map(j=>{
+    if(j.addressId!==addressId||j.deletedAt||j.archivedAt||j.status==="atlikta"||j.date<today)return j;
+    return hist({...j,archivedAt:at,archivedByAddressAt:at},"Būsimas darbas sustabdytas kartu su adresu");
+  });
+}
+export function archiveAddress(id:string):boolean{
+  const address=state.addresses.find(a=>a.id===id);
+  if(!address||address.archivedAt||address.deletedAt)return false;
+  const at=nowIso();
+  set(s=>({
+    addresses:s.addresses.map(a=>a.id===id?{...a,archivedAt:at,preArchiveStatus:a.status||"aktyvus",status:"sustabdytas"}:a),
+    jobs:suspendAddressJobs(s.jobs,id,at),
   }));
+  return true;
+}
+export function restoreAddress(id:string):boolean{
+  const address=state.addresses.find(a=>a.id===id);
+  if(!address||!address.archivedAt||address.deletedAt)return false;
+  set(s=>({
+    addresses:s.addresses.map(a=>a.id===id?{...a,archivedAt:undefined,status:a.preArchiveStatus||"aktyvus",preArchiveStatus:undefined}:a),
+    jobs:s.jobs.map(j=>j.addressId===id&&j.archivedByAddressAt&&j.archivedAt===j.archivedByAddressAt&&!j.deletedAt
+      ?hist({...j,archivedAt:undefined,archivedByAddressAt:undefined},"Būsimas darbas grąžintas atkūrus adresą"):j),
+  }));
+  return true;
+}
+/** Soft delete: links and photos stay intact, but restored through the UI is not allowed. */
+export function deleteAddress(id:string):boolean{
+  const address=state.addresses.find(a=>a.id===id);
+  if(!address||address.deletedAt)return false;
+  const at=nowIso();
+  set(s=>({
+    addresses:s.addresses.map(a=>a.id===id?{...a,deletedAt:at,status:"sustabdytas"}:a),
+    jobs:suspendAddressJobs(s.jobs,id,at),
+  }));
+  return true;
 }
 
 // ---------- Jobs ----------
@@ -218,6 +248,7 @@ function hist(job: Job, text: string): Job {
 
 export function addJob(input: JobInput, extra: Partial<Job> = {}): Job {
   const target=state.addresses.find(a=>a.id===input.addressId);
+  if(!target||target.archivedAt||target.deletedAt){toast.error("Darbas nekurimas archyvuotam ar pašalintam adresui");return null as unknown as Job}
   if(target?.gpsProtectionEnabled)input={...input,gpsRequired:true};
   if(input.gpsRequired&&!hasConfirmedPin(target)){
     toast.error("Reikalingas patvirtintas GPS žymeklis");return null as unknown as Job;
@@ -361,13 +392,13 @@ export function addComment(id: string, text: string) {
 
 export function archiveJob(id:string):boolean {
   const job=state.jobs.find(j=>j.id===id);
-  if(!job||job.deletedAt||job.archivedAt||job.status!=="atlikta")return false;
+  if(!job||job.deletedAt||job.archivedAt)return false;
   set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,archivedAt:nowIso()},"Darbas perkeltas į archyvą"):j)}));
   return true;
 }
 export function restoreJob(id:string):boolean {
   const job=state.jobs.find(j=>j.id===id);
-  if(!job||!job.archivedAt||job.deletedAt)return false;
+  if(!job||!job.archivedAt||job.deletedAt||state.addresses.some(a=>a.id===job.addressId&&(a.archivedAt||a.deletedAt)))return false;
   set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,archivedAt:undefined},"Darbas grąžintas iš archyvo"):j)}));
   return true;
 }
