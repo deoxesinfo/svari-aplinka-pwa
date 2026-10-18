@@ -108,7 +108,7 @@ export function PhotoGrid({ photos, empty = "Nuotraukų dar nėra." }: { photos:
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
         {photos.map((p) => <Thumb key={p.id} photo={p} onClick={() => setOpenId(p.id)} />)}
       </div>
-      {selected && <Lightbox photo={selected} gallery={photos} onNavigate={setOpenId} onClose={() => setOpenId(null)} />}
+      {selected && <Lightbox key={selected.id} photo={selected} gallery={photos} onNavigate={setOpenId} onClose={() => setOpenId(null)} />}
     </>
   );
 }

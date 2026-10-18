@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
-import { Archive, BriefcaseBusiness, CalendarDays, ExternalLink, History, Pencil, Plus, RotateCcw, Search, Trash2, UserRoundCheck, Users } from "lucide-react";
+import { Archive, BriefcaseBusiness, CalendarDays, Camera, ExternalLink, History, Pencil, Plus, RotateCcw, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PageHeader, Field, Pill, Confirm, EmptyState, inputCls, textareaCls } from "@/components/app/ui-bits";
 import { useAppState, addPerson, updatePerson, archivePerson, addRecruitmentLink, removeRecruitmentLink, type PersonInput } from "@/lib/store";
 import { todayISO } from "@/lib/dates";
+import { PersonAvatar, PersonAvatarEditor } from "@/components/app/PersonAvatar";
 import { PERSON_POSITION_LABEL, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
 
 export const Route = createFileRoute("/darbuotojai")({ component: PeoplePage });
@@ -170,7 +171,7 @@ function PeoplePage(){
         const periods=p.employmentPeriods||[];
         return <article className="card-surface p-4" key={p.id}>
           <div className="flex flex-wrap items-start gap-3">
-            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-primary/10"><UserRoundCheck className="size-5 text-primary"/></span>
+            <PersonAvatar key={p.avatarPhotoId||"none"} person={p}/>
             <div className="min-w-0 flex-1 space-y-1">
               <p className="font-semibold">{p.name}</p>
               <div className="flex flex-wrap gap-1.5">
@@ -187,6 +188,10 @@ function PeoplePage(){
               <Button variant="ghost" size="sm" onClick={()=>openForm(p)}><Pencil className="size-4"/> Redaguoti</Button>
             </div>
           </div>
+          <details className="mt-3 rounded-lg border p-3">
+            <summary className="cursor-pointer text-sm font-semibold"><Camera className="mr-2 inline size-4"/>Profilio nuotrauka</summary>
+            <div className="mt-3"><PersonAvatarEditor person={p}/></div>
+          </details>
           {p.notes&&<p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{p.notes}</p>}
           <details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold"><History className="mr-2 inline size-4"/>Darbo laikotarpių istorija ({periods.length})</summary>
@@ -221,6 +226,8 @@ function PeoplePage(){
             <Field label="Darbo pabaigos data">
               <input type="date" className={inputCls} disabled={draft.status!=="nebedirba"} value={draft.status==="nebedirba"?draft.endedAt||"":""} onChange={e=>setDraft(d=>({...d,endedAt:e.target.value||undefined}))}/></Field>
           </div>
+          {editing && <PersonAvatarEditor person={people.find(p=>p.id===editing.id)||editing}/>}
+          {!editing && <p className="text-xs text-muted-foreground">Sukūrę profilį, nuotrauką galėsite pridėti jo redagavimo lange.</p>}
           {editing&&<p className="text-xs text-muted-foreground">Profilis sukurtas: {editing.createdAt.slice(0,10)}. Šios datos keisti negalima. Ankstesni darbo laikotarpiai lieka istorijoje.</p>}
           <Field label="Pastabos"><textarea className={textareaCls} rows={3} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))} placeholder="Tik DEMO pastabos, be asmens duomenų"/></Field>
           <DialogFooter><Button type="button" variant="outline" onClick={()=>setOpened(false)}>Atšaukti</Button><Button type="submit">Išsaugoti</Button></DialogFooter>

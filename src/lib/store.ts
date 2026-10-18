@@ -130,6 +130,12 @@ export function archivePerson(id: string, endedAt: string): boolean {
 // Older consumers cannot hard-delete personnel. Archive instead.
 export function deletePerson(_id: string): boolean { return false; }
 
+/** Store just an IndexedDB photo identifier, never a base64 image in localStorage. */
+export function setPersonAvatar(id: string, avatarPhotoId?: string) {
+  if (!state.people.some(p=>p.id===id)) return;
+  set(s=>({people:s.people.map(p=>p.id===id?{...p,avatarPhotoId}:p)}));
+}
+
 // ---------- Recruitment links (DEMO only, not connected to job boards) ----------
 export function addRecruitmentLink(title: string, url: string, notes: string): RecruitmentLink {
   const link={id:uid(),title,url,notes,createdAt:nowIso()};

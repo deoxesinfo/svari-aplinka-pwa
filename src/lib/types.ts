@@ -23,6 +23,7 @@ export interface Person {
   position?: PersonPosition;
   status: PersonStatus;
   notes: string;
+  avatarPhotoId?: string; // local DEMO IndexedDB only, never public URL
   createdAt: string; // when profile was entered, NOT the hire date
   startedAt?: string; // current/latest hire date
   endedAt?: string; // most recent departure
