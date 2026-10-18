@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-18",version:"V2.0 – etapų peržiūra",category:"planas",
+   title:"Įgyvendintų funkcijų ir likusių bandymų auditas",
+   details:[
+    "Sukurtas atskiras techninės būklės dokumentas PWA_ETAPU_ATASKAITA_2026-10-18.md, atskiriantis veikiančias funkcijas nuo realiai nepatikrintų.",
+    "V1.7–V2.0 kodas turi privalomą Auth, bendrą duomenų šaltinį, auditą, pranešimus ir GPS patikros pagrindą.",
+    "Dar neišbandytas dviejų skirtingų telefonų sinchronizavimas, darbuotojų rolės, GPS tikslumas ir tikri Push pranešimai.",
+    "Cloudflare R2 ir nuotraukų sinchronizacija atidėta rytojui, demonstraciniai duomenys į Supabase neperkelti.",
+   ],commits:[]},
+
   {date:"2026-10-18",version:"V1.8.2",category:"funkcija",
    title:"Rankinis Supabase duomenų kopijos eksportas",
    details:[

@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-18 | V2.0 – etapas / QA | V1.7–V2.0 etapų sąrašas, įgyvendintų funkcijų ribos, tikrintini telefonų bandymai, R2 atidėta kitam kartui | [Ataskaita](./PWA_ETAPU_ATASKAITA_2026-10-18.md) |
 | 2026-10-18 | V1.8.2 | Rankinis JSON eksportas iš Supabase duomenų; atkūrimas ir nepriklausomos kopijos dar neįdiegtos | Šis etapas |
 | 2026-10-18 | V2.0.3 | Vienkartinė GPS patikra darbo kortelėje, leidimo ir tikslumo tikrinimas, išimtis su priežastimi, užbaigimo apsauga; telefonų testai liko | Šis etapas |
 | 2026-10-18 | V2.0.2 | Objektų GPS koordinatės, darbo GPS jungiklis (OFF), 30/50/100 m, tikslumo skaičiavimas, užbaigimo apsauga, admin išimtis. Įrenginių testai dar laukia. | Šis etapas |
