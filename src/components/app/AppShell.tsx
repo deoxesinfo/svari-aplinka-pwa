@@ -5,6 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History, UserCircle, ScrollText,
 } from "lucide-react";
 import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
+import { getCloudRole } from "@/lib/cloud-sync";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/app/NotificationBell";
 
@@ -46,9 +47,10 @@ function Brand({ compact }: { compact?: boolean }) {
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const isActive = useActive();
+  const employee=isCloudMode()&&getCloudRole()==="worker";
   return (
     <nav className="flex flex-col gap-1" aria-label="Pagrindinė navigacija">
-      {NAV.map((n) => (
+      {NAV.filter(n=>!employee||["/","/kalendorius","/darbai","/nuotraukos","/paskyra"].includes(n.to)).map((n) => (
         <Link
           key={n.to}
           to={n.to}
@@ -144,7 +146,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Mobile bottom nav */}
         <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur lg:hidden" aria-label="Apatinė navigacija">
           <div className="grid grid-cols-5">
-            {NAV.filter(n => ["/", "/kalendorius", "/darbai", "/adresai", "/nuotraukos"].includes(n.to)).map((n) => (
+            {NAV.filter(n => (isCloudMode()&&getCloudRole()==="worker"?["/","/kalendorius","/darbai","/nuotraukos"]:["/","/kalendorius","/darbai","/adresai","/nuotraukos"]).includes(n.to)).map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
