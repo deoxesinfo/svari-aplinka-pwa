@@ -55,6 +55,7 @@ BEGIN
   SELECT count(*) INTO v_photo_count FROM public.sa_photo_metadata p
    WHERE p.organization_id=p_org AND p.job_id=p_job
      AND p.data->>'proofMode'='gps_live'
+     AND p.data->>'uploadedBy'=(SELECT auth.uid())::text
      AND p.created_at >= v_stamp - interval '24 hours';
   IF v_photo_count<1 THEN RAISE EXCEPTION 'GPS_PHOTO_REQUIRED' USING ERRCODE='23514'; END IF;
   UPDATE public.sa_jobs
