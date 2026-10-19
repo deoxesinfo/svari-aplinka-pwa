@@ -28,7 +28,12 @@ async function call(env,jwt,path,options={}){
  headers.set("authorization","Bearer "+jwt);
  headers.set("apikey",env.SUPABASE_PUBLISHABLE_KEY);
  headers.set("accept","application/json");
- return fetch(env.SUPABASE_URL+path,{...options,headers,redirect:"error"});
+ // Cloudflare Workers throws TypeError for redirect:"error" on this Supabase
+ // outbound request even when the endpoint itself responds HTTP 200.
+ // "manual" avoids automatic credential forwarding across domains.
+ const res=await fetch(env.SUPABASE_URL+path,{...options,headers,redirect:"manual"});
+ if(res.status>=300&&res.status<400)fail(502,"DATABASE_REDIRECT_DENIED");
+ return res;
 }
 async function rows(env,jwt,path){
  const res=await call(env,jwt,path);
@@ -212,30 +217,6 @@ export default {async fetch(req,env){
      "access-control-max-age":"600"}}),origin,env);
   }
   const path=new URL(req.url).pathname;
-  if(req.method==="GET"&&path==="/health"&&new URL(req.url).searchParams.get("check")==="supabase"){
-   // Temporary external-connectivity probe: no user token, no personal data, read-only.
-   // Probe both redirect strategies because Cloudflare can reject a redirect with
-   // redirect:"error" before an HTTP response is returned.
-   const methods=[];
-   for(const redirect of ["error","manual","follow"]){
-    try{
-     const r=await fetch(env.SUPABASE_URL+"/auth/v1/health",{
-      method:"GET",headers:{"apikey":env.SUPABASE_PUBLISHABLE_KEY},redirect
-     });
-     const rawLocation=r.headers.get("location");
-     let redirectTarget="none";
-     if(rawLocation){
-      try{const url=new URL(rawLocation,env.SUPABASE_URL);redirectTarget=url.origin===env.SUPABASE_URL?"same-origin":url.hostname.endsWith(".supabase.co")?"supabase-host":"other-host"}catch{redirectTarget="invalid"}
-     }
-     methods.push({redirect,http:r.status,reachable:true,redirectTarget});
-    }catch(e){
-     // Only log a fixed JS error class; never log exception text, request or secrets.
-     console.warn("R2_SUPABASE_EGRESS_FAIL",{redirect,errorType:e instanceof Error?e.name:"unknown"});
-     methods.push({redirect,reachable:false,errorType:e instanceof Error?e.name:"unknown"});
-    }
-   }
-   return cors(response({supabaseNetworkProbe:methods}),origin,env);
-  }
   if(req.method==="GET"&&path==="/health"){
    try{
     await env.R2_BUCKET.head("__sa_healthcheck__/missing-object");
