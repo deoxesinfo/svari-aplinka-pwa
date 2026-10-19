@@ -32,7 +32,9 @@ function StoragePage() {
   const [address, setAddress] = useState("");
   const [job, setJob] = useState("");
   const [worker, setWorker] = useState("");
-  const [period, setPeriod] = useState<RetentionPeriod>("12m");
+  const [period, setPeriod] = useState<RetentionPeriod | "all">("all");
+  const [fromDate,setFromDate] = useState("");
+  const [toDate,setToDate] = useState("");
   const [tab, setTab] = useState<"active" | "trash">("active");
   const [selected, setSelected] = useState<string[]>([]);
   const [confirm, setConfirm] = useState<"trash" | "restore" | "purge" | null>(null);
@@ -66,12 +68,14 @@ function StoragePage() {
     (tab === "trash" ? !!p.trashedAt : !p.trashedAt) &&
     (!address || p.addressId === address) && (!job || p.jobId === job) &&
     (!worker || (workerName.get(p.jobId || "") || p.uploadedBy || "Nepriskirta") === worker) &&
-    (tab === "trash" || olderThan(p.createdAt, period))
-  ).sort((a,b) => b.createdAt.localeCompare(a.createdAt)), [rows, tab, address, job, worker, period, workerName]);
+    (tab === "trash" || period === "all" || olderThan(p.createdAt, period)) &&
+    (!fromDate || p.createdAt.slice(0,10) >= fromDate) &&
+    (!toDate || p.createdAt.slice(0,10) <= toDate)
+  ).sort((a,b) => b.createdAt.localeCompare(a.createdAt)), [rows, tab, address, job, worker, period, fromDate, toDate, workerName]);
 
   const chosen = filtered.filter(p => selected.includes(p.id));
   const bytes = chosen.reduce((sum,p) => sum + p.size + (p.thumbSize || 0), 0);
-  const olderCandidates = rows.filter(p => !p.trashedAt && olderThan(p.createdAt,period));
+  const olderCandidates = rows.filter(p => !p.trashedAt && (period === "all" || olderThan(p.createdAt,period)));
   const selectedAll = filtered.length > 0 && filtered.slice(0, 50).every(p => selected.includes(p.id));
   const preview: PhotoMeta[] = filtered.slice(0, visibleCount).filter(p => !p.trashedAt).map(p => ({
     id:p.id, addressId:p.addressId, jobId:p.jobId, createdAt:p.createdAt,
@@ -81,7 +85,7 @@ function StoragePage() {
     if (!org || !admin || !chosen.length) return;
     setBusy(true); setConfirm(null);
     try {
-      await storageAction(org,action,chosen.map(p => p.id),action === "trash" ? period : undefined);
+      await storageAction(org,action,chosen.map(p => p.id),action === "trash" && period !== "all" ? period : undefined);
       toast.success(action === "trash" ? "Nuotraukos perkeltos į šiukšlinę" :
         action === "restore" ? "Nuotraukos atkurtos" : "Nuotraukos galutinai pašalintos");
       await refreshCloudWorkspace();
@@ -138,13 +142,18 @@ function StoragePage() {
             <option value="">Visi darbuotojai</option>{workerValues.map(w=><option key={w}>{w}</option>)}
           </select></label>
         <label className="text-xs">Nuotraukų amžius
-          <select className={inputCls} value={period} onChange={e=>{setPeriod(e.target.value as RetentionPeriod);setSelected([]);}}>
+          <select className={inputCls} value={period} onChange={e=>{setPeriod(e.target.value as RetentionPeriod | "all");setSelected([]);}}>
+            <option value="all">Visos nuotraukos</option>
             {periods.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
           </select></label>
+        <label className="text-xs">Nuo datos
+          <input type="date" className={inputCls} value={fromDate} onChange={e=>{setFromDate(e.target.value);setSelected([]);}}/></label>
+        <label className="text-xs">Iki datos
+          <input type="date" className={inputCls} value={toDate} onChange={e=>{setToDate(e.target.value);setSelected([]);}}/></label>
       </div>
       {tab === "active" && <p className="text-sm text-muted-foreground">
         Iš viso pagal pasirinktą amžių: {olderCandidates.length}. Po filtrų: {filtered.length}.
-        Jokie failai neištrinami automatiškai.
+        Jokie failai neištrinami automatiškai. Trinimui reikia pasirinkti konkretų senumo laikotarpį.
       </p>}
       <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3 text-sm">
         <label className="flex items-center gap-2">
@@ -153,7 +162,7 @@ function StoragePage() {
           Pažymėti iki 50 matomų nuotraukų</label>
         <span className="text-muted-foreground">Pasirinkta: {chosen.length} · {bytesLabel(bytes)} (apytiksliai)</span>
         {tab==="active"?
-          <Button disabled={!chosen.length||busy} variant="destructive" onClick={()=>setConfirm("trash")}>
+          <Button disabled={!chosen.length||busy||period==="all"} variant="destructive" onClick={()=>setConfirm("trash")}>
             <Trash2 className="size-4"/> Perkelti į šiukšlinę</Button>
           :<>
             <Button disabled={!chosen.length||busy} variant="outline" onClick={()=>setConfirm("restore")}>
