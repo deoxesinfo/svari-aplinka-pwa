@@ -408,7 +408,7 @@ export default {async fetch(req,env){
   if(req.method==="GET"&&path==="/health"){
    try{
     await env.R2_BUCKET.head("__sa_healthcheck__/missing-object");
-    return cors(response({status:"ok",storage:"ready"}),origin,env);
+    return cors(response({status:"ok",storage:"ready",apiVersion:"2.3.14",storageStatsEnabled:true}),origin,env);
    }catch(e){
     console.error("R2_HEALTH_UNAVAILABLE",{errorType:e instanceof Error?e.name:"unknown"});
     return cors(response({status:"degraded",storage:"unavailable"},503),origin,env);
