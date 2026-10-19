@@ -1,6 +1,14 @@
 # Vienos nuotraukos R2 pilotas – saugiklių DRAFT (2026-10-19)
 
-**BŪSENA:** kodas GitHub DRAFT šakoje. NEDEPLOYINTAS. Dabartinis Cloudflare Worker vis dar su `ENABLE_UPLOADS=false` ir nėra gavęs šios naujos apsaugos. Supabase, PWA ir Cloudflare be naujo patvirtinimo NEKEISTI.
+**BŪSENA:** Worker Pilot Guards bandomoji versija `9b272de5` aktyvi Cloudflare su **įkėlimu IŠJUNGTU**; PR #4 lieka DRAFT, PWA ir Supabase nekeisti. `ENABLE_UPLOADS=false`, `PILOT_ENABLED` nenustatytas (išjungta). Būsimai vienos nuotraukos aktyvacijai privalomas atskiras patvirtinimas.
+
+## Pirmasis Pilot Guards Worker Deploy – 2026-10-19
+
+- Naudotojo Cloudflare ekrano nuotraukoje patvirtinta **aktyvi ir naujausia Worker versija `9b272de5`** su naujo Worker kodo 221 eilute ir „No problems have been detected“.
+- Prieš Deploy Cloudflare Settings ekrane patvirtinta `ENABLE_UPLOADS=false`; `PILOT_ENABLED` nebuvo nustatytas, todėl pagal `pilotConfiguration()` jis elgiasi kaip išjungtas.
+- `GET /` grąžina `{"error":"INVALID_ID"}` – pagal Worker maršrutizavimą tai numatytas atsakymas be `x-organization-id`, ne Deploy klaida.
+- **Tai nėra vienos nuotraukos įkėlimo aktyvavimas.** Jokio PWA Deploy, jokio Supabase pakeitimo, jokio nuotraukų įkėlimo ar DELETE.
+- Po Deploy būtina iš naujo paleisti išorinius Worker API read-only smoke testus (health 200, disabled POST 503, unauth GET 401, DELETE 403, CORS). Išorinės patikros įrodymas – atitinkamas GitHub Actions „R2 Live API read-only security probes“ paleidimas **po šio įrašo komito**.
 
 ## Kokie saugikliai paruošti
 - `ENABLE_UPLOADS` lieka absoliutus užraktas: jei ne `true`, `POST /v1/photos` atsako 503 `UPLOADS_DISABLED`.
