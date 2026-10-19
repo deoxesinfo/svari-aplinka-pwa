@@ -1,6 +1,7 @@
--- MIGRATION SOURCE for approved DB STAGE 1; Cloudflare and PWA remain DRAFT.
+-- ALREADY APPLIED to Supabase PWA 2026-10-19 (version 20261019074937); DO NOT REAPPLY.
+-- Cloudflare Worker and PWA deployments are still NOT approved.
 -- Švari Aplinka PWA (mbinhbascpeupnxrvidk).
--- DB STEP 1 approved 2026-10-19. Only new trigger/function, no data changes.
+-- DB STEP 1 approved and successfully applied. Only new trigger/function, no user data changes.
 -- Reviewed against live schema 2026-10-19: sa_photo_metadata has RLS SELECT,
 -- INSERT, UPDATE, but no DELETE; no existing custom trigger on photo metadata.
 BEGIN;
