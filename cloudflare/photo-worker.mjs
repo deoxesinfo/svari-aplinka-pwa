@@ -200,7 +200,7 @@ async function upload(request,env,jwt,org,pilot,userId,role){
  // Server-only session scoped to authenticated user and target job.
  // Geolocation supplied by browser can still be spoofed by the device user.
  const gpsProtected=Boolean(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired);
- const gpsData=gpsProtected?await gpsProof(env,value(fd,"gpsProof"),org,userId,jobId):null;
+ const gpsData=gpsProtected?await gpsProof(env,typeof fd.get("gpsProof")==="string"?fd.get("gpsProof"):"",org,userId,jobId):null;
  if(role==="worker"&&!gpsProtected)fail(409,"WORKER_GPS_REQUIRED");
  // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
  stage="R2_RESERVATION";
