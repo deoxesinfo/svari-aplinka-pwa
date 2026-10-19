@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { downloadR2Photo } from "./r2-photos";
+import { choosePhotoVariant, PHOTO_MAX_BYTES, THUMB_MAX_BYTES, type EncodedVariant } from "./photo-quality";
 
 const DB_NAME = "svari-aplinka-demo-photos";
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -147,21 +148,52 @@ async function encode(c: HTMLCanvasElement, q: number): Promise<Blob> {
   throw new Error("Nepavyko užkoduoti nuotraukos kaip WebP/JPEG");
 }
 
-/** Resize to max 1600px, convert to WebP (JPEG fallback) and make a 400px thumbnail. */
-export async function processImage(file: File) {
-  try {
-    const src = await loadSource(file);
-    const full = await encode(render(src, 1600), 0.82);
-    const thumbCanvas = render(src, 400);
-    const thumb = await encode(thumbCanvas, 0.7);
-    const w = Math.min(1600, src.w), h = src.h;
-    const scale = Math.min(1, 1600 / Math.max(src.w, src.h));
-    src.close?.();
-    return { full, thumb, width: Math.round(src.w * scale) || w, height: Math.round(h * scale) };
-  } catch (err) {
-    // Never store an uncompressed original. The error must be visible to the user,
-    // but never contains image contents or private information.
-    if(err instanceof Error&&/Nepavyko užkoduoti/.test(err.message))throw err;
-    throw new Error("Nepavyko atidaryti ar sumažinti šios nuotraukos telefone.");
+/**
+ * Preserve small surface defects without wasting R2 storage:
+ * JPEG 1600px safe iOS baseline, 2000px WebP if the browser supports it
+ * AND fits a 35% relative / 1.6MiB absolute budget. Otherwise try 1800px.
+ * Always enforce actual Worker 3MiB full + 512KiB thumbnail limits.
+ */
+export async function processImage(file:File){
+ let src:Source|undefined;
+ try{
+  src=await loadSource(file);
+  const edge=Math.max(src.w,src.h);
+  const variant=async(max:number,quality:number,webpPreferred=false):Promise<EncodedVariant>=>{
+   const canvas=render(src!,max);
+   let blob:Blob;
+   if(webpPreferred){
+    const webp=await canvasBlob(canvas,"image/webp",quality);
+    blob=webp?.type==="image/webp"?webp:await encode(canvas,quality);
+   }else{
+    blob=await encode(canvas,quality);
+   }
+   return {blob,width:canvas.width,height:canvas.height,maxEdge:Math.max(canvas.width,canvas.height)};
+  };
+  let baseline=await variant(1600,0.84);
+  // Large noisy phone images need a quality fallback, never original file bytes.
+  if(baseline.blob.size>PHOTO_MAX_BYTES)baseline=await variant(1600,0.70);
+  if(baseline.blob.size>PHOTO_MAX_BYTES)baseline=await variant(1600,0.56);
+  if(baseline.blob.size>PHOTO_MAX_BYTES)throw new Error("Nuotrauka per didelė net suspaudus");
+  let selected=baseline;
+  if(edge>1600){
+   // WebP usually preserves more pixels at lower byte cost. iPhone keeps JPEG
+   // fallback when WebP encoding is unsupported or returns an incorrect MIME.
+   const hi=await variant(2000,0.84,true);
+   if(hi.blob.size<=Math.min(Math.round(1.6*1024*1024),Math.max(300*1024,baseline.blob.size*1.35))){
+    selected=choosePhotoVariant(baseline,hi);
+   }else{
+    const medium=await variant(1800,0.84,true);
+    selected=choosePhotoVariant(baseline,hi,medium);
+   }
   }
+  const thumbCanvas=render(src,400);
+  let thumb=await encode(thumbCanvas,0.70);
+  if(thumb.size>THUMB_MAX_BYTES)thumb=await encode(thumbCanvas,0.5);
+  if(thumb.size>THUMB_MAX_BYTES)throw new Error("Miniatiūra per didelė net suspaudus");
+  return {full:selected.blob,thumb,width:selected.width,height:selected.height};
+ }catch(err){
+  if(err instanceof Error&&/per didelė|per didelė net|Nepavyko užkoduoti/.test(err.message))throw err;
+  throw new Error("Nepavyko atidaryti ar sumažinti šios nuotraukos telefone.");
+ }finally{src?.close?.();}
 }
