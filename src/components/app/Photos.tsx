@@ -129,7 +129,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const address=addresses.find(a=>a.id===addressId);
   const job=jobs.find(j=>j.id===jobId);
   const protectedByGps=Boolean(address?.gpsProtectionEnabled||job?.gpsRequired);
-  const pilotAllowed=!isCloudMode()||(CLOUD_R2_PHOTOS_READY && jobId===R2_PILOT_JOB_ID);
+  const pilotAllowed=!isCloudMode()||(CLOUD_R2_PHOTOS_READY && !!jobId && (import.meta.env.VITE_SA_R2_PHOTOS==="enabled" || jobId===R2_PILOT_JOB_ID));
   const proof=jobId?job?.gpsVerification:localProof;
   const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
   const gpsAllowed=Boolean(address&&hasConfirmedPin(address)&&
@@ -172,8 +172,8 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
     if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 15 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
-    // Pilot client allows one selection only; Worker/R2 immutable claim is the authoritative limit.
-    const list = incoming.slice(0, isCloudMode() ? Math.min(1,remaining) : remaining);
+    // R2 and the database enforce the quota. Batch up to 5 sequentially.
+    const list = incoming.slice(0, isCloudMode() ? Math.min(5,remaining) : remaining);
     if (!list.length) return;
     setBusy(list.length);
     let ok = 0;
@@ -213,7 +213,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
       <Button type="button" variant="outline" disabled className="min-h-14 whitespace-normal px-2 text-sm"><ImagePlus className="size-4"/> Įkelti</Button>
     </div>
     <p className="rounded-lg border p-3 text-xs text-muted-foreground">
-      Nuotraukų įkėlimas išjungtas. Ribotas bandymas leidžiamas tik vienam administratoriaus darbui atskirai patvirtintoje versijoje. GPS patikra vien to neatrakina.
+      Nuotraukų įkėlimas šioje programėlės versijoje išjungtas. GPS patikra vien to neatrakina.
     </p>
   </div>;
   return (
@@ -233,14 +233,14 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
         </Button>
       </div>
       <input ref={cam} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handle(e.target.files)} />
-      <input ref={gal} type="file" accept="image/*" multiple={!isCloudMode()} className="hidden" onChange={(e) => handle(e.target.files)} />
+      <input ref={gal} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handle(e.target.files)} />
       {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 15 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
       {busy > 0 ? (
         <p className="flex items-center gap-2 text-sm text-primary" role="status">
           <Loader2 className="size-4 animate-spin" /> Apdorojama nuotraukų: {busy}…
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos.</p>
+        <p className="text-xs text-muted-foreground">{isCloudMode()?"Nuotraukos sumažinamos iki 1600 px ir saugomos privačioje R2 saugykloje. Vienam darbui – iki 15 nuotraukų.":"Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos."}</p>
       )}
     </div>
   );
