@@ -294,18 +294,41 @@ async function patchStorageRow(env,jwt,org,row,data){
  const changed=res.ok?await res.json().catch(()=>[]):[];
  if(!Array.isArray(changed)||changed.length!==1)fail(503,"STORAGE_UPDATE_FAILED");
 }
-async function usageStorage(env,org){
- let cursor,bytes=0,objects=0;const folders=new Set(),prefix="sa/"+org+"/";
+async function usageStorage(env,jwt,org){
+ let cursor,bytes=0,objects=0;
+ const folders=new Set(),files=new Set(),prefix="sa/"+org+"/";
+ let completed=false;
  for(let page=0;page<150;page++){
   const batch=await env.R2_BUCKET.list({prefix,limit:1000,...(cursor?{cursor}:{})});
   if(!batch||!Array.isArray(batch.objects))fail(503,"R2_LIST_FAILED");
-  for(const object of batch.objects){objects++;bytes+=object.size;
-   const id=object.key.slice(prefix.length).split("/")[0];if(UUID.test(id))folders.add(id);}
-  if(!batch.truncated)return response({r2Bytes:bytes,r2Objects:objects,r2PhotoFolders:folders.size});
+  for(const object of batch.objects){
+   objects++;bytes+=object.size;files.add(object.key);
+   const id=object.key.slice(prefix.length).split("/")[0];
+   if(UUID.test(id))folders.add(id);
+  }
+  if(!batch.truncated){completed=true;break}
   if(!batch.cursor||batch.cursor===cursor)fail(503,"R2_CURSOR_FAILED");
   cursor=batch.cursor;
  }
- fail(503,"R2_LIST_LIMIT");
+ if(!completed)fail(503,"R2_LIST_LIMIT");
+ let photoRecords=0,missing=0;
+ for(let offset=0;offset<100000;offset+=500){
+  const batch=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,data"+
+    "&organization_id=eq."+org+"&limit=500&offset="+offset);
+  for(const photo of batch){
+   const keys=storageKeys(org,photo);
+   for(const key of keys){
+    if(!files.delete(key))missing++;
+   }
+   photoRecords++;
+  }
+  if(batch.length<500)break;
+  if(offset===99500)fail(503,"PHOTO_LIST_LIMIT");
+ }
+ return response({
+  r2Bytes:bytes,r2Objects:objects,r2PhotoFolders:folders.size,
+  photoRecords,missingR2Files:missing,unlinkedR2Files:files.size
+ });
 }
 async function editStorage(req,env,jwt,org,userId,action){
  if(env.ENABLE_STORAGE_ACTIONS!=="true")fail(503,"STORAGE_ACTIONS_DISABLED");
@@ -394,7 +417,7 @@ export default {async fetch(req,env){
   if(req.method==="GET"&&path==="/v1/storage/usage"){
    const {role}=await authenticated(env,req,org,false);
    if(role!=="admin")fail(403,"ADMIN_ONLY");
-   return cors(await usageStorage(env,org),origin,env);
+   return cors(await usageStorage(env,(await authenticated(env,req,org,false)).jwt,org),origin,env);
   }
   if(req.method==="POST"&&storageAction){
    const {jwt,userId,role}=await authenticated(env,req,org,false);
