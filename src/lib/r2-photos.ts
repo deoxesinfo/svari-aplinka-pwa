@@ -30,7 +30,7 @@ export async function downloadR2Photo(org:string,id:string,kind:"full"|"thumb"){
  }));
  return r.blob();
 }
-export type GpsSession={token:string;expiresAt:number;issuedAt:string;radius:number;mode:"gps_live"|"admin_override";distanceMeters:number|null;accuracyMeters:number|null};
+export type GpsSession={token:string;issuedAt:string;radius:number;mode:"gps_live"|"admin_override";distanceMeters:number|null;accuracyMeters:number|null};
 export async function verifyR2Gps(org:string,jobId:string,addressId:string,fix:{latitude:number;longitude:number;accuracy:number}):Promise<GpsSession>{
  const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/verify",{
   method:"POST",headers:{...await headers(org),"content-type":"application/json"},
