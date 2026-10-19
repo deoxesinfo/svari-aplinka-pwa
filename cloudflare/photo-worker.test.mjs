@@ -9,10 +9,11 @@ const CLAIM="__sa_pilot_guard__/one-photo-v1";
 test.beforeEach(()=>{files.delete(CLAIM)});
 const db=[],files=new Map();
 let role="admin",auth=true,gps=false,jobGps=false,nPhotos=0,saveOk=true;
-let transportFault="none";
+let transportFault="none",claimFault=false,scopeFault=false;
 const bucket={
  async put(k,b,opts){
    if(k===CLAIM){
+     if(claimFault)throw new TypeError("simulated R2 runtime failure");
      // Model conditional R2 PUT with If-None-Match:* as an atomic create.
      assert.equal(opts?.onlyIf?.get("If-None-Match"),"*");
      if(files.has(k))return null;
@@ -31,7 +32,7 @@ globalThis.fetch=async (url,init={})=>{
  if(p==="/auth/v1/user")return new Response(JSON.stringify(auth?{id:USER}:{}),{status:auth?200:401});
  if(p.endsWith("/sa_memberships"))return Response.json(role?[{role}]:[]);
  if(p.endsWith("/sa_addresses"))return Response.json([{id:ADDRESS,data:{gpsProtectionEnabled:gps}}]);
- if(p.endsWith("/sa_jobs"))return Response.json([{id:JOB,address_id:ADDRESS,data:{gpsRequired:jobGps}}]);
+ if(p.endsWith("/sa_jobs")){if(scopeFault)throw new TypeError("simulated scope transport failure");return Response.json([{id:JOB,address_id:ADDRESS,data:{gpsRequired:jobGps}}]);}
  if(p.endsWith("/sa_photo_metadata")&&init.method==="POST"){
    if(!saveOk)return new Response(null,{status:403});
    if(transportFault==="before")throw Error("simulated transport before database commit");
@@ -121,6 +122,26 @@ test("address-only pilot uploads are blocked until a safe database quota exists"
 test("oversized declared request refused",async()=>{
  const r=await worker.fetch(request("/v1/photos","POST",{"content-length":"99999999"},form()),env);
  assert.equal(r.status,413);
+});
+test("R2 reservation runtime failure is classified and leaves claim unused",async()=>{
+ claimFault=true;
+ const old=console.error; console.error=()=>{};
+ try{
+  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+  assert.equal(r.status,502);
+  assert.equal((await r.json()).error,"UPLOAD_R2_RESERVATION_FAILED");
+  assert.equal(files.has(CLAIM),false);
+ }finally{claimFault=false;console.error=old}
+});
+test("unexpected scope transport failure reports stage and creates no R2 claim",async()=>{
+ scopeFault=true;
+ const old=console.error; console.error=()=>{};
+ try{
+  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+  assert.equal(r.status,502);
+  assert.equal((await r.json()).error,"UPLOAD_DB_SCOPE_CHECK_FAILED");
+  assert.equal(files.has(CLAIM),false);
+ }finally{scopeFault=false;console.error=old}
 });
 test("successful upload writes two R2 objects plus metadata",async()=>{
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
