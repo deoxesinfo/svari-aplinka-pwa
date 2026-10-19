@@ -1,0 +1,16 @@
+# Švari Aplinka photo Worker V2.3.14
+# Matches the EXISTING private Worker/bucket; no new bucket or public binding.
+# Dashboard-managed Supabase connection settings remain unchanged.
+name = "svari-aplinka-photos"
+main = "cloudflare/photo-worker.mjs"
+compatibility_date = "2026-10-19"
+workers_dev = true
+keep_vars = true
+
+[vars]
+ENABLE_STORAGE_ACTIONS = "false"
+ENABLE_STORAGE_PURGE = "false"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "svari-aplinka-foto"
