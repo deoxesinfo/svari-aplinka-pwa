@@ -39,7 +39,13 @@ async function fetchPhotoMetadata(org:string):Promise<PhotoMeta[]>{
         id:p.id,addressId:p.address_id,jobId:p.job_id||undefined,createdAt:p.created_at,
         width:Number(d.width)||0,height:Number(d.height)||0,size:Number(d.size)||0,
         type:typeof d.type==="string"?d.type:"image/webp",
-        tag:d.tag==="pries"||d.tag==="po"||d.tag==="problema"?d.tag:undefined
+        tag:d.tag==="pries"||d.tag==="po"||d.tag==="problema"?d.tag:undefined,
+        proofMode:d.proofMode==="gps_live"||d.proofMode==="admin_override"?d.proofMode:undefined,
+        gpsVerifiedAt:typeof d.gpsVerifiedAt==="string"?d.gpsVerifiedAt:undefined,
+        gpsDistanceMeters:typeof d.gpsDistanceMeters==="number"?d.gpsDistanceMeters:undefined,
+        gpsAccuracyMeters:typeof d.gpsAccuracyMeters==="number"?d.gpsAccuracyMeters:undefined,
+        gpsRadiusMeters:typeof d.gpsRadiusMeters==="number"?d.gpsRadiusMeters:undefined,
+        gpsOverrideReason:typeof d.gpsOverrideReason==="string"?d.gpsOverrideReason:undefined
       });
     }
     if((data?.length||0)<500)return all;
