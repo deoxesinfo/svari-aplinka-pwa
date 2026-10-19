@@ -114,6 +114,6 @@ export async function saveCloudMutations(org:string,mutations:CloudMutation[]){
   if(touchedJobs){
     // Dispatch only after the DB confirmed the job mutation and created notifications.
     // Offline and scheduled cases will be handled by server-side scheduling.
-    void supabase.functions.invoke("sa-push-dispatch",{body:{action:"dispatch",organizationId:org}}).catch(()=>{});
+    void supabase.functions?.invoke?.("sa-push-dispatch",{body:{action:"dispatch",organizationId:org}})?.catch(()=>{});
   }
 }
