@@ -2,7 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { Plus, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAppState } from "@/lib/store";
+import { useAppState,isCloudMode } from "@/lib/store";
+import { getCloudRole } from "@/lib/cloud-sync";
 import { sortJobs } from "@/lib/scheduling";
 import { addDays, startOfWeek, todayISO } from "@/lib/dates";
 import { JOB_TYPE_LABEL } from "@/lib/types";
@@ -29,6 +30,7 @@ export function finishedInRange(completedAt: string | undefined, range: DateRang
 }
 function Jobs() {
   const { jobs, addresses } = useAppState();
+  const employee=isCloudMode()&&getCloudRole()==="worker";
   const [q, setQ] = useState("");
   const [type, setType] = useState("");
   const [view, setView] = useState<View>("today");
@@ -60,7 +62,7 @@ function Jobs() {
     : sortJobs(filtered,today);
   return <div>
     <PageHeader title="Darbai" subtitle={`Šiandien liko: ${pending.length} · Atlikta: ${done.length}`}
-      actions={<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>}/>
+      actions={!employee?<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>:undefined}/>
     <div className="mb-4 grid grid-cols-3 gap-2" role="tablist" aria-label="Darbų sąrašai">
       {tabs.map(t=><button key={t.id} type="button" role="tab" aria-selected={view===t.id}
         onClick={()=>setView(t.id)}
@@ -95,6 +97,6 @@ function Jobs() {
     <button type="button" className="mt-5 text-sm text-muted-foreground underline" onClick={()=>setView(view==="archive"?"all":"archive")}>
       {view==="archive"?"Grįžti į visus darbus":`Archyvas (${jobs.filter(j=>j.archivedAt&&!j.deletedAt).length})`}
     </button>
-    <JobFormDialog open={open} onOpenChange={setOpen}/>
+    {!employee&&<JobFormDialog open={open} onOpenChange={setOpen}/>}
   </div>;
 }
