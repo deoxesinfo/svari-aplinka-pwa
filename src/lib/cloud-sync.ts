@@ -96,7 +96,9 @@ export function cloudMutations(before:AppState,after:AppState,org:string):CloudM
   return [...deletes,...adds,...changes];
 }
 export async function saveCloudMutations(org:string,mutations:CloudMutation[]){
+  let touchedJobs=false;
   for(const change of mutations){
+    if(change.table==="sa_jobs")touchedJobs=true;
     if(change.kind==="add"){
       const {error}=await supabase.from(change.table).insert(change.row!);
       if(error)throw new Error(change.table+": "+error.message);
