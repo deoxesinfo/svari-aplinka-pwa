@@ -2,6 +2,7 @@ import {useCallback,useEffect,useState} from "react";
 import {Check,Clock3,Inbox,RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {getCloudOrganizationId} from "@/lib/store";
+import {PushSettings} from "@/components/app/PushSettings";
 import {acknowledgeStaffMessage,listStaffInbox,type InboxMessage} from "@/lib/staff-messages";
 
 export function StaffInbox(){
@@ -29,6 +30,7 @@ export function StaffInbox(){
   finally{setBusy("")}
  };
  return <section className="space-y-3">
+  <PushSettings/>
   <div className="flex items-center justify-between gap-2">
    <h2 className="text-lg font-bold">Gauti pranešimai</h2>
    <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
