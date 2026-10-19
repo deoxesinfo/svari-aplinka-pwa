@@ -25,7 +25,7 @@ CREATE POLICY sa_photos_worker_assigned_gps_insert ON public.sa_photo_metadata
 
 -- Work completion is a narrow RPC: employees cannot UPDATE all job JSON.
 -- The function never accepts a client-supplied completion timestamp.
-CREATE OR REPLACE FUNCTION public.sa_complete_assigned_job(p_org uuid,p_job uuid)
+CREATE OR REPLACE FUNCTION public.sa_complete_assigned_job(p_org uuid,p_job uuid,p_note text DEFAULT '')
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -45,6 +45,9 @@ BEGIN
         OR COALESCE(v_job.data->>'deletedAt','') <> '' THEN
     RAISE EXCEPTION 'JOB_NOT_ASSIGNED' USING ERRCODE='42501';
   END IF;
+  IF length(COALESCE(p_note,''))>1200 THEN
+    RAISE EXCEPTION 'NOTE_TOO_LONG' USING ERRCODE='22001';
+  END IF;
   IF v_job.data->>'status' = 'atlikta' THEN
     RETURN true;
   END IF;
@@ -57,16 +60,22 @@ BEGIN
   UPDATE public.sa_jobs
    SET data = jsonb_set(
      jsonb_set(
-      jsonb_set(data,'{status}','"atlikta"'::jsonb,true),
-      '{completedAt}',to_jsonb(to_char(v_stamp AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),true
+       jsonb_set(
+         jsonb_set(data,'{status}','"atlikta"'::jsonb,true),
+         '{completedAt}',to_jsonb(to_char(v_stamp AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),true
+       ),
+       '{history}',COALESCE(data->'history','[]'::jsonb)
+         || jsonb_build_array(jsonb_build_object('at',v_stamp,'text','Darbas užbaigtas darbuotojo GPS fotografavimo sesijoje')),true
      ),
-     '{history}',COALESCE(data->'history','[]'::jsonb)
-       || jsonb_build_array(jsonb_build_object('at',v_stamp,'text','Darbas užbaigtas darbuotojo GPS fotografavimo sesijoje')),true
+     '{comments}',COALESCE(data->'comments','[]'::jsonb)
+       || CASE WHEN length(trim(COALESCE(p_note,'')))>0
+         THEN jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'at',v_stamp,'text',trim(p_note)))
+         ELSE '[]'::jsonb END,true
    ),updated_at=v_stamp
    WHERE id=p_job AND organization_id=p_org;
   RETURN true;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.sa_complete_assigned_job(uuid,uuid) FROM PUBLIC,anon;
+REVOKE ALL ON FUNCTION public.sa_complete_assigned_job(uuid,uuid,text) FROM PUBLIC,anon;
 GRANT EXECUTE ON FUNCTION public.sa_complete_assigned_job(uuid,uuid) TO authenticated;
 COMMIT;
