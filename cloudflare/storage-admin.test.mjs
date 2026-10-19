@@ -7,7 +7,7 @@ const user="db9628fb-61e9-4fbd-a7b3-23f9c4909157";
 const id="30628c39-72d0-4ec8-9769-5d3bf68e3883";
 const imageBase="sa/"+org+"/"+id;
 const full=imageBase+"/full.webp",thumb=imageBase+"/thumb.webp";
-let role="admin", record, deleted, dbCalls;
+let role="admin", record, deleted, dbCalls, r2DeleteFails;
 const objects=new Map();
 const env={SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.co",
  SUPABASE_PUBLISHABLE_KEY:"public-test",ALLOWED_ORIGIN:"https://deoxesinfo.github.io",
@@ -15,7 +15,7 @@ const env={SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.co",
  R2_BUCKET:{
   async list({prefix}){return {objects:[...objects.entries()].filter(([key])=>key.startsWith(prefix)).map(([key,size])=>({key,size})),truncated:false};},
   async head(key){return objects.has(key)?{size:objects.get(key)}:null;},
-  async delete(keys){for(const key of Array.isArray(keys)?keys:[keys])objects.delete(key);}
+  async delete(keys){if(r2DeleteFails)return;for(const key of Array.isArray(keys)?keys:[keys])objects.delete(key);}
  }};
 const realFetch=globalThis.fetch;
 globalThis.fetch=async(url,options={})=>{
@@ -27,7 +27,7 @@ globalThis.fetch=async(url,options={})=>{
  if(u.pathname==="/rest/v1/rpc/sa_storage_finalize_photo_purge"){
   dbCalls++;
   const args=JSON.parse(options.body||"{}");
-  if(args.p_org!==org||args.p_photo!==id||!record?.data?.purgingAt)return Response.json(false);
+  if(args.p_org!==org||args.p_photo!==id||(!record?.data?.purgingAt||!record?.data?.trashedAt))return Response.json(false);
   deleted=true;record=null;return Response.json(true);
  }
  if(u.pathname.endsWith("/sa_photo_metadata")){
@@ -51,7 +51,7 @@ function req(route,method="GET",data){
  });
 }
 test.beforeEach(()=>{
- role="admin";deleted=false;dbCalls=0;objects.clear();
+ role="admin";deleted=false;dbCalls=0;r2DeleteFails=false;objects.clear();
  objects.set(full,8192);objects.set(thumb,1024);
  record={id,object_key:imageBase,organization_id:org,
   created_at:"2025-01-01T00:00:00.000Z",
@@ -129,6 +129,51 @@ test("purge requires typed confirmation and enabled purge flag",async()=>{
  let result=await worker.fetch(req("/v1/storage/purge","POST",{ids:[id]}),env);
  assert.equal(result.status,400);assert.equal(objects.size,2);
  result=await worker.fetch(req("/v1/storage/purge","POST",{ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,200,await result.clone().text());
+ assert.equal(deleted,true);assert.equal(objects.size,0);
+});
+test("admin can permanently remove today's selected photo without moving it to trash first",async()=>{
+ env.ENABLE_STORAGE_ACTIONS="true";env.ENABLE_STORAGE_PURGE="true";
+ record.created_at=new Date().toISOString();
+ const result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,200,await result.clone().text());
+ assert.equal(deleted,true);assert.equal(record,null);assert.equal(objects.size,0);
+});
+test("manual trash can hide today's photo without deleting R2",async()=>{
+ env.ENABLE_STORAGE_ACTIONS="true";record.created_at=new Date().toISOString();
+ const result=await worker.fetch(req("/v1/storage/trash","POST",{
+  ids:[id],period:"manual"}),env);
+ assert.equal(result.status,200,await result.clone().text());
+ assert.ok(record.data.trashedAt);assert.equal(objects.size,2);
+});
+test("permanent delete refuses a worker and leaves all objects intact",async()=>{
+ env.ENABLE_STORAGE_ACTIONS="true";env.ENABLE_STORAGE_PURGE="true";role="worker";
+ const result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,403);assert.equal(dbCalls,0);assert.equal(objects.size,2);
+});
+test("permanent delete refuses invalid scope and IDs, even with confirmation",async()=>{
+ env.ENABLE_STORAGE_ACTIONS="true";env.ENABLE_STORAGE_PURGE="true";
+ record.object_key="sa/"+org+"/wrong-photo";
+ let result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,409);assert.equal(objects.size,2);
+ record.object_key=imageBase;
+ result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id,id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,400);assert.equal(objects.size,2);
+});
+test("failed R2 removal blocks Supabase finalization and allows explicit retry",async()=>{
+ env.ENABLE_STORAGE_ACTIONS="true";env.ENABLE_STORAGE_PURGE="true";r2DeleteFails=true;
+ let result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
+ assert.equal(result.status,503);assert.equal(deleted,false);
+ assert.ok(record.data.trashedAt);assert.ok(record.data.purgingAt);
+ assert.equal(objects.size,2);
+ r2DeleteFails=false;
+ result=await worker.fetch(req("/v1/storage/purge","POST",{
+  ids:[id],confirmation:"SALINTI VISAM LAIKUI"}),env);
  assert.equal(result.status,200,await result.clone().text());
  assert.equal(deleted,true);assert.equal(objects.size,0);
 });

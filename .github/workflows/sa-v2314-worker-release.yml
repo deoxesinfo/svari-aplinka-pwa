@@ -1,4 +1,4 @@
-name: ŠA V2.3.14 Worker controlled release
+name: ŠA V2.3.17 Worker controlled release
 on:
   pull_request:
     branches: [main]
@@ -36,7 +36,7 @@ jobs:
   release:
     needs: verify
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'SA_V2314_WORKER_RELEASE_APPROVED')
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'SA_V2317_STORAGE_PURGE_APPROVED')
     steps:
       - uses: actions/checkout@v4
       - name: Check Cloudflare API token secret and account ID secret or variable
@@ -79,7 +79,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Deploy same private Worker using tested Wrangler CLI; preserve vars; deletion OFF
+      - name: Deploy same private Worker using tested Wrangler CLI; preserve vars; admin-only manual purge ON
         if: steps.creds.outputs.ready == 'true'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -97,10 +97,10 @@ jobs:
           for (let i=0;i<6;i++) {
             const response=await fetch(url,{signal:AbortSignal.timeout(12000),cache:'no-store'});
             result=await response.json();
-            if (response.status===200&&result.apiVersion==='2.3.14'&&result.storageStatsEnabled===true) break;
+            if (response.status===200&&result.apiVersion==='2.3.17'&&result.storageStatsEnabled===true) break;
             await new Promise(resolve=>setTimeout(resolve,2000));
           }
-          assert.equal(result?.apiVersion,'2.3.14','Live Worker still old version');
+          assert.equal(result?.apiVersion,'2.3.17','Live Worker still old version');
           assert.equal(result.storageStatsEnabled,true);
           const org='00000000-0000-4000-8000-000000000002';
           for(const path of ['/v1/storage/usage','/v1/photos/00000000-0000-4000-8000-000000000001/thumb']){
@@ -109,5 +109,5 @@ jobs:
             });
             assert.equal(r.status,401,'Private route must require JWT: '+path);
           }
-          console.log('PASS Worker V2.3.14 live; R2 route exists, anonymous photo/storage access denied. No data changed.');
+          console.log('PASS Worker V2.3.17 live; R2 route exists, anonymous photo/storage access denied. No data changed.');
           NODE

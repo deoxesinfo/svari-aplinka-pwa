@@ -110,11 +110,11 @@ export async function estimateStorageSelection(org: string, ids: string[]): Prom
 }
 export async function storageAction(
   org: string, action: "trash" | "restore" | "purge",
-  ids: string[], period?: RetentionPeriod
+  ids: string[], period?: RetentionPeriod | "manual"
 ) {
   if (ids.length === 0 || ids.length > 50 || new Set(ids).size !== ids.length)
     throw new Error("Vienu kartu pasirinkite 1–50 nuotraukų");
-  if (action === "trash" && (!period || !PERIODS.includes(period)))
+  if (action === "trash" && (!period || (period !== "manual" && !PERIODS.includes(period))))
     throw new Error("Pasirinkite senumo laikotarpį");
   return workerRequest<{ ok: boolean; changed: number }>(org, "/v1/storage/" + action,
     { ids, ...(period ? { period } : {}), ...(action === "purge" ? { confirmation: "SALINTI VISAM LAIKUI" } : {}) });
