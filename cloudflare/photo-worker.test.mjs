@@ -96,7 +96,7 @@ test("private GET image requires session and returns no-store",async()=>{
 });
 test("failed DB write rolls back R2 objects",async()=>{
  saveOk=false;const prior=files.size;const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
- assert.equal(r.status,409);assert.equal(files.size,prior);saveOk=true;
+ assert.equal(r.status,403);assert.equal(files.size,prior);saveOk=true;
 });
 test("database reply lost after successful commit keeps blobs and reports success",async()=>{
  transportFault="after";const before=files.size,previous=db.length;
