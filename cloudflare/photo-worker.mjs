@@ -415,9 +415,9 @@ export default {async fetch(req,env){
 
   const storageAction=/^\/v1\/storage\/(trash|restore|purge)$/.exec(path);
   if(req.method==="GET"&&path==="/v1/storage/usage"){
-   const {role}=await authenticated(env,req,org,false);
+   const {jwt,role}=await authenticated(env,req,org,false);
    if(role!=="admin")fail(403,"ADMIN_ONLY");
-   return cors(await usageStorage(env,(await authenticated(env,req,org,false)).jwt,org),origin,env);
+   return cors(await usageStorage(env,jwt,org),origin,env);
   }
   if(req.method==="POST"&&storageAction){
    const {jwt,userId,role}=await authenticated(env,req,org,false);
