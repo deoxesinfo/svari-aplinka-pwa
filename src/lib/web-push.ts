@@ -37,7 +37,7 @@ export async function enableDevicePush(org:string,key:string):Promise<void>{
  if(!sub.endpoint||!serialized.keys?.['p256dh']||!serialized.keys['auth'])throw new Error("Naršyklė negrąžino pilnos Push prenumeratos");
  const {error}=await supabase.from("sa_push_subscriptions").upsert({
   organization_id:org,user_id:user.id,endpoint:sub.endpoint,
-  p256dh:serialized.keys['p256dh'],auth:serialized.keys.auth,updated_at:new Date().toISOString()
+  p256dh:serialized.keys['p256dh'],auth:serialized.keys['auth'],updated_at:new Date().toISOString()
  },{onConflict:"endpoint"});
  if(error)throw new Error("Nepavyko išsaugoti įrenginio prenumeratos: "+error.message);
 }
