@@ -1,14 +1,12 @@
--- DRAFT ONLY / NOT APPLIED. Švari Aplinka PWA (mbinhbascpeupnxrvidk).
--- Requires separate explicit APPROVE before applying. No existing data changes here.
+-- MIGRATION SOURCE for approved DB STAGE 1; Cloudflare and PWA remain DRAFT.
+-- Švari Aplinka PWA (mbinhbascpeupnxrvidk).
+-- DB STEP 1 approved 2026-10-19. Only new trigger/function, no data changes.
 -- Reviewed against live schema 2026-10-19: sa_photo_metadata has RLS SELECT,
 -- INSERT, UPDATE, but no DELETE; no existing custom trigger on photo metadata.
 BEGIN;
 
--- Only active organization admins can remove private photo metadata.
-CREATE POLICY photos_admin_delete
-ON public.sa_photo_metadata
-FOR DELETE TO authenticated
-USING (private.sa_my_role(organization_id) = 'admin');
+-- DELETE RLS policy is deliberately UNCHANGED per 2026-10-19 user approval.
+-- This stage only creates a defensive 15-photos-per-job trigger.
 
 -- Serialize concurrent uploads for the same job by locking the parent job.
 -- This is needed in addition to the API's optimistic count check.
@@ -47,7 +45,7 @@ FOR EACH ROW EXECUTE FUNCTION private.sa_photo_insert_guard();
 COMMIT;
 
 -- Deployment prerequisites:
--- 1) SQL/migration review and database backup.
+-- 1) Targeted pre-change schema snapshot + reversible DDL saved; full managed backup status unverified.
 -- 2) Authenticated admin and non-admin RLS verification, concurrent upload tests.
--- 3) R2/DB reconciliation after partial failures; deletion requires its own safe flow.
+-- 3) R2/DB reconciliation after partial failures; deletion stays disabled.
 -- 4) GPS-protected uploads remain OFF until trusted server-side verification.
