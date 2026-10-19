@@ -116,6 +116,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         {!done && job.date < todayISO() && <Pill tone="danger">{overdueLabel(job.date, todayISO())}</Pill>}
         <Pill>{job.worker || "Nepriskirta"}</Pill>
         {job.managerId && <Pill>Vadybininkas: {people.find(p=>p.id===job.managerId)?.name || "Nežinomas"}</Pill>}
+        {job.priority === "auksta" && !done && <Pill tone="danger">Skubu</Pill>}
         {job.inspection === "patikrinta" && <Pill tone="success">Patikrinta</Pill>}
         {job.inspection === "taisyti" && <Pill tone="danger">Reikia taisyti</Pill>}
       </div>
@@ -171,10 +172,10 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         <section className="card-surface space-y-3 p-4 sm:p-5">
           <h3 className="text-base font-bold">Patikrinimas ir istorija</h3>
           {!employee&&<div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => { setInspection(job.id, "patikrinta"); toast.success("Darbas patikrintas"); }}>
+            <Button variant="outline" onClick={() => { if(setInspection(job.id, "patikrinta"))toast.success("Darbas pažymėtas patikrintu"); else toast.info("Darbas jau patikrintas"); }}>
               <ShieldCheck /> Patikrinta
             </Button>
-            <Button variant="outline" disabled={job.inspection === "taisyti"} onClick={() => setFixOpen(true)}>
+            <Button variant="outline" disabled={job.inspection === "taisyti" && !done && job.priority === "auksta"} onClick={() => setFixOpen(true)}>
               <AlertCircle /> Reikia taisyti
             </Button>
           </div>}
@@ -211,9 +212,9 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
     <Confirm open={finishOpen} onOpenChange={setFinishOpen}
       title="Užbaigti darbą?" text="Darbas bus perkeltas į skirtuką „Atlikti“. Darbuotojui būtina GPS patikra ir bent viena šio darbo nuotrauka."
       confirmLabel="Užbaigti darbą" onConfirm={complete} />
-    <Confirm open={fixOpen} onOpenChange={setFixOpen} title="Sukurti taisymo darbą?"
-      text="Bus sukurtas atskiras skubus darbas šiandienai." confirmLabel="Sukurti"
-      onConfirm={() => { setInspection(job.id, "taisyti"); toast.success("Sukurtas taisymo darbas"); }} />
+    <Confirm open={fixOpen} onOpenChange={setFixOpen} title="Atidaryti tą patį darbą taisymui?"
+      text="Naujas darbas nebus kuriamas. Šis darbas bus grąžintas į nebaigtus ir pažymėtas „Skubu“ bei „Reikia taisyti“. Ankstesnės nuotraukos, komentarai ir istorija liks." confirmLabel="Grąžinti taisymui"
+      onConfirm={() => { if(setInspection(job.id, "taisyti", draft.trim())){setDraft("");toast.success("Tas pats darbas grąžintas taisymui");}else toast.info("Darbas jau pažymėtas taisymui"); }} />
     <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
       text="Tik administratoriui. Darbas bus paslėptas, jo istorija liks išsaugota."
       onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pažymėtas ištrintu");onClose()}}).catch(()=>toast.error("Tik administratorius gali ištrinti darbą")); }} />
