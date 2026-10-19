@@ -1,0 +1,41 @@
+name: ŠA V2.3.19 messages strict typecheck and regressions
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/routes/pranesimai.tsx'
+      - 'src/components/app/StaffInbox.tsx'
+      - 'src/components/app/NotificationBell.tsx'
+      - 'src/lib/staff-messages.ts'
+      - 'src/test/staff-messages.test.ts'
+      - '.github/workflows/sa-v2319-messages-typecheck.yml'
+permissions:
+  contents: read
+jobs:
+  messages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Strict diagnostics for new staff messaging code
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/sa-tsc.log 2>&1
+          result=$?
+          set -e
+          if grep -Eq '^src/(components/app/(StaffInbox|NotificationBell)[.]tsx|lib/staff-messages[.]ts|routes/pranesimai[.]tsx|test/staff-messages[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-tsc.log; then
+            echo "::error::V2.3.19 message files have TypeScript diagnostics"
+            grep -E '^src/(components/app/(StaffInbox|NotificationBell)[.]tsx|lib/staff-messages[.]ts|routes/pranesimai[.]tsx|test/staff-messages[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-tsc.log
+            exit 1
+          fi
+          if [ "$result" -ne 0 ]; then
+            count=$(grep -c 'error TS' /tmp/sa-tsc.log || true)
+            echo "::warning::Existing unrelated TypeScript backlog: $count diagnostics"
+          fi
+      - name: Staff message regression tests
+        run: npm test -- src/test/staff-messages.test.ts
