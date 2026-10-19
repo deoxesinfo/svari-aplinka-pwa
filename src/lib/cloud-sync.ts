@@ -2,6 +2,7 @@ import { supabase } from "./supabase-client";
 import { fillAssignments } from "./work-assignments";
 import type { AppState } from "./store";
 import type { Address, Job, Person, PhotoMeta, RecruitmentLink } from "./types";
+import { newestPhotosFirst } from "./photo-sort";
 
 export type LiveCloudRole="admin"|"worker";
 let currentRole:LiveCloudRole="admin";
@@ -31,7 +32,7 @@ async function fetchPhotoMetadata(org:string):Promise<PhotoMeta[]>{
   for(let start=0;start<100000;start+=500){
     const {data,error}=await supabase.from("sa_photo_metadata")
       .select("id,address_id,job_id,created_at,data")
-      .eq("organization_id",org).order("id",{ascending:true}).range(start,start+499);
+      .eq("organization_id",org).order("created_at",{ascending:false}).order("id",{ascending:false}).range(start,start+499);
     if(error)throw new Error("Nepavyko nuskaityti nuotraukų");
     for(const p of data||[]){
       const d=(p.data||{}) as Record<string,unknown>;
@@ -49,7 +50,7 @@ async function fetchPhotoMetadata(org:string):Promise<PhotoMeta[]>{
         gpsOverrideReason:typeof d.gpsOverrideReason==="string"?d.gpsOverrideReason:undefined
       });
     }
-    if((data?.length||0)<500)return all;
+    if((data?.length||0)<500)return newestPhotosFirst(all);
   }
   throw new Error("Nuotraukų skaitymo limitas – reikia papildomo puslapiavimo");
 }
