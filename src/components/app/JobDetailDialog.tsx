@@ -66,8 +66,8 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
       addComment(job.id, draft.trim());
       setDraft("");
     }
-    setJobStatus(job.id, "atlikta");
-    toast.success("Darbas užbaigtas. Sąraše perkeltas į apačią.");
+    if(!setJobStatus(job.id, "atlikta"))return;
+    toast.success("Darbas užbaigtas – rasite skiltyje „Atlikti“.");
     onClose();
   };
 
