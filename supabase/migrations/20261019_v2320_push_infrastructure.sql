@@ -102,7 +102,7 @@ create trigger sa_queue_staff_push after insert on public.sa_staff_message_recei
 for each row execute function private.sa_queue_push_staff();
 
 -- Lease due outbox rows, never expose this operation to ordinary authenticated clients.
-create or replace function public.sa_push_claim_due(p_limit integer default 20)
+create or replace function public.sa_push_claim_due(p_limit integer default 20,p_org uuid default null)
 returns setof public.sa_push_outbox
 language plpgsql security definer set search_path='' as $$
 begin
@@ -113,6 +113,7 @@ begin
   with candidate as (
     select o.id from public.sa_push_outbox o
     where o.finished_at is null and o.scheduled_at<=now() and o.attempts<5
+      and (p_org is null or o.organization_id=p_org)
       and (o.leased_at is null or o.leased_at<now()-interval '3 minutes')
     order by o.scheduled_at,o.id limit greatest(1,least(p_limit,50))
     for update skip locked
@@ -136,8 +137,8 @@ begin
   return changed is not null;
 end;
 $$;
-revoke all on function public.sa_push_claim_due(integer) from public,anon,authenticated;
+revoke all on function public.sa_push_claim_due(integer,uuid) from public,anon,authenticated;
 revoke all on function public.sa_push_finish(uuid,text,text) from public,anon,authenticated;
-grant execute on function public.sa_push_claim_due(integer) to service_role;
+grant execute on function public.sa_push_claim_due(integer,uuid) to service_role;
 grant execute on function public.sa_push_finish(uuid,text,text) to service_role;
 commit;
