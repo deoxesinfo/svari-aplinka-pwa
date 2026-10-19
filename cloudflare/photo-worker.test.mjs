@@ -123,6 +123,29 @@ test("manager cannot upload pictures",async()=>{
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
  assert.equal(r.status,403,await r.clone().text());
 });
+test("V2.3.12: 2000px adaptive WebP accepted; 2001px rejected without writing",async()=>{
+ const before=db.length;
+ env.PILOT_ENABLED="false";
+ try{
+  const legal=form();
+  legal.set("width","2000");legal.set("height","1333");
+  const res=await worker.fetch(request("/v1/photos","POST",{},legal),env);
+  assert.equal(res.status,201,await res.clone().text());
+  assert.equal(db.at(-1).data.width,2000);
+  assert.equal(db.at(-1).data.height,1333);
+  const tall=form();tall.set("width","1375");tall.set("height","2000");
+  const allowed=await worker.fetch(request("/v1/photos","POST",{},tall),env);
+  assert.equal(allowed.status,201,await allowed.clone().text());
+  const oversized=form();oversized.set("width","2001");oversized.set("height","1400");
+  const rejected=await worker.fetch(request("/v1/photos","POST",{},oversized),env);
+  assert.equal(rejected.status,400);
+  assert.equal((await rejected.json()).error,"INVALID_DIMENSIONS");
+  const tooTall=form();tooTall.set("height","2001");
+  const rejectedTall=await worker.fetch(request("/v1/photos","POST",{},tooTall),env);
+  assert.equal(rejectedTall.status,400);
+  assert.equal(db.length,before+2,"invalid dimensions must never save metadata");
+ }finally{env.PILOT_ENABLED="true"}
+});
 test("GPS-protected address rejects missing fresh position",async()=>{
  gps=true;
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
