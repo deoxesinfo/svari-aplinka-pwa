@@ -8,6 +8,17 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.3.10",category:"funkcija",
+    title:"Šiandien / Atlikti / Visi darbai ir GPS fotografavimas be sesijos limito",
+    details:[
+      "Darbų skiltyje trys skirtukai: šiandienos neatlikti (įskaitant ankstesnių dienų nebaigtus), atlikti su datų filtrais, visi darbai; archyvas išsaugotas.",
+      "Užbaigti darbai automatiškai atsiranda „Atlikti“ skiltyje. Administratorius išlaiko visų darbų istoriją.",
+      "iOS/Android vietos leidimai tikrinami automatiškai; jei GPS išjungtas, pateikiami konkretūs nustatymų nurodymai.",
+      "GPS sesijų ir laikmačio nėra: kiekvienam GPS apsaugotam fotografavimui ir darbo užbaigimui prašoma naujų telefono koordinačių; serveris tikrina 30/50/100 m spindulį.",
+      "Darbuotojams ruošiama priskirtų darbų ir nuotraukų prieiga su Supabase RLS; tik administratoriui GPS išimtys su priežastimi.",
+      "R2 registruoja GPS patikros rezultatą ir serverio įkėlimo laiką, nekaupia žalių telefono koordinačių; tikslių dublikatų kontrolė SHA-256.",
+      "Naršyklės GPS ar kamera nėra 100% nuo techninio klastojimo apsaugotas įrodymas. Darbuotojų paskyros dar neįvestos, todėl darbuotojo telefono bandymas būtinas jas priskyrus."
+    ],commits:[]},
   {date:"2026-10-19",version:"V2.2.10",category:"taisymas",
     title:"R2 fotografavimo serverio klaidos taisymas",
     details:[
