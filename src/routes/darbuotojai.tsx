@@ -8,6 +8,7 @@ import { PageHeader, Field, Pill, Confirm, EmptyState, inputCls, textareaCls } f
 import { useAppState, addPerson, updatePerson, archivePerson, addRecruitmentLink, removeRecruitmentLink, type PersonInput } from "@/lib/store";
 import { todayISO } from "@/lib/dates";
 import { PersonAvatar, PersonAvatarEditor } from "@/components/app/PersonAvatar";
+import { PersonnelDateField } from "@/components/app/PersonnelDateField";
 import { useSchedules } from "@/components/app/AssignedSchedules";
 import { formatDays,travelModes } from "@/lib/work-assignments";
 import { Link } from "@tanstack/react-router";
@@ -82,7 +83,6 @@ function PeoplePage(){
     }
     const working=draft.status==="aktyvus"||draft.status==="atostogos";
     if(working && !draft.startedAt){toast.error("Nurodykite darbo pradžios datą");return}
-    if(draft.status==="nebedirba"&&!draft.endedAt){toast.error("Nurodykite darbo pabaigos datą");return}
     if(draft.startedAt&&draft.endedAt&&draft.status==="nebedirba"&&draft.endedAt<draft.startedAt){
       toast.error("Darbo pabaiga negali būti ankstesnė už pradžią");return;
     }
@@ -213,7 +213,7 @@ function PeoplePage(){
           <details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold"><History className="mr-2 inline size-4"/>Darbo laikotarpių istorija ({periods.length})</summary>
             <div className="mt-2 space-y-1 text-sm">
-              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt||"Pradžia nežinoma"} → {item.endedAt||"Dirba dabar"}</p>)
+              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt||"Pradžia nežinoma"} → {item.endedAt||(p.status==="nebedirba"?"Pabaigos data nenurodyta":"Dirba dabar")}</p>)
                 :<p className="text-muted-foreground">Istorinio įdarbinimo pradžios duomenų nėra – įveskite rankiniu būdu, kad jie nebūtų išgalvoti.</p>}
             </div>
           </details>
@@ -237,17 +237,20 @@ function PeoplePage(){
           <Field label="Būsena"><select className={inputCls} value={draft.status} onChange={e=>changeStatus(e.target.value as PersonStatus)}>
             {Object.entries(STATUSES).map(([value,label])=><option key={value} value={value}>{label}</option>)}
           </select></Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={editing?.status==="nebedirba"&&draft.status==="aktyvus"?"Naujo darbo laikotarpio pradžia":"Dirba nuo (data)"}>
-              <input type="date" className={inputCls} value={draft.startedAt||""} onChange={e=>setDraft(d=>({...d,startedAt:e.target.value||undefined}))}/></Field>
-            <Field label="Darbo pabaigos data">
-              <input type="date" className={inputCls} disabled={draft.status!=="nebedirba"} value={draft.status==="nebedirba"?draft.endedAt||"":""} onChange={e=>setDraft(d=>({...d,endedAt:e.target.value||undefined}))}/></Field>
+          <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+            <PersonnelDateField
+              label={editing?.status==="nebedirba"&&draft.status==="aktyvus"?"Naujo darbo laikotarpio pradžia":"Dirba nuo (data)"}
+              value={draft.startedAt} onChange={date=>setDraft(d=>({...d,startedAt:date}))}/>
+            <PersonnelDateField label="Darbo pabaigos data"
+              disabled={draft.status!=="nebedirba"}
+              value={draft.status==="nebedirba"?draft.endedAt:undefined}
+              onChange={date=>setDraft(d=>({...d,endedAt:date}))} clearable/>
           </div>
           {editing && <PersonAvatarEditor person={people.find(p=>p.id===editing.id)||editing}/>}
           {!editing && <p className="text-xs text-muted-foreground">Sukūrę profilį, nuotrauką galėsite pridėti jo redagavimo lange.</p>}
           {editing&&<p className="text-xs text-muted-foreground">Profilis sukurtas: {editing.createdAt.slice(0,10)}. Šios datos keisti negalima. Ankstesni darbo laikotarpiai lieka istorijoje.</p>}
           <Field label="Pastabos"><textarea className={textareaCls} rows={3} value={draft.notes} onChange={e=>setDraft(d=>({...d,notes:e.target.value}))} placeholder="Tik DEMO pastabos, be asmens duomenų"/></Field>
-          <DialogFooter><Button type="button" variant="outline" onClick={()=>setOpened(false)}>Atšaukti</Button><Button type="submit">Išsaugoti</Button></DialogFooter>
+          <DialogFooter className="flex flex-col-reverse gap-4 sm:flex-row sm:gap-4 sm:space-x-0 [&>button]:min-h-11"><Button type="button" variant="outline" onClick={()=>setOpened(false)}>Atšaukti</Button><Button type="submit">Išsaugoti</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
