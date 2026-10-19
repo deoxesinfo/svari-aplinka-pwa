@@ -41,6 +41,7 @@ function StoragePage() {
   const [purgePhrase, setPurgePhrase] = useState("");
   const [visibleCount, setVisibleCount] = useState(50);
   const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
+  const [verifiedSelection, setVerifiedSelection] = useState("");
   const [estimateError, setEstimateError] = useState("");
 
   async function reload() {
@@ -79,14 +80,14 @@ function StoragePage() {
   const approximateBytes = chosen.reduce((sum,p) => sum + p.size + (p.thumbSize || 0), 0);
   const estimateKey = chosen.map(p => p.id).sort().join(",");
   const exactBytes = estimate?.bytes;
-  const estimateReady = !!estimate && estimate.photos === chosen.length && estimate.missing === 0;
+  const estimateReady = !!estimate && verifiedSelection === estimateKey && estimate.photos === chosen.length && estimate.missing === 0;
   useEffect(() => {
-    setEstimate(null); setEstimateError("");
+    setEstimate(null); setVerifiedSelection(""); setEstimateError("");
     if (!org || !admin || !estimateKey) return;
     let active = true;
     const timeout = window.setTimeout(() => {
       void estimateStorageSelection(org, estimateKey.split(","))
-        .then(result => { if(active) setEstimate(result); })
+        .then(result => { if(active) { setEstimate(result); setVerifiedSelection(estimateKey); } })
         .catch(e => { if(active) setEstimateError(e instanceof Error ? e.message : "R2 patikra nepavyko"); });
     }, 250);
     return () => { active = false; window.clearTimeout(timeout); };
