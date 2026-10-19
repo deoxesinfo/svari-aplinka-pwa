@@ -10,6 +10,7 @@ import { currentLocation, locationPermissionState } from "@/lib/location-permiss
 import { getCloudRole } from "@/lib/cloud-sync";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
+import { newestPhotosFirst } from "@/lib/photo-sort";
 import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Confirm } from "./ui-bits";
@@ -113,14 +114,15 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
 
 export function PhotoGrid({ photos, empty = "Nuotraukų dar nėra." }: { photos: PhotoMeta[]; empty?: string }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const selected = photos.find(p => p.id === openId);
-  if (!photos.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
+  const ordered = newestPhotosFirst(photos);
+  const selected = ordered.find(p => p.id === openId);
+  if (!ordered.length) return <p className="text-sm text-muted-foreground">{empty}</p>;
   return (
     <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-6">
-        {photos.map((p) => <Thumb key={p.id} photo={p} onClick={() => setOpenId(p.id)} />)}
+        {ordered.map((p) => <Thumb key={p.id} photo={p} onClick={() => setOpenId(p.id)} />)}
       </div>
-      {selected && <Lightbox key={selected.id} photo={selected} gallery={photos} onNavigate={setOpenId} onClose={() => setOpenId(null)} />}
+      {selected && <Lightbox key={selected.id} photo={selected} gallery={ordered} onNavigate={setOpenId} onClose={() => setOpenId(null)} />}
     </>
   );
 }
