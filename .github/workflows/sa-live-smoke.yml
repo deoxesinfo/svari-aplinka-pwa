@@ -1,0 +1,46 @@
+name: SA V2.3.13 live read-only readiness
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/sa-live-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  public-endpoints:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify public PWA, Worker health and authentication without photo operations
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base='https://svari-aplinka-photos.svariaplinka-lt.workers.dev';
+          const placeholder='00000000-0000-4000-8000-000000000001';
+          const org='00000000-0000-4000-8000-000000000002';
+          const request=async(url,options={})=>{
+            const response=await fetch(url,{...options,signal:AbortSignal.timeout(15000),redirect:'error'});
+            return {status:response.status,body:await response.text()};
+          };
+          const page=await request('https://deoxesinfo.github.io/svari-aplinka-pwa/');
+          assert.equal(page.status,200,'GitHub Pages app must load');
+          assert.match(page.body,/Švari Aplinka|svari-aplinka|script/i,'Expected app shell');
+          console.log('PWA_PUBLIC',page.status);
+          const health=await request(base+'/health');
+          assert.equal(health.status,200,'Worker R2 health');
+          const ready=JSON.parse(health.body);
+          assert.equal(ready.status,'ok');
+          console.log('R2_HEALTH',ready.status);
+          const photo=await request(base+'/v1/photos/'+placeholder+'/thumb',{headers:{'x-organization-id':org}});
+          assert.equal(photo.status,401,'Unauthenticated private photo must be rejected');
+          console.log('PHOTO_JWT_REQUIRED',photo.status);
+          const storage=await request(base+'/v1/storage/usage',{headers:{'x-organization-id':org}});
+          assert.ok([401,404].includes(storage.status),'Storage endpoint must never expose data anonymously');
+          console.log('STORAGE_ENDPOINT',storage.status,storage.status===401?'DEPLOYED':'PENDING_WORKER_DEPLOY');
+          console.log('READ_ONLY_PROBES_COMPLETE: no logins, GPS samples, photos, metadata writes or deletes.');
+          NODE
