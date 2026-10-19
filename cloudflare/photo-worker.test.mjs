@@ -6,7 +6,11 @@ const ADDRESS="9d156bd9-6968-4e64-aa70-b5b72e5a3a79";
 const JOB="502171c4-c9e3-494d-a5db-6a847edc4e41";
 const USER="db9628fb-61e9-4fbd-a7b3-23f9c4909157";
 const CLAIM="__sa_pilot_guard__/one-photo-v1";
-test.beforeEach(()=>{files.delete(CLAIM)});
+test.beforeEach(()=>{
+ files.delete(CLAIM);
+ role="admin";auth=true;gps=false;jobGps=false;nPhotos=0;saveOk=true;
+ transportFault="none";claimFault=false;scopeFault=false;
+});
 const db=[],files=new Map();
 let role="admin",auth=true,gps=false,jobGps=false,nPhotos=0,saveOk=true;
 let transportFault="none",claimFault=false,scopeFault=false;
@@ -100,9 +104,21 @@ test("wrong pilot job rejected before reserving slot",async()=>{
 test("missing bearer denied",async()=>assert.equal((await worker.fetch(request("/v1/photos","POST",{authorization:""},form()),env)).status,401));
 test("origin outside allowlist denied",async()=>assert.equal((await worker.fetch(request("/v1/photos","POST",{origin:"https://evil.example"},form()),env)).status,403));
 test("expired session denied",async()=>{auth=false;assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,401);auth=true});
-test("non-admin denied upload",async()=>{role="worker";assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,403);role="admin"});
-test("GPS-protected address fails closed",async()=>{gps=true;assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,409);gps=false});
-test("GPS-protected job fails closed",async()=>{jobGps=true;assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,409);jobGps=false});
+test("manager cannot upload pictures",async()=>{
+ role="manager";
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,403,await r.clone().text());
+});
+test("GPS-protected address rejects missing fresh position",async()=>{
+ gps=true;
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,400);assert.equal((await r.json()).error,"GPS_POSITION_INVALID");
+});
+test("GPS-protected job rejects missing fresh position",async()=>{
+ jobGps=true;
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,400);assert.equal((await r.json()).error,"GPS_POSITION_INVALID");
+});
 test("15 photos limit enforced",async()=>{nPhotos=15;assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,409);nPhotos=0});
 test("invalid signature rejected",async()=>{
  const f=form();f.set("full",new Blob(["<html>garbage contents repeating"],{type:"image/webp"}),"wrong.webp");
@@ -220,56 +236,51 @@ test("production mode still blocks unauthenticated and non-admin uploads",async(
  try{
   const anon=await worker.fetch(request("/v1/photos","POST",{authorization:""},form()),env);
   assert.equal(anon.status,401);
-  role="worker";
+  role="manager";
   const ordinary=await worker.fetch(request("/v1/photos","POST",{},form()),env);
   assert.equal(ordinary.status,403);
  }finally{role="admin";env.PILOT_ENABLED="true"}
 });
-test("GPS server session requires login and validates 50m radius, accuracy",async()=>{
- env.PILOT_ENABLED="false";
- gps=true;jobGps=true;
- try{
-   const body=(latitude,longitude,accuracy)=>JSON.stringify({jobId:JOB,addressId:ADDRESS,latitude,longitude,accuracy});
-   const denied=await worker.fetch(request("/v1/gps/verify","POST",{authorization:"","content-type":"application/json"},body(54.9,23.9,10)),env);
-   assert.equal(denied.status,401);
-   const far=await worker.fetch(request("/v1/gps/verify","POST",{"content-type":"application/json"},body(55.1,23.9,10)),env);
-   assert.equal(far.status,409);assert.equal((await far.json()).error,"GPS_OUTSIDE_RADIUS");
-   const inaccurate=await worker.fetch(request("/v1/gps/verify","POST",{"content-type":"application/json"},body(54.9,23.9,75)),env);
-   assert.equal(inaccurate.status,409);
-   const good=await worker.fetch(request("/v1/gps/verify","POST",{"content-type":"application/json"},body(54.9,23.9,12)),env);
-   assert.equal(good.status,201,await good.clone().text());
-   const verified=await good.json();
-   assert.ok(verified.token);assert.equal(verified.radius,50);
-   const f=form();f.set("gpsProof",verified.token);
-   const uploaded=await worker.fetch(request("/v1/photos","POST",{},f),env);
-   assert.equal(uploaded.status,201,await uploaded.clone().text());
-   assert.equal(db.at(-1).data.proofMode,"gps_live");
-   assert.equal(db.at(-1).data.gpsRadiusMeters,50);
-   // A worker may upload only to their own assigned job with a valid session.
-   role="worker";
-   const workerVerify=await worker.fetch(request("/v1/gps/verify","POST",{"content-type":"application/json"},body(54.9,23.9,5)),env);
-   assert.equal(workerVerify.status,201,await workerVerify.clone().text());
-   const workerToken=(await workerVerify.json()).token;
-   const fw=form();fw.set("gpsProof",workerToken);
-   const another=await worker.fetch(request("/v1/photos","POST",{},fw),env);
-   // Same mock picture bytes, cross-user duplicate is intentionally rejected.
-   assert.equal(another.status,409);
-   role="admin";
- }finally{role="admin";gps=false;jobGps=false;env.PILOT_ENABLED="true"}
+test("stateless GPS check has no expiry and can be repeated hours apart",async()=>{
+ env.PILOT_ENABLED="false";jobGps=true;
+ const body=(latitude,longitude,accuracy)=>JSON.stringify({jobId:JOB,addressId:ADDRESS,latitude,longitude,accuracy});
+ const headers={"content-type":"application/json"};
+ let r=await worker.fetch(request("/v1/gps/verify","POST",{...headers,authorization:""},body(54.9,23.9,10)),env);
+ assert.equal(r.status,401);
+ r=await worker.fetch(request("/v1/gps/verify","POST",headers,body(55.1,23.9,10)),env);
+ assert.equal(r.status,409);assert.equal((await r.json()).error,"GPS_OUTSIDE_RADIUS");
+ r=await worker.fetch(request("/v1/gps/verify","POST",headers,body(54.9,23.9,75)),env);
+ assert.equal(r.status,409);assert.equal((await r.json()).error,"GPS_ACCURACY_LOW");
+ for(let i=0;i<2;i++){
+  r=await worker.fetch(request("/v1/gps/verify","POST",headers,body(54.9,23.9,9)),env);
+  assert.equal(r.status,200,await r.clone().text());
+  const data=await r.json();assert.equal(data.ok,true);assert.equal(data.radius,50);
+  assert.equal("token" in data,false);assert.equal("expiresAt" in data,false);
+ }
+ const f=form();f.set("gpsLatitude","54.9");f.set("gpsLongitude","23.9");f.set("gpsAccuracy","10");
+ const saved=await worker.fetch(request("/v1/photos","POST",{},f),env);
+ assert.equal(saved.status,201,await saved.clone().text());
+ assert.equal(db.at(-1).data.proofMode,"gps_live");
+ assert.equal(db.at(-1).data.gpsRadiusMeters,50);
+ role="worker";
+ const missing=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(missing.status,400);
+ const old=await worker.fetch(request("/v1/photos","POST",{},f),env);
+ assert.equal(old.status,409); // same JPEG/WebP bytes; exact-file duplicate
+ role="admin";
 });
-test("admin-only GPS exception requires an audit reason",async()=>{
- env.PILOT_ENABLED="false";
- try{
-  const bad=await worker.fetch(request("/v1/gps/override","POST",{"content-type":"application/json"},JSON.stringify({jobId:JOB,addressId:ADDRESS,reason:"short"})),env);
-  assert.equal(bad.status,400);
-  role="worker";
-  const blocked=await worker.fetch(request("/v1/gps/override","POST",{"content-type":"application/json"},JSON.stringify({jobId:JOB,addressId:ADDRESS,reason:"A valid reason more than fifteen characters"})),env);
-  assert.equal(blocked.status,403);
-  role="admin";
-  const good=await worker.fetch(request("/v1/gps/override","POST",{"content-type":"application/json"},JSON.stringify({jobId:JOB,addressId:ADDRESS,reason:"Šiame objekte GPS neveikia dėl sutrikimo."})),env);
-  assert.equal(good.status,201,await good.clone().text());
-  assert.equal((await good.json()).mode,"admin_override");
- }finally{role="admin";env.PILOT_ENABLED="true"}
+test("admin photo GPS override requires explicit reason and worker cannot override",async()=>{
+ env.PILOT_ENABLED="false";gps=true;
+ const invalid=form();invalid.set("gpsOverrideReason","too short");
+ const r=await worker.fetch(request("/v1/photos","POST",{},invalid),env);
+ assert.equal(r.status,400);
+ const valid=form();valid.set("gpsOverrideReason","GPS unavailable at this confirmed property");
+ let result=await worker.fetch(request("/v1/photos","POST",{},valid),env);
+ assert.equal(result.status,201,await result.clone().text());
+ assert.equal(db.at(-1).data.proofMode,"admin_override");
+ role="worker";
+ result=await worker.fetch(request("/v1/photos","POST",{},valid),env);
+ assert.equal(result.status,403);
 });
 test("unknown routes denied",async()=>assert.equal((await worker.fetch(request("/v1/buckets"),env)).status,404));
 test("OPTIONS preflight allowlist",async()=>{
