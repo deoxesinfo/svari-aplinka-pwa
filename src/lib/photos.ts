@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { downloadR2Photo } from "./r2-photos";
 
 const DB_NAME = "svari-aplinka-demo-photos";
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -64,13 +65,15 @@ export function isQuotaError(e: unknown): boolean {
   return n === "QuotaExceededError" || n === "NS_ERROR_DOM_QUOTA_REACHED";
 }
 
-export function usePhotoUrl(id: string, kind: "full" | "thumb") {
+export function usePhotoUrl(id: string, kind: "full" | "thumb", organizationId?: string | null) {
   const [url, setUrl] = useState<string | null>(null);
   const [missing, setMissing] = useState(false);
   useEffect(() => {
     let revoked = false;
     let u: string | null = null;
-    getPhotoBlob(id, kind)
+    setUrl(null);
+    setMissing(false);
+    (organizationId ? downloadR2Photo(organizationId,id,kind) : getPhotoBlob(id, kind))
       .then((b) => {
         if (revoked) return;
         if (!b) return setMissing(true);
@@ -82,7 +85,7 @@ export function usePhotoUrl(id: string, kind: "full" | "thumb") {
       revoked = true;
       if (u) URL.revokeObjectURL(u);
     };
-  }, [id, kind]);
+  }, [id, kind, organizationId]);
   return { url, missing };
 }
 
