@@ -9,6 +9,7 @@ import { loadCloudState,cloudMutations,saveCloudMutations,resetCloudRole } from 
 import { gpsResult,validGpsForCompletion } from "./gps";
 import type { GpsRadius } from "./gps";
 import { hasConfirmedPin } from "./address-gps";
+import { applyInspection, reopenWhenMadeUrgent } from "./job-followup";
 
 const KEY = "svari-aplinka-demo-v1";
 let backend:"demo"|"loading"|"cloud"="demo";
@@ -285,8 +286,12 @@ export function updateJob(id: string, input: JobInput) {
   if(address?.gpsProtectionEnabled)input={...input,gpsRequired:true};
   if(input.gpsRequired&&!hasConfirmedPin(address)){toast.error("Pirmiausia patvirtinkite objekto GPS vietą");return}
   const changed=previous?.addressId!==input.addressId||previous?.gpsRadiusMeters!==input.gpsRadiusMeters||previous?.gpsRequired!==input.gpsRequired;
-  const verified=changed?undefined:previous?.gpsVerification;
-  const override=changed?undefined:previous?.gpsOverride;
+  const reopening=previous?.status==="atlikta"&&input.status==="laukia";
+  const verified=changed||reopening?undefined:previous?.gpsVerification;
+  const override=changed||reopening?undefined:previous?.gpsOverride;
+  if(previous && reopenWhenMadeUrgent(previous,input.priority) && input.status==="atlikta"){
+    input={...input,status:"laukia"};
+  }
   if(input.gpsRequired&&input.status==="atlikta"&&previous?.status!=="atlikta"
     &&!validGpsForCompletion(verified,address||{})&&!override){toast.error("Prieš užbaigdami atlikite GPS patikrą");return}
   set((s) => ({
@@ -297,6 +302,8 @@ export function updateJob(id: string, input: JobInput) {
       if (j.status !== input.status) {
         n.completedAt = input.status === "atlikta" ? nowIso() : undefined;
         changes.push(`būsena: ${STATUS_LABEL[input.status]}`);
+        if(j.status==="atlikta"&&input.status==="laukia"&&j.completedAt)
+          changes.push(`ankstesnis užbaigimas: ${j.completedAt}`);
       }
       if (j.date !== input.date) changes.push(`data: ${input.date}`);
       if (j.worker !== input.worker) changes.push(`darbuotojas: ${input.worker}`);
@@ -368,28 +375,13 @@ export function overrideJobGPS(id:string,note:string):boolean{
     "Administratoriaus GPS išimtis: "+note.trim()):j)}));
   return true;
 }
-export function setInspection(id: string, inspection: Exclude<Inspection, null>, followupNote?: string) {
-  const job = state.jobs.find((j) => j.id === id);
-  if (!job) return;
-  set((s) => ({
-    jobs: s.jobs.map((j) => (j.id === id ? hist({ ...j, inspection }, `Patikrinimas: ${INSPECTION_LABEL[inspection]}`) : j)),
-  }));
-  if (inspection === "taisyti") {
-    const f = addJob(
-      {
-        addressId: job.addressId,
-        type: job.type === "patikrinimas" ? "laiptine" : job.type,
-        worker: job.worker,
-        date: todayISO(),
-        priority: "auksta",
-        instructions: `Taisymas po patikrinimo. ${followupNote ?? ""}\n\nPradinės instrukcijos: ${job.instructions}`.trim(),
-        status: "laukia",
-        notes: "",
-      },
-      { parentJobId: job.id, history: [{ at: nowIso(), text: "Sukurtas taisymo darbas po patikrinimo" }] },
-    );
-    return f;
-  }
+export function setInspection(id: string, inspection: Exclude<Inspection, null>, followupNote?: string): boolean {
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job)return false;
+  const next=applyInspection(job,inspection,nowIso(),todayISO(),followupNote||"");
+  if(!next)return false;
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?next:j)}));
+  return true;
 }
 
 export function addComment(id: string, text: string) {
