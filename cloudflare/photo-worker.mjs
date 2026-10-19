@@ -273,7 +273,7 @@ async function readImage(env,jwt,org,photoId,kind){
   "content-disposition":"inline","cache-control":NO_STORE,"x-content-type-options":"nosniff"}});
 }
 
-/* V2.3.13: admin-only storage controls. Flags are OFF unless explicitly enabled. */
+/* V2.3.17: admin-only manual photo cleanup. No automatic deletion or scheduled purge. */
 const STORAGE_PERIODS=new Set(["30d","6m","12m","24m"]);
 function storageCutoff(period,now=new Date()){
  if(!STORAGE_PERIODS.has(period))fail(400,"INVALID_PERIOD");
@@ -356,19 +356,19 @@ async function editStorage(req,env,jwt,org,userId,action){
  const ids=input?.ids;
  if(!Array.isArray(ids)||!ids.length||ids.length>50||new Set(ids).size!==ids.length)fail(400,"INVALID_IDS");
  ids.forEach(uuid);
- if(action==="trash"&&!STORAGE_PERIODS.has(input.period))fail(400,"INVALID_PERIOD");
+ if(action==="trash"&&input.period!=="manual"&&!STORAGE_PERIODS.has(input.period))fail(400,"INVALID_PERIOD");
  if(action==="purge"&&input.confirmation!=="SALINTI VISAM LAIKUI")fail(400,"CONFIRMATION_REQUIRED");
  const photoRows=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,created_at,data"+
   "&organization_id=eq."+org+"&id=in.("+ids.join(",")+")");
  if(photoRows.length!==ids.length)fail(409,"STORAGE_SELECTION_CHANGED");
  const found=new Map(photoRows.map(x=>[x.id,x]));
  const items=ids.map(id=>found.get(id));
- const limit=action==="trash"?Number(storageCutoff(input.period)):0;
+ const limit=action==="trash"&&input.period!=="manual"?Number(storageCutoff(input.period)):null;
  for(const row of items){
   const d=row.data||{},paths=storageKeys(org,row);
-  if(action==="trash"&&(d.trashedAt||d.purgingAt||!(Date.parse(row.created_at)<limit)))
+  if(action==="trash"&&(d.trashedAt||d.purgingAt||(limit!==null&&!(Date.parse(row.created_at)<limit))))
    fail(409,"STORAGE_CANDIDATE_CHANGED");
-  if(action!=="trash"&&!d.trashedAt)fail(409,"STORAGE_NOT_TRASHED");
+  if(action==="restore"&&!d.trashedAt)fail(409,"STORAGE_NOT_TRASHED");
   if(action==="restore"&&d.purgingAt)fail(409,"STORAGE_ALREADY_PURGING");
   if(action!=="purge")for(const path of paths)if(!await env.R2_BUCKET.head(path))fail(409,"R2_FILE_MISSING");
  }
@@ -379,9 +379,18 @@ async function editStorage(req,env,jwt,org,userId,action){
   else if(action==="restore"){
    const {trashedAt,trashedBy,...rest}=d;await patchStorageRow(env,jwt,org,row,rest);
   }else{
-   // Tombstone BEFORE touching R2. Retry purge if storage/DB fails.
-   if(!d.purgingAt)await patchStorageRow(env,jwt,org,row,{...d,purgingAt:new Date().toISOString(),purgingBy:userId});
-   await env.R2_BUCKET.delete(storageKeys(org,row));
+   // Direct admin purge supports today's uploads; hide before deleting R2.
+   // On failure, keep a tombstone so a manual retry can finish safely.
+   if(!d.purgingAt){
+    const now=new Date().toISOString();
+    await patchStorageRow(env,jwt,org,row,{...d,
+      trashedAt:d.trashedAt||now,trashedBy:d.trashedBy||userId,
+      purgingAt:now,purgingBy:userId});
+   }
+   const keys=storageKeys(org,row);
+   await env.R2_BUCKET.delete(keys);
+   // Never finalize metadata if either original or thumbnail survives.
+   for(const key of keys)if(await env.R2_BUCKET.head(key))fail(503,"R2_DELETE_NOT_CONFIRMED");
    const res=await call(env,jwt,"/rest/v1/rpc/sa_storage_finalize_photo_purge",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({p_org:org,p_photo:row.id})});
@@ -408,7 +417,7 @@ export default {async fetch(req,env){
   if(req.method==="GET"&&path==="/health"){
    try{
     await env.R2_BUCKET.head("__sa_healthcheck__/missing-object");
-    return cors(response({status:"ok",storage:"ready",apiVersion:"2.3.14",storageStatsEnabled:true}),origin,env);
+    return cors(response({status:"ok",storage:"ready",apiVersion:"2.3.17",storageStatsEnabled:true}),origin,env);
    }catch(e){
     console.error("R2_HEALTH_UNAVAILABLE",{errorType:e instanceof Error?e.name:"unknown"});
     return cors(response({status:"degraded",storage:"unavailable"},503),origin,env);
@@ -474,7 +483,7 @@ export default {async fetch(req,env){
    const {jwt}=await authenticated(env,req,org,false);
    return cors(await readImage(env,jwt,org,photoId,m[2]),origin,env);
   }
-  // No public list or delete endpoints; DELETE RLS policy remains unchanged.
+  // No public list or DELETE endpoint; only confirmed admin POST /v1/storage/purge.
   // Image GET uses the caller's JWT; Supabase RLS decides visibility.
   if(req.method==="DELETE"&&path.startsWith("/v1/photos/"))fail(403,"DELETE_DISABLED");
   fail(404,"UNKNOWN_ROUTE");
