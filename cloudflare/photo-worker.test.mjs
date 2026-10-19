@@ -44,7 +44,11 @@ globalThis.fetch=async (url,init={})=>{
    if(idQuery)return Response.json(db.filter(row=>row.id===idQuery.slice(3)).map(row=>({id:row.id})));
    return Response.json(Array.from({length:nPhotos},(_,i)=>({id:String(i)})));
  }
- if(p.endsWith("/sa_photo_metadata"))return Response.json(db);
+ if(p.endsWith("/sa_photo_metadata")){
+   const idQuery=u.searchParams.get("id");
+   const result=idQuery?db.filter(row=>row.id===idQuery.slice(3)):db;
+   return Response.json(result);
+ }
  throw Error("unexpected Supabase request "+p);
 };
 function request(path,method="GET",headers={},body){
