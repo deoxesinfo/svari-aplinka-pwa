@@ -2,12 +2,16 @@
  * Švari Aplinka private photos API — DRAFT, NOT DEPLOYED.
  * R2 binding: R2_BUCKET
  * Text vars: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, ALLOWED_ORIGIN, ENABLE_UPLOADS
+ * One-photo pilot (DRAFT, OFF): PILOT_ENABLED, PILOT_ORG_ID, PILOT_USER_ID, PILOT_JOB_ID
  * Never use a service_role token or public bucket.
  */
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
 const MAX_REQUEST=7*1024*1024,MAX_IMAGE=3*1024*1024,MAX_THUMB=512*1024;
 const TAGS=new Set(["pries","po","problema"]);
 const NO_STORE="private, no-store, max-age=0";
+// One global, immutable marker per pilot version: NOT automatically deleted on errors.
+// R2 conditional PUT uses If-None-Match:* to atomically permit only ONE upload attempt.
+const PILOT_CLAIM_KEY="__sa_pilot_guard__/one-photo-v1";
 class Problem extends Error{constructor(status,code){super(code);this.status=status;this.code=code}}
 function fail(status,code){throw new Problem(status,code)}
 function response(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":NO_STORE,"x-content-type-options":"nosniff","referrer-policy":"no-referrer"}})}
@@ -43,7 +47,32 @@ async function authenticated(env,request,org,write){
  const membership=await one(env,jwt,"/rest/v1/sa_memberships?select=role&organization_id=eq."+org+"&user_id=eq."+user.id+"&active=eq.true&limit=1");
  if(!membership)fail(403,"NO_MEMBERSHIP");
  if(write&&membership.role!=="admin")fail(403,"ADMIN_ONLY");
- return jwt; // every subsequent Supabase request uses this JWT => RLS applies
+ return {jwt,userId:user.id}; // every subsequent Supabase request uses this JWT => RLS applies
+}
+function pilotConfiguration(env){
+ if(env.PILOT_ENABLED!=="true" ||
+    !UUID.test(env.PILOT_ORG_ID||"") ||
+    !UUID.test(env.PILOT_USER_ID||"") ||
+    !UUID.test(env.PILOT_JOB_ID||""))fail(503,"PILOT_NOT_CONFIGURED");
+ return {organizationId:env.PILOT_ORG_ID,userId:env.PILOT_USER_ID,jobId:env.PILOT_JOB_ID};
+}
+function restrictPilot(org,userId,jobId,pilot){
+ if(org!==pilot.organizationId || userId!==pilot.userId || jobId!==pilot.jobId)
+  fail(403,"PILOT_SCOPE_DENIED");
+}
+async function claimOneAttempt(env){
+ // R2 honors If-None-Match:* conditional write atomically.
+ // Never rely on an R2 HEAD/GET followed by unconditional PUT (race condition).
+ // Fail CLOSED if the platform returns null, false, or throws.
+ const claimed=await env.R2_BUCKET.put(
+  PILOT_CLAIM_KEY,"claimed",{
+   onlyIf:new Headers({"If-None-Match":"*"}),
+   httpMetadata:{contentType:"text/plain"}
+  }
+ );
+ if(!claimed)fail(409,"PILOT_ALREADY_USED");
+ // Never delete this guard (even after partial failure). Re-arming requires
+ // an explicitly reviewed new pilot version with a NEW immutable key.
 }
 async function limitedForm(req){
  const type=req.headers.get("content-type")||"";
@@ -81,7 +110,7 @@ async function checkFile(blob,limit){
 }
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
-async function upload(request,env,jwt,org){
+async function upload(request,env,jwt,org,pilot){
  const fd=await limitedForm(request);
  const addressId=uuid(value(fd,"addressId"));
  const jr=fd.get("jobId");
@@ -89,6 +118,7 @@ async function upload(request,env,jwt,org){
  // Phase 1 requires a job: DB has transactional 15-photo guard only for job photos.
  // Address-only photos need a separately approved server-side quota/lock.
  if(!jobId)fail(409,"JOB_REQUIRED_FOR_PILOT");
+ if(jobId!==pilot.jobId)fail(403,"PILOT_SCOPE_DENIED");
  const tag=value(fd,"tag",16);if(!TAGS.has(tag))fail(400,"INVALID_TAG");
  const width=Number(value(fd,"width",8)),height=Number(value(fd,"height",8));
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>1600||height>1600)fail(400,"INVALID_DIMENSIONS");
@@ -104,6 +134,8 @@ async function upload(request,env,jwt,org){
  }
  // Never trust GPS confirmation from browser/localStorage/JWT claims.
  if(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired)fail(409,"SERVER_GPS_REQUIRED");
+ // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
+ await claimOneAttempt(env);
  const photoId=crypto.randomUUID(),key="sa/"+org+"/"+photoId;
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
   data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag}};
@@ -170,13 +202,16 @@ export default {async fetch(req,env){
   const org=orgFrom(req);
   if(req.method==="POST"&&path==="/v1/photos"){
    if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
-   const jwt=await authenticated(env,req,org,true);
-   return cors(await upload(req,env,jwt,org),origin,env);
+   const pilot=pilotConfiguration(env); // fail closed if enabled without all pilot guards
+   if(org!==pilot.organizationId)fail(403,"PILOT_SCOPE_DENIED");
+   const {jwt,userId}=await authenticated(env,req,org,true);
+   if(userId!==pilot.userId)fail(403,"PILOT_SCOPE_DENIED");
+   return cors(await upload(req,env,jwt,org,pilot),origin,env);
   }
   const m=/^\/v1\/photos\/([0-9a-f-]{36})\/(full|thumb)$/.exec(path);
   if(m&&req.method==="GET"){
    const photoId=uuid(m[1]);
-   const jwt=await authenticated(env,req,org,false);
+   const {jwt}=await authenticated(env,req,org,false);
    return cors(await readImage(env,jwt,org,photoId,m[2]),origin,env);
   }
   // No public list or delete endpoints; DELETE RLS policy remains unchanged.
