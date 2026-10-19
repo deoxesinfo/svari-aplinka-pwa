@@ -212,6 +212,25 @@ export default {async fetch(req,env){
      "access-control-max-age":"600"}}),origin,env);
   }
   const path=new URL(req.url).pathname;
+  if(req.method==="GET"&&path==="/health"&&new URL(req.url).searchParams.get("check")==="supabase"){
+   // Temporary external-connectivity probe: no user token, no personal data, read-only.
+   // Probe both redirect strategies because Cloudflare can reject a redirect with
+   // redirect:"error" before an HTTP response is returned.
+   const methods=[];
+   for(const redirect of ["error","follow"]){
+    try{
+     const r=await fetch(env.SUPABASE_URL+"/auth/v1/health",{
+      method:"GET",headers:{"apikey":env.SUPABASE_PUBLISHABLE_KEY},redirect
+     });
+     methods.push({redirect,http:r.status,reachable:true});
+    }catch(e){
+     // Only log a fixed JS error class; never log exception text, request or secrets.
+     console.warn("R2_SUPABASE_EGRESS_FAIL",{redirect,errorType:e instanceof Error?e.name:"unknown"});
+     methods.push({redirect,reachable:false,errorType:e instanceof Error?e.name:"unknown"});
+    }
+   }
+   return cors(response({supabaseNetworkProbe:methods}),origin,env);
+  }
   if(req.method==="GET"&&path==="/health"){
    try{
     await env.R2_BUCKET.head("__sa_healthcheck__/missing-object");
