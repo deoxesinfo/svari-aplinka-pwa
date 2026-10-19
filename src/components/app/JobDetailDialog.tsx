@@ -13,7 +13,8 @@ import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink } from "./MapsLink";
 import { useAppState, addComment, setJobStatus, setInspection, deleteJob, isCloudMode, getCloudOrganizationId, refreshCloudWorkspace } from "@/lib/store";
 import { getCloudRole } from "@/lib/cloud-sync";
-import { completeR2AssignedJob } from "@/lib/r2-photos";
+import { completeR2AssignedJob, verifyR2Gps } from "@/lib/r2-photos";
+import { currentLocation } from "@/lib/location-permission";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { currentAdminOrg } from "@/lib/work-assignments";
 import { fmtDateTime, fmtLong, overdueLabel, todayISO } from "@/lib/dates";
@@ -41,7 +42,6 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
   const [finishOpen, setFinishOpen] = useState(false);
   const [fixOpen, setFixOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [gpsProofToken,setGpsProofToken]=useState<string|null>(null);
   const employee=isCloudMode()&&getCloudRole()==="worker";
 
   if (!job) {
@@ -69,9 +69,9 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
     if(employee){
       const org=getCloudOrganizationId();
       if(!org){toast.error("Nepatvirtinta organizacija");return}
-      if(!gpsProofToken){toast.error("Pirmiausia patvirtinkite GPS ir nufotografuokite darbą");return}
       try{
-        await completeR2AssignedJob(org,job.id,job.addressId,gpsProofToken,draft.trim());
+        const gps=await currentLocation(); // fresh at completion; no countdown or reused GPS session
+        await completeR2AssignedJob(org,job.id,job.addressId,gps,draft.trim());
         await refreshCloudWorkspace();
         setDraft("");
         toast.success("Darbas užbaigtas ir perkeltas į „Atlikti“.");
@@ -79,8 +79,18 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
       }catch(e){toast.error(e instanceof Error?e.message:"Darbo užbaigti nepavyko",{duration:10000})}
       return;
     }
+    let gpsVerified=false;
+    if(isCloudMode()&&(job.gpsRequired||address?.gpsProtectionEnabled)&&!job.gpsOverride){
+      try{
+        const org=getCloudOrganizationId();
+        if(!org)throw Error("Organizacija nepatvirtinta");
+        const gps=await currentLocation();
+        await verifyR2Gps(org,job.id,job.addressId,gps);
+        gpsVerified=true;
+      }catch(e){toast.error(e instanceof Error?e.message:"GPS patikra nepavyko");return}
+    }
     if (draft.trim()) {addComment(job.id,draft.trim());setDraft("")}
-    if(!setJobStatus(job.id,"atlikta"))return;
+    if(!setJobStatus(job.id,"atlikta",gpsVerified))return;
     toast.success("Darbas užbaigtas – rasite skiltyje „Atlikti“.");
     onClose();
   };
@@ -136,8 +146,8 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
 
         <section className="card-surface space-y-3 p-4 sm:p-5">
           <h3 className="flex items-center gap-2 text-base font-bold"><Camera className="size-5 text-primary"/> Nuotraukos · {related.length}/15</h3>
-          <p className="text-xs text-muted-foreground">Pasirinkite žymą „Prieš“, „Po“ arba „Problema“. Nuotraukos WebP formatu saugomos tik šio įrenginio naršyklėje.</p>
-          {address && <PhotoUploader addressId={address.id} jobId={job.id} onGpsProof={setGpsProofToken} />}
+          <p className="text-xs text-muted-foreground">Pasirinkite žymą „Prieš“, „Po“ arba „Problema“. Nuotraukos saugomos privačioje saugykloje (prisijungus) arba tik naršyklėje (DEMO).</p>
+          {address && <PhotoUploader addressId={address.id} jobId={job.id} />}
           <PhotoGrid photos={related} empty="Nuotraukų dar nėra." />
         </section>
       </div>
