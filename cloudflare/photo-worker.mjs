@@ -341,10 +341,11 @@ async function editStorage(req,env,jwt,org,userId,action){
    // Tombstone BEFORE touching R2. Retry purge if storage/DB fails.
    if(!d.purgingAt)await patchStorageRow(env,jwt,org,row,{...d,purgingAt:new Date().toISOString(),purgingBy:userId});
    await env.R2_BUCKET.delete(storageKeys(org,row));
-   const res=await call(env,jwt,"/rest/v1/sa_photo_metadata?organization_id=eq."+org+"&id=eq."+row.id,
-    {method:"DELETE",headers:{"prefer":"return=representation"}});
-   const deleted=res.ok?await res.json().catch(()=>[]):[];
-   if(!Array.isArray(deleted)||deleted.length!==1)fail(503,"STORAGE_PURGE_METADATA_PENDING");
+   const res=await call(env,jwt,"/rest/v1/rpc/sa_storage_finalize_photo_purge",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({p_org:org,p_photo:row.id})});
+   if(!res.ok||await res.json().catch(()=>false)!==true)
+    fail(503,"STORAGE_PURGE_METADATA_PENDING");
   }
   changed++;
  }
