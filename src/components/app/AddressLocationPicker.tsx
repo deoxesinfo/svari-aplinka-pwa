@@ -14,13 +14,33 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
  const markerSetRef=useRef<((lat:number,lon:number)=>void)|null>(null);
  const [open,setOpen]=useState(false);
  const [busy,setBusy]=useState(false);
- const [candidates,setCandidates]=useState<Result[]>([]);
+ const [candidates,setCandidates]=useState<AddressCandidate[]>([]);
  const [error,setError]=useState("");
+ const [locating,setLocating]=useState(false);
+ const [accuracy,setAccuracy]=useState<number|null>(null);
+ const [locationError,setLocationError]=useState("");
+ const currentQuery=useRef(addressReference(value.street,value.city));
+ const lookupRequest=useRef(0);
+ const locationRequest=useRef(0);
+ // Invalidate pending third-party responses when the address changes or the dialog unmounts.
+ useEffect(()=>{
+   const next=addressReference(value.street,value.city);
+   if(next===currentQuery.current)return;
+   currentQuery.current=next;
+   lookupRequest.current++;
+   locationRequest.current++;
+   setBusy(false);setLocating(false);setError("");setLocationError("");
+   setCandidates([]);setAccuracy(null);
+ },[value.street,value.city]);
+ useEffect(()=>()=>{lookupRequest.current++;locationRequest.current++},[]);
  const selected=value.latitude!==undefined&&value.longitude!==undefined;
  const confirmed=hasConfirmedPin(value);
- const updatePin=(lat:number,lon:number)=>{
+ const updatePin=(lat:number,lon:number,deviceAccuracy:number|null=null)=>{
+   // A map click, search result, or phone location only proposes a pin; never confirms it.
    onChange({latitude:+lat.toFixed(7),longitude:+lon.toFixed(7),gpsLocationConfirmed:false,gpsReference:undefined});
+   setAccuracy(deviceAccuracy);
    markerSetRef.current?.(lat,lon);
+   mapRef.current?.setView([lat,lon],18);
  };
  useEffect(()=>{
    if(!open||!node.current)return;
@@ -65,10 +85,11 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
    if(busy)return;
    const query=addressReference(value.street,value.city);
    currentQuery.current=query;
+   const request=++lookupRequest.current;
    setBusy(true);setError("");setCandidates([]);
    try{
      const found=await findAddressCandidates(value.street,value.city);
-     if(currentQuery.current!==query)return;
+     if(currentQuery.current!==query||request!==lookupRequest.current)return;
      setCandidates(found);
      if(!found.length){
        setError("Adresas nerastas. Patikrinkite rašybą arba ranka pasirinkite namą žemėlapyje.");
@@ -79,18 +100,48 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
        // even then a human must tap the confirmation button to enable GPS.
        if(found.length===1&&best.exactHouse)updatePin(best.lat,best.lon);
      }
-   }catch(e){if(currentQuery.current===query)setError(e instanceof Error?e.message:"Paieškos klaida.");}
-   finally{if(currentQuery.current===query)setBusy(false);}
+   }catch(e){if(currentQuery.current===query&&request===lookupRequest.current)setError(e instanceof Error?e.message:"Paieškos klaida.");}
+   finally{if(currentQuery.current===query&&request===lookupRequest.current)setBusy(false);}
+ };
+ const locateOnPhone=()=>{
+   setLocationError("");
+   if(typeof navigator==="undefined"||!navigator.geolocation){
+     setLocationError("Šiame įrenginyje GPS vieta nepasiekiama. Galite pažymėti namą žemėlapyje.");return;
+   }
+   const request=++locationRequest.current;
+   const query=addressReference(value.street,value.city);
+   setLocating(true);
+   // No background tracking: one-time reading ONLY after a direct user tap.
+   navigator.geolocation.getCurrentPosition(
+     position=>{
+       if(locationRequest.current!==request||query!==currentQuery.current)return;
+       setLocating(false);
+       const {latitude,longitude,accuracy:meters}=position.coords;
+       if(!Number.isFinite(latitude)||!Number.isFinite(longitude)||!Number.isFinite(meters)){
+         setLocationError("Telefono GPS grąžino netinkamą vietą. Pasirinkite namą ranka.");return;
+       }
+       updatePin(latitude,longitude,Math.max(0,meters));
+       setError("");
+     },
+     geoError=>{
+       if(locationRequest.current!==request||query!==currentQuery.current)return;
+       setLocating(false);
+       const message=geoError.code===1
+         ?"Vietos leidimas nesuteiktas. Leiskite vietos prieigą naršyklėje arba pažymėkite namą žemėlapyje."
+         :geoError.code===3
+         ?"Nepavyko laiku nustatyti vietos. Bandykite lauke arba pažymėkite namą žemėlapyje."
+         :"Telefono vieta laikinai nepasiekiama. Pažymėkite namą žemėlapyje.";
+       setLocationError(message);
+     },
+     {enableHighAccuracy:true,maximumAge:0,timeout:15000}
+   );
  };
  return <section className="min-w-0 max-w-full rounded-xl border bg-muted/20 p-3 sm:p-4">
    <label className="flex cursor-pointer items-start gap-3">
      <input type="checkbox" className="mt-1 size-5 shrink-0 accent-primary"
        checked={Boolean(value.gpsProtectionEnabled)} onChange={e=>{
          onChange({gpsProtectionEnabled:e.target.checked});
-         if(e.target.checked){
-           setOpen(true);
-           if(value.street.trim()&&value.city.trim())void lookup();
-         }
+         if(e.target.checked)setOpen(true);
        }}/>
      <span><strong className="text-sm">Apsaugoti nuotraukas ir darbus pagal GPS</strong>
        <span className="mt-1 block text-xs text-muted-foreground">Pagal nutylėjimą išjungta. Įjungus reikia patvirtinti tikslų namo žymeklį.</span>
@@ -98,7 +149,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
    </label>
    <div className="mt-3 flex min-w-0 flex-wrap items-center gap-2">
      <Button type="button" variant="outline" size="sm" onClick={()=>{
-         if(!open&&value.street.trim()&&value.city.trim()&&!selected)void lookup();
+         setError("");setLocationError("");
          setOpen(x=>!x);
        }}>
        <MapPinned className="size-4"/>{open?"Uždaryti žemėlapį":"Pasirinkti tikslią vietą"}
@@ -110,6 +161,16 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
        {busy?<LoaderCircle className="size-4 animate-spin"/>:<LocateFixed className="size-4"/>}
        Ieškoti pagal adresą
      </Button>
+     <Button type="button" variant="outline" disabled={locating} onClick={locateOnPhone} className="min-h-11 w-full">
+       {locating?<LoaderCircle className="size-4 animate-spin"/>:<LocateFixed className="size-4"/>}
+       {locating?"Nustatoma telefono vieta…":"Naudoti mano GPS vietą"}
+     </Button>
+     {locationError&&<p role="alert" className="text-xs text-destructive">{locationError}</p>}
+     {accuracy!==null&&selected&&<p aria-live="polite" className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+       Telefono GPS tikslumas: apie {Math.round(accuracy)} m.
+       {accuracy>50?" Vieta gali būti netiksli – pataisykite žymeklį ant tikrojo namo.":" Patikrinkite žymeklį žemėlapyje prieš patvirtindami."}
+       GPS apsauga dar nepatvirtinta.
+     </p>}
      {candidates.length>0&&<div className="min-w-0 space-y-1 rounded-lg border bg-card p-2">
        <p className="text-xs font-semibold">Pasirinkite tikslų namą. Apytikslis gatvės rezultatas GPS apsaugos nepatvirtina:</p>
        {candidates.map((candidate,i)=><button key={i} type="button" onClick={()=>updatePin(candidate.lat,candidate.lon)}
