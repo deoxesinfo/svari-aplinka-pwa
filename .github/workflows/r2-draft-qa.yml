@@ -1,0 +1,26 @@
+name: R2 DRAFT – build and security tests (no deploy)
+on:
+  push:
+    branches:
+      - feature/r2-photos-draft-no-deploy
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  verify-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build PWA
+        run: npm run build
+      - name: Test PWA
+        run: npm test
+      - name: Test private Worker API
+        run: node --test cloudflare/photo-worker.test.mjs
