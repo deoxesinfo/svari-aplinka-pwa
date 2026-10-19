@@ -1,0 +1,25 @@
+name: ŠA V2.3.16 strict TypeScript + GPS UI verification
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/app/AddressLocationPicker.tsx'
+      - 'src/test/address-location-picker.test.tsx'
+      - '.github/workflows/sa-v2316-gps-typecheck.yml'
+permissions:
+  contents: read
+jobs:
+  strict-gps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Strict TypeScript (no emit)
+        run: npx tsc --noEmit --pretty false
+      - name: GPS interactive regression tests
+        run: npm test -- src/test/address-location-picker.test.tsx
