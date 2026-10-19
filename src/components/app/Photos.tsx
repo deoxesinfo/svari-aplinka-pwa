@@ -309,7 +309,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
           <Loader2 className="size-4 animate-spin" /> Apdorojama nuotraukų: {busy}…
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">{isCloudMode()?"Nuotraukos sumažinamos iki 1600 px ir saugomos privačioje R2 saugykloje. Vienam darbui – iki 15 nuotraukų.":"Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos."}</p>
+        <p className="text-xs text-muted-foreground">{isCloudMode()?"Nuotraukos optimizuojamos iki 1600–2000 px (WebP/JPEG, pagal kokybę ir dydį) ir saugomos privačioje R2 saugykloje. Vienam darbui – iki 15 nuotraukų.":"Nuotraukos optimizuojamos iki 1600–2000 px ir saugomos tik šioje naršyklėje (DEMO). Jos nesinchronizuojamos."}</p>
       )}
     </div>
   );

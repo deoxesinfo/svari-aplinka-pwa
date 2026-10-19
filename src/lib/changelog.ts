@@ -8,6 +8,16 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.3.12",category:"taisymas",
+   title:"2000 px nuotraukų R2 API suderinamumas",
+   details:[
+    "Ištaisyta 400 INVALID_DIMENSIONS: V2.3.11 galėjo sukurti 1800–2000 px vaizdą, o Cloudflare Worker klaidingai atmesdavo viską virš 1600 px.",
+    "Serverio leidžiama kraštinė padidinta iki 2000 px, paliekant 3 MiB pilnos nuotraukos ir 512 KiB miniatiūros ribas, 15 nuotraukų darbui bei JWT/RLS/GPS apsaugą.",
+    "Automatiniai testai tikrina 2000 px horizontalius ir vertikalius vaizdus ir atmeta 2001 px be DB/R2 įrašymo.",
+    "Programėlėje tiksliai nurodyta adaptyvi 1600–2000 px raiška.",
+    "Ankstesnės trys nuotraukos Supabase metaduomenų bazėje išlikusios ir priskirtos vienam darbui; fizinis R2 failų egzistavimas atskirai nepatvirtintas.",
+    "Saugyklos statistika ir senų nuotraukų trynimas nėra aktyvuoti – prieš tai reikia atskiro galutinio patvirtinimo."
+   ],commits:[]},
   {date:"2026-10-19",version:"V2.3.11",category:"funkcija",
    title:"Išmanesnis nuotraukų raiškos ir R2 vietos optimizavimas",
    details:[
