@@ -61,3 +61,12 @@ export async function uploadR2Photo(
  }));
  return r.json() as Promise<PhotoMeta>;
 }
+
+/** Employee-only completion: the Worker checks own job, fresh GPS proof and
+ * Supabase's narrow RPC. Never mutate the entire job JSON from the browser. */
+export async function completeR2AssignedJob(org:string,jobId:string,addressId:string,proofToken:string,note:string):Promise<void>{
+ await checked(await fetch(R2_WORKER_URL+"/v1/jobs/"+encodeURIComponent(jobId)+"/complete",{
+  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
+  body:JSON.stringify({addressId,gpsProof:proofToken,note}),cache:"no-store"
+ }));
+}
