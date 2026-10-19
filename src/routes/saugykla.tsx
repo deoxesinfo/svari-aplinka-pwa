@@ -101,7 +101,8 @@ function StoragePage() {
   const approximateBytes = chosen.reduce((sum,p) => sum + p.size + (p.thumbSize || 0), 0);
   const estimateKey = chosen.map(p => p.id).sort().join(",");
   const exactBytes = estimate?.bytes;
-  const estimateReady = !!estimate && verifiedSelection === estimateKey && estimate.photos === chosen.length && estimate.missing === 0;
+  const estimateReady = !!estimate && verifiedSelection === estimateKey && estimate.photos === chosen.length &&
+    (estimate.missing === 0 || (tab === "trash" && chosen.every(p => !!p.purgingAt)));
   useEffect(() => {
     setEstimate(null); setVerifiedSelection(""); setEstimateError("");
     if (!org || !admin || !estimateKey) return;
@@ -123,7 +124,7 @@ function StoragePage() {
     if (!org || !admin || !chosen.length || !estimateReady) return;
     setBusy(true); setConfirm(null);
     try {
-      await storageAction(org,action,chosen.map(p => p.id),action === "trash" && period !== "all" ? period : undefined);
+      await storageAction(org,action,chosen.map(p => p.id),action === "trash" ? (period === "all" ? "manual" : period) : undefined);
       toast.success(action === "trash" ? "Nuotraukos perkeltos į šiukšlinę" :
         action === "restore" ? "Nuotraukos atkurtos" : "Nuotraukos galutinai pašalintos");
       await refreshCloudWorkspace();
@@ -207,7 +208,7 @@ function StoragePage() {
       </div>
       {tab === "active" && <p className="text-sm text-muted-foreground">
         Iš viso pagal pasirinktą amžių: {olderCandidates.length}. Po filtrų: {filtered.length}.
-        Jokie failai neištrinami automatiškai. Trinimui reikia pasirinkti konkretų senumo laikotarpį.
+        Jokie failai neištrinami automatiškai. Galite pasirinkti ir šiandien įkeltas nuotraukas. Galutinis pašalinimas galimas tik administratoriui atskirai patvirtinus.
       </p>}
       <div className="flex flex-wrap items-center gap-3 rounded-lg bg-muted p-3 text-sm">
         <label className="flex items-center gap-2">
@@ -223,14 +224,12 @@ function StoragePage() {
               estimateError ? "R2 patikros klaida: " + estimateError : "Tikrinamas tikslus dydis…"}
           </span>}
         {tab==="active"?
-          <Button disabled={!chosen.length||busy||period==="all"||!estimateReady} variant="destructive" onClick={()=>setConfirm("trash")}>
+          <Button disabled={!chosen.length||busy||!estimateReady} variant="outline" onClick={()=>setConfirm("trash")}>
             <Trash2 className="size-4"/> Perkelti į šiukšlinę</Button>
-          :<>
-            <Button disabled={!chosen.length||busy||!estimateReady} variant="outline" onClick={()=>setConfirm("restore")}>
-              <ArchiveRestore className="size-4"/> Atkurti</Button>
-            <Button disabled={!chosen.length||busy||!estimateReady} variant="destructive" onClick={()=>{setPurgePhrase("");setConfirm("purge");}}>
-              <Trash2 className="size-4"/> Pašalinti galutinai</Button>
-          </>}
+          :<Button disabled={!chosen.length||busy||!estimateReady} variant="outline" onClick={()=>setConfirm("restore")}>
+            <ArchiveRestore className="size-4"/> Atkurti</Button>}
+        <Button disabled={!chosen.length||busy||!estimateReady} variant="destructive" onClick={()=>{setPurgePhrase("");setConfirm("purge");}}>
+          <Trash2 className="size-4"/> Ištrinti visam laikui</Button>
       </div>
       {filtered.length ? <>
         <div className="max-h-[36rem] space-y-1 overflow-y-auto">
@@ -256,8 +255,8 @@ function StoragePage() {
         text="Pakeiskite laikotarpį ar filtrus."/>}
     </section>
     <Confirm open={confirm==="trash"} onOpenChange={o=>!o&&setConfirm(null)}
-      title={"Perkelti " + chosen.length + " nuotraukas į šiukšlinę?"}
-      text={"Jas bus galima atkurti. Supabase ir R2 failai kol kas fiziškai nešalinami. " +
+      title={"Perkelti " + chosen.length + " pasirinktų nuotraukų į šiukšlinę?"}
+      text={"Jas bus galima atkurti. Net ir šiandien įkeltos nuotraukos šiame etape dar fiziškai nešalinamos. " +
         "Patikrintas pasirinktų R2 failų dydis: " + bytesLabel(exactBytes)}
       confirmLabel="Perkelti" onConfirm={()=>void perform("trash")}/>
     <Confirm open={confirm==="restore"} onOpenChange={o=>!o&&setConfirm(null)}
@@ -268,15 +267,15 @@ function StoragePage() {
       className="fixed inset-0 z-50 grid place-items-center bg-black/70 px-4">
       <div className="w-full max-w-md space-y-3 rounded-xl bg-background p-5 shadow-xl">
         <h2 className="text-lg font-bold">Negrįžtamai pašalinti {chosen.length} nuotraukų?</h2>
-        <p className="text-sm">Tai panaikins failus iš Cloudflare R2 ir jų metaduomenis.
-          Atkūrimas po šio veiksmo neįmanomas. Joks trynimas nevyks automatiškai.</p>
+        <p className="text-sm">Tai panaikins TIK pasirinktas nuotraukas: originalus ir miniatiūras iš Cloudflare R2 bei jų metaduomenis iš Supabase.
+          Atkūrimas po šio veiksmo neįmanomas. Galima ištrinti ir šiandien įkeltas nuotraukas. Joks trynimas nevyks automatiškai.</p>
         <label className="block text-xs">Įrašykite SALINTI VISAM LAIKUI
           <input className={inputCls} value={purgePhrase} onChange={e=>setPurgePhrase(e.target.value)}/>
         </label>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={()=>setConfirm(null)}>Atšaukti</Button>
           <Button variant="destructive" disabled={purgePhrase!=="SALINTI VISAM LAIKUI"||busy}
-            onClick={()=>void perform("purge")}>Pašalinti negrįžtamai</Button>
+            onClick={()=>void perform("purge")}>Taip, ištrinti visam laikui</Button>
         </div>
       </div>
     </div>}
