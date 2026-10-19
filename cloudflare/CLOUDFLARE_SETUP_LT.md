@@ -21,7 +21,7 @@ Settings → Variables and Secrets (kai bus atskirai patvirtinta Worker konfigū
 | Name | Type | Value |
 |---|---|---|
 | `SUPABASE_URL` | Text | `https://mbinhbascpeupnxrvidk.supabase.co` |
-| `SUPABASE_PUBLISHABLE_KEY` | Secret or Text | Viešasis publishable key iš `src/lib/supabase-client.ts`, prasideda `sb_publishable_`. **NE service_role/secret key**. |
+| `SUPABASE_PUBLISHABLE_KEY` | Secret or Text | `sb_publishable_PtfE1p4mDM2vGLZI6i5X7w_MiOKwsys` (viešasis PWA publishable key; **NE** `service_role` / Supabase secret key). |
 | `ALLOWED_ORIGIN` | Text | `https://deoxesinfo.github.io` (be pasvirojo brūkšnio gale; ne su `/svari-aplinka-pwa/`) |
 | `ENABLE_UPLOADS` | Text | `false` **BŪTINAI** (pilotas nepaleistas) |
 
