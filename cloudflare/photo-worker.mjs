@@ -316,6 +316,27 @@ export default {async fetch(req,env){
    const {jwt,userId,role}=await authenticated(env,req,org,false);
    return cors(await gpsSession(req,env,jwt,org,userId,role,path.endsWith("override")),origin,env);
   }
+  const complete=/^\/v1\/jobs\/([0-9a-f-]{36})\/complete$/.exec(path);
+  if(req.method==="POST"&&complete){
+   const jobId=uuid(complete[1]);
+   const {jwt,userId,role}=await authenticated(env,req,org,false);
+   if(role!=="worker")fail(403,"WORKER_ONLY");
+   const raw=await req.text();if(raw.length>1600)fail(413,"REQUEST_TOO_LARGE");
+   let payload;try{payload=JSON.parse(raw)}catch{fail(400,"INVALID_COMPLETION")}
+   if(!payload||typeof payload!=="object")fail(400,"INVALID_COMPLETION");
+   const addressId=uuid(payload.addressId);
+   await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+   const proof=await gpsProof(env,payload.gpsProof,org,userId,jobId);
+   if(proof.mode!=="gps_live")fail(403,"LIVE_GPS_REQUIRED");
+   const note=typeof payload.note==="string"?payload.note.trim():"";
+   if(note.length>1200)fail(413,"NOTE_TOO_LONG");
+   const res=await call(env,jwt,"/rest/v1/rpc/sa_complete_assigned_job",{
+     method:"POST",headers:{"content-type":"application/json"},
+     body:JSON.stringify({p_org:org,p_job:jobId,p_note:note})
+   });
+   if(!res.ok)fail(res.status===403?403:409,"COMPLETION_REQUIREMENTS_NOT_MET");
+   return cors(response({ok:true,completedAt:new Date().toISOString()}),origin,env);
+  }
   const m=/^\/v1\/photos\/([0-9a-f-]{36})\/(full|thumb)$/.exec(path);
   if(m&&req.method==="GET"){
    const photoId=uuid(m[1]);
