@@ -92,6 +92,7 @@ function StoragePage() {
       await reload();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nepavyko atlikti veiksmo");
+      await Promise.allSettled([refreshCloudWorkspace(),reload()]); // A batch may have partially completed.
     } finally { setBusy(false); }
   }
 
