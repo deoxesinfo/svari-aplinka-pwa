@@ -20,7 +20,7 @@ export function AddressFormDialog({
   }, [open, address]);
   const up = <K extends keyof AddressInput>(k: K, val: AddressInput[K]) => setV((s) => ({
     ...s,[k]:val,
-    ...(k==="street"||k==="city"?{gpsLocationConfirmed:false,gpsReference:undefined}:{}),
+    ...(k==="street"||k==="city"?{latitude:undefined,longitude:undefined,gpsLocationConfirmed:false,gpsReference:undefined}:{}),
   }));
   const patchGps=(patch:Partial<AddressInput>)=>setV(s=>({...s,...patch}));
 
@@ -47,7 +47,7 @@ export function AddressFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.25rem)] max-w-lg overflow-y-auto px-4 pb-6 pt-6 sm:p-6">
+      <DialogContent className="max-h-[90dvh] w-[calc(100vw-1.25rem)] max-w-lg min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-6 sm:p-6">
         <DialogHeader>
           <DialogTitle>{address ? "Redaguoti adresą" : "Naujas adresas"}</DialogTitle>
           <DialogDescription>Adresai išsaugomi prisijungusios įmonės Supabase saugykloje.</DialogDescription>
