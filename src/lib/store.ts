@@ -5,7 +5,7 @@ import { clearPhotoBlobs, deletePhotoBlobs } from "./photos";
 import { todayISO } from "./dates";
 import type { Address, Inspection, Job, JobStatus, PhotoMeta, Person, RecruitmentLink, EmploymentPeriod } from "./types";
 import { INSPECTION_LABEL, PRIORITY_LABEL, STATUS_LABEL } from "./types";
-import { loadCloudState,cloudMutations,saveCloudMutations } from "./cloud-sync";
+import { loadCloudState,cloudMutations,saveCloudMutations,resetCloudRole } from "./cloud-sync";
 import { gpsResult,validGpsForCompletion } from "./gps";
 import type { GpsRadius } from "./gps";
 import { hasConfirmedPin } from "./address-gps";
@@ -20,7 +20,7 @@ export const isCloudMode=()=>backend!=="demo";
 export const getCloudOrganizationId=()=>backend==="cloud"?company:null;
 export const getCloudSaveError=()=>saveError;
 export function leaveCloudWorkspace(){
-  backend="loading";company=null;saveError=null;state=EMPTY;listeners.forEach(l=>l());
+  backend="loading";company=null;saveError=null;resetCloudRole();state=EMPTY;listeners.forEach(l=>l());
 }
 export async function enterCloudWorkspace(org:string){
   if(backend==="cloud"&&company===org&&state.loaded)return;
