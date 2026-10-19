@@ -56,7 +56,7 @@ async function limitedForm(req){
   for(;;){const {value,done}=await reader.read();if(done)break;length+=value.byteLength;
    if(length>MAX_REQUEST){await reader.cancel();fail(413,"BODY_TOO_LARGE")}parts.push(value)}
  }finally{try{reader.releaseLock()}catch{}}
- const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>fail(400,"MALFORMED_MULTIPART"));
+ const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>{throw new Problem(400,"MALFORMED_MULTIPART");});
  const keys=new Set(["addressId","jobId","tag","width","height","full","thumb"]);
  for(const [name] of form)if(!keys.has(name)||form.getAll(name).length!==1)fail(400,"INVALID_FORM_FIELDS");
  return form;
