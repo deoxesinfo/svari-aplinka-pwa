@@ -22,6 +22,7 @@ const bucket={
    files.set(k,b);return{};
  },
  async get(k){const b=files.get(k);return b?{body:b.stream()}:null},
+ async head(k){return files.has(k)?{etag:"mock"}:null},
  async delete(k){files.delete(k)}
 };
 const env={R2_BUCKET:bucket,SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.co",SUPABASE_PUBLISHABLE_KEY:"public-test",ALLOWED_ORIGIN:"https://deoxesinfo.github.io",ENABLE_UPLOADS:"true",
@@ -72,11 +73,11 @@ test("upload switch defaults closed unless explicitly enabled",async()=>{
  env.ENABLE_UPLOADS="true";
 });
 test("missing pilot configuration fails closed before any new image writes",async()=>{
- env.PILOT_ENABLED="false";
- const before=files.size;
+ const before=files.size,previous=env.PILOT_JOB_ID;
+ env.PILOT_JOB_ID="";
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
  assert.equal(r.status,503);assert.equal((await r.json()).error,"PILOT_NOT_CONFIGURED");
- assert.equal(files.size,before);env.PILOT_ENABLED="true";
+ assert.equal(files.size,before);env.PILOT_JOB_ID=previous;
 });
 test("wrong pilot organization is rejected",async()=>{
  const old=env.PILOT_ORG_ID;env.PILOT_ORG_ID="91f66427-4e3b-4f20-9100-122e26666e56";
@@ -193,6 +194,34 @@ test("database disconnected before commit safely removes new blobs",async()=>{
  transportFault="none";
 });
 test("delete remains disabled",async()=>assert.equal((await worker.fetch(request("/v1/photos/"+db.at(-1).id,"DELETE"),env)).status,403));
+test("read-only R2 /health probe reports actual storage readiness",async()=>{
+ const r=await worker.fetch(request("/health","GET",{"x-organization-id":""}),env);
+ assert.equal(r.status,200);
+ assert.deepEqual(await r.json(),{status:"ok",storage:"ready"});
+});
+test("production mode permits multiple sequential admin uploads without pilot reservation",async()=>{
+ env.PILOT_ENABLED="false";
+ const before=db.length,blobs=files.size;
+ try{
+  const a=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+  const b=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+  assert.equal(a.status,201,await a.clone().text());
+  assert.equal(b.status,201,await b.clone().text());
+  assert.equal(db.length,before+2);
+  assert.equal(files.size,blobs+4);
+  assert.equal(files.has(CLAIM),false);
+ }finally{env.PILOT_ENABLED="true"}
+});
+test("production mode still blocks unauthenticated and non-admin uploads",async()=>{
+ env.PILOT_ENABLED="false";
+ try{
+  const anon=await worker.fetch(request("/v1/photos","POST",{authorization:""},form()),env);
+  assert.equal(anon.status,401);
+  role="worker";
+  const ordinary=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+  assert.equal(ordinary.status,403);
+ }finally{role="admin";env.PILOT_ENABLED="true"}
+});
 test("unknown routes denied",async()=>assert.equal((await worker.fetch(request("/v1/buckets"),env)).status,404));
 test("OPTIONS preflight allowlist",async()=>{
  const r=await worker.fetch(request("/v1/photos","OPTIONS",{"access-control-request-method":"POST"}),env);
