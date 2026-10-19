@@ -84,7 +84,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           if(actionsOpen){setActionsOpen(false);return}
           setDetailsOpen(true);
         }} aria-label={"Atidaryti darbą: "+(address?.street??"Adresas ištrintas")}
-          className={cn("card-surface group flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12 lg:pb-16",
+          className={cn("card-surface group relative flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12 lg:pr-56",
             overdue&&"border-l-4 border-l-warning",done&&"bg-muted/30")}>
           <span aria-hidden="true" className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border-2",
             done?"border-primary bg-primary text-primary-foreground":"border-input text-transparent")}>
@@ -116,9 +116,9 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
               {done&&<span className="inline-flex items-center gap-1 text-primary"><Check className="size-3.5"/>Atlikta</span>}
             </div>
           </div>
-          <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground"/>
+          <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground lg:absolute lg:right-3 lg:top-1/2 lg:mt-0 lg:-translate-y-1/2"/>
         </button>
-        {address&&<div className="absolute bottom-4 right-4 z-10 hidden lg:block">
+        {address&&<div className="absolute right-12 top-1/2 z-10 hidden -translate-y-1/2 lg:block">
           <MapsLink street={address.street} city={address.city} compact/>
         </div>}
         <button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
