@@ -2,7 +2,8 @@ import { supabase } from "./supabase-client";
 import type { PhotoMeta, PhotoTag } from "./types";
 
 /** Explicit release gate: false until Worker, policy, GPS and end-to-end QA are approved. */
-export const CLOUD_R2_PHOTOS_READY=false;
+/** Only an explicitly built one-photo pilot UI may expose R2 controls; default builds stay OFF. */
+export const CLOUD_R2_PHOTOS_READY=import.meta.env.VITE_SA_R2_PILOT==="admin-one-photo";
 export const R2_WORKER_URL="https://svari-aplinka-photos.svariaplinka-lt.workers.dev";
 /** User access token only. Worker validates JWT and performs RLS-bound reads. */
 async function headers(org:string){
