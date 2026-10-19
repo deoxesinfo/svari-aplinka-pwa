@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode,getCloudOrganizationId,refreshCloudWorkspace,verifyJobGPS } from "@/lib/store";
-import { CLOUD_R2_PHOTOS_READY, uploadR2Photo } from "@/lib/r2-photos";
+import { CLOUD_R2_PHOTOS_READY, R2_PILOT_JOB_ID, uploadR2Photo } from "@/lib/r2-photos";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
 import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
