@@ -13,10 +13,12 @@
 
 Tikslas: po metų aiškiai atkurti, kas, kada ir kodėl buvo pakeista.
 
-9. Versijų numeravimas po V2.2.4: kitas smulkus papildymas V2.2.5, vėliau V2.2.6 (kelti paskutinį skaičių). V2.2.1 patvirtintas kalendoriaus filtras, A4 spausdinimas ir mygtukų tarpai; naujų funkcijų be patvirtinimo nepridėti.
+9. Versijų numeravimas po V2.2.5: kitas smulkus papildymas V2.2.6, vėliau V2.2.7 (kelti paskutinį skaičių). V2.2.1 patvirtintas kalendoriaus filtras, A4 spausdinimas ir mygtukų tarpai; naujų funkcijų be patvirtinimo nepridėti.
 
 10. V2.2.2: darbų archyvavimas ir trynimas yra **minkštieji**, kad nebūtų sunaikintos darbo istorijos ar perkurti pasikartojantys darbai; administratoriaus A4 išraše pagal patvirtinimą automatiškai spausdinami konfidencialūs objektų kodai. Kitų funkcijų šioje versijoje nepridėti.
 
 11. V2.2.3: adresų archyvavimas ir trynimas saugo susijusius darbus, grafikus ir nuotraukas, sustabdo būsimo darbo generavimą; darbuotojo nuotraukos redagavimas tik profilio formoje. R2 ir kitos naujos funkcijos neliečiamos.
 
 12. V2.2.4: personalo redagavimo formos vienodi datos laukai, aiškus X darbo pabaigos datai išvalyti, 16 px mygtukų tarpas. Pabaigos data gali būti nežinoma, jos neišgalvoti. Standartinius iPhone datos valdiklius palikti.
+
+13. V2.2.5: aktyvaus personalo pabaigos datos neblokuoti; X išvalo datą, statusas automatiškai nesikeičia. Darbo modalas slenkamas tik vertikaliai, mobilūs laukai neplečia viewport. Standartinis iOS datos kalendorius lieka.

@@ -30,6 +30,28 @@ describe("V2.2.4 personalo datos",()=>{
      expect(input.parentElement?.className).toContain("h-11 w-full min-w-0 max-w-full");
    }
  });
+ it("pabaigos data pasirenkama ir aktyviam darbuotojui, o po X vėl įvedama",()=>{
+   function Form(){
+     const [date,setDate]=useState<string|undefined>();
+     const [status]=useState("aktyvus");
+     return <>
+       <span data-testid="status">{status}</span>
+       <PersonnelDateField label="Darbo pabaigos data" value={date} onChange={setDate} clearable/>
+     </>;
+   }
+   render(<Form/>);
+   const field=screen.getByLabelText("Darbo pabaigos data") as HTMLInputElement;
+   expect(field).not.toBeDisabled();
+   fireEvent.change(field,{target:{value:"2026-11-10"}});
+   expect(field.value).toBe("2026-11-10");
+   expect(screen.getByTestId("status").textContent).toBe("aktyvus");
+   fireEvent.click(screen.getByRole("button",{name:"Išvalyti darbo pabaigos datą"}));
+   expect(field.value).toBe("");
+   expect(field).not.toBeDisabled();
+   fireEvent.change(field,{target:{value:"2026-11-15"}});
+   expect(field.value).toBe("2026-11-15");
+ });
+
  it("nežinomą pabaigos datą galima saugoti, neišgalvojant skaičių",()=>{
    const original:Person={id:"demo",name:"Pavyzdys",role:"darbuotojas",status:"aktyvus",
      notes:"",startedAt:"2026-10-01",createdAt:"2026-10-01T00:00:00Z",

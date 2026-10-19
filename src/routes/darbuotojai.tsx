@@ -70,7 +70,7 @@ function PeoplePage(){
     setDraft(d=>({
       ...d,status,
       startedAt:(status==="aktyvus"||status==="atostogos") && editing?.status==="nebedirba" ? todayISO() : d.startedAt,
-      endedAt:status==="nebedirba"?d.endedAt||todayISO():(status==="aktyvus"||status==="atostogos")?undefined:d.endedAt,
+      endedAt:(status==="aktyvus"||status==="atostogos")&&editing?.status==="nebedirba"?undefined:d.endedAt,
     }));
   };
   const submit=(event:FormEvent)=>{
@@ -83,7 +83,7 @@ function PeoplePage(){
     }
     const working=draft.status==="aktyvus"||draft.status==="atostogos";
     if(working && !draft.startedAt){toast.error("Nurodykite darbo pradžios datą");return}
-    if(draft.startedAt&&draft.endedAt&&draft.status==="nebedirba"&&draft.endedAt<draft.startedAt){
+    if(draft.startedAt&&draft.endedAt&&draft.endedAt<draft.startedAt){
       toast.error("Darbo pabaiga negali būti ankstesnė už pradžią");return;
     }
     if(editing?.status==="nebedirba" && working && editing.endedAt && draft.startedAt && draft.startedAt <= editing.endedAt){
@@ -242,8 +242,7 @@ function PeoplePage(){
               label={editing?.status==="nebedirba"&&draft.status==="aktyvus"?"Naujo darbo laikotarpio pradžia":"Dirba nuo (data)"}
               value={draft.startedAt} onChange={date=>setDraft(d=>({...d,startedAt:date}))}/>
             <PersonnelDateField label="Darbo pabaigos data"
-              disabled={draft.status!=="nebedirba"}
-              value={draft.status==="nebedirba"?draft.endedAt:undefined}
+              value={draft.endedAt}
               onChange={date=>setDraft(d=>({...d,endedAt:date}))} clearable/>
           </div>
           {editing && <PersonAvatarEditor person={people.find(p=>p.id===editing.id)||editing}/>}

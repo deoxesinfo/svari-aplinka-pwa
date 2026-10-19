@@ -8,6 +8,16 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.5",category:"taisymas",
+    title:"iPhone darbuotojo pabaigos datos ir darbo redagavimo slinkimo pataisa",
+    details:[
+      "Darbuotojo Redaguoti formoje pabaigos data atidaroma ir tada, kai būsena Aktyvus; data gali būti įrašyta, pakeista arba išvalyta X. Statusas nepasikeičia automatiškai.",
+      "Suvienodintas vietinių iPhone datos laukų išdėstymas ir teksto lygiavimas; standartinis Safari datos kalendorius paliktas.",
+      "Darbo Redaguoti / Naujo darbo iššokantis langas apribotas mobiliojo ekrano pločiu. Horizontalus slinkimas užblokuotas, paliktas vertikalus, formos laukai negali išplėsti lango.",
+      "Pataisytas išsaugojimo ir atšaukimo mygtukų tarpas darbo redagavimo lange. Supabase, GPS, R2 ir kitos funkcijos nekeičiamos.",
+      "Automatiniai išdėstymo testai nepakeičia vizualaus iPhone Safari bandymo.",
+    ],commits:[]},
+
   {date:"2026-10-19",version:"V2.2.4",category:"taisymas",
    title:"Vienodi darbuotojo datų laukai ir patogūs išsaugojimo mygtukai",
    details:[

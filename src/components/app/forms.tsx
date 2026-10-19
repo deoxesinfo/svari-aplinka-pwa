@@ -52,12 +52,12 @@ export function AddressFormDialog({
           <DialogTitle>{address ? "Redaguoti adresą" : "Naujas adresas"}</DialogTitle>
           <DialogDescription>Adresai išsaugomi prisijungusios įmonės Supabase saugykloje.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={submit} className="grid gap-4">
+        <form onSubmit={submit} className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4">
           <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
             <Field label="Gatvė, namo nr."><input className={inputCls} value={v.street} onChange={(e) => up("street", e.target.value)} placeholder="Pavyzdžio g. 12" autoFocus /></Field>
             <Field label="Miestas"><input className={inputCls} value={v.city} onChange={(e) => up("city", e.target.value)} placeholder="Kaunas" /></Field>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Valymo tipas">
               <select className={inputCls} value={v.type} onChange={(e) => up("type", e.target.value as AddressInput["type"])}>
                 {Object.entries(ADDRESS_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -101,7 +101,7 @@ export function AddressFormDialog({
             <input className={inputCls} value={v.accessCode} onChange={(e) => up("accessCode", e.target.value)} />
           </Field>
           <Field label="Pastabos"><textarea className={textareaCls} value={v.notes} onChange={(e) => up("notes", e.target.value)} /></Field>
-          <DialogFooter className="mt-3 border-t pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-3">
+          <DialogFooter className="mt-3 flex flex-col-reverse gap-4 border-t pt-5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:flex-row sm:gap-4 sm:space-x-0 [&>button]:min-h-11">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Atšaukti</Button>
             <Button type="submit">Išsaugoti</Button>
           </DialogFooter>
@@ -166,8 +166,8 @@ export function JobFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="sa-job-dialog max-h-[90dvh] min-w-0 overflow-x-hidden overflow-y-auto overscroll-x-none px-4 py-6 sm:px-6">
+        <DialogHeader className="min-w-0">
           <DialogTitle>{job ? "Redaguoti darbą" : "Naujas darbas"}</DialogTitle>
           <DialogDescription>Neužbaigti darbai automatiškai perkeliami į šiandieną.</DialogDescription>
         </DialogHeader>
