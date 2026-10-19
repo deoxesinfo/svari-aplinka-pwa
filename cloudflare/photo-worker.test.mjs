@@ -78,6 +78,15 @@ function file(){
  x.set(new TextEncoder().encode("VP8 "),12);
  return new Blob([x],{type:"image/webp"});
 }
+function fileWithMarker(n){
+ const data=new Uint8Array(40);
+ data.set(new TextEncoder().encode("RIFF"),0);
+ new DataView(data.buffer).setUint32(4,data.byteLength-8,true);
+ data.set(new TextEncoder().encode("WEBP"),8);
+ data.set(new TextEncoder().encode("VP8 "),12);
+ data[20]=n;
+ return new Blob([data],{type:"image/webp"});
+}
 function form(){const x=new FormData();x.set("addressId",ADDRESS);x.set("jobId",JOB);x.set("tag","po");x.set("width","400");x.set("height","300");x.set("full",file(),"full.webp");x.set("thumb",file(),"thumb.webp");return x}
 test("upload switch defaults closed unless explicitly enabled",async()=>{
  env.ENABLE_UPLOADS="false";
@@ -262,7 +271,7 @@ test("stateless GPS check has no expiry and can be repeated hours apart",async()
   const data=await r.json();assert.equal(data.ok,true);assert.equal(data.radius,50);
   assert.equal("token" in data,false);assert.equal("expiresAt" in data,false);
  }
- const f=form();f.set("gpsLatitude","54.9");f.set("gpsLongitude","23.9");f.set("gpsAccuracy","10");
+ const f=form();f.set("full",fileWithMarker(202),"unique-gps.webp");f.set("gpsLatitude","54.9");f.set("gpsLongitude","23.9");f.set("gpsAccuracy","10");
  const saved=await worker.fetch(request("/v1/photos","POST",{},f),env);
  assert.equal(saved.status,201,await saved.clone().text());
  assert.equal(db.at(-1).data.proofMode,"gps_live");
@@ -279,7 +288,7 @@ test("admin photo GPS override requires explicit reason and worker cannot overri
  const invalid=form();invalid.set("gpsOverrideReason","too short");
  const r=await worker.fetch(request("/v1/photos","POST",{},invalid),env);
  assert.equal(r.status,400);
- const valid=form();valid.set("gpsOverrideReason","GPS unavailable at this confirmed property");
+ const valid=form();valid.set("full",fileWithMarker(203),"admin-override.webp");valid.set("gpsOverrideReason","GPS unavailable at this confirmed property");
  let result=await worker.fetch(request("/v1/photos","POST",{},valid),env);
  assert.equal(result.status,201,await result.clone().text());
  assert.equal(db.at(-1).data.proofMode,"admin_override");
