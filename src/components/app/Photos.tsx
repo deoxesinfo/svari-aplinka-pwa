@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode,getCloudOrganizationId,refreshCloudWorkspace,verifyJobGPS } from "@/lib/store";
-import { CLOUD_R2_PHOTOS_READY, R2_PILOT_JOB_ID, uploadR2Photo, verifyR2Gps, overrideR2Gps, type GpsSession } from "@/lib/r2-photos";
+import { CLOUD_R2_PHOTOS_READY, R2_PILOT_JOB_ID, uploadR2Photo, verifyR2Gps, type LocationFix } from "@/lib/r2-photos";
 import { currentLocation, locationPermissionState } from "@/lib/location-permission";
 import { getCloudRole } from "@/lib/cloud-sync";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
@@ -119,14 +119,15 @@ export function PhotoGrid({ photos, empty = "Nuotraukų dar nėra." }: { photos:
   );
 }
 
-export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: string; jobId?: string; onGpsProof?:(token:string|null)=>void }) {
+export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?: string }) {
   const cam = useRef<HTMLInputElement>(null);
   const gal = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
   const [tag, setTag] = useState<PhotoTag>("po");
   const [localProof,setLocalProof]=useState<LocationResult|undefined>();
   const [checking,setChecking]=useState(false);
-  const [gpsSession,setGpsSession]=useState<GpsSession|null>(null);
+  const [gpsReady,setGpsReady]=useState(false);
+  const [gpsOverrideReason,setGpsOverrideReason]=useState("");
   const [gpsTip,setGpsTip]=useState("");
   const [now,setNow]=useState(Date.now());
   const { photos,addresses,jobs } = useAppState();
@@ -137,12 +138,12 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
   const proof=jobId?job?.gpsVerification:localProof;
   const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
   const gpsAllowed=isCloudMode()
-    ? Boolean(gpsSession?.token)
+    ? Boolean(gpsReady||gpsOverrideReason)
     : Boolean(address&&hasConfirmedPin(address)&&
        ((jobId&&job?.gpsOverride)||validGpsForCompletion(proof,address,now)));
   const locked=protectedByGps&&!gpsAllowed;
   useEffect(()=>{const id=window.setInterval(()=>setNow(Date.now()),10000);return()=>window.clearInterval(id)},[]);
-  useEffect(()=>{setLocalProof(undefined);setGpsSession(null);setGpsTip("");onGpsProof?.(null)},[addressId,jobId]);
+  useEffect(()=>{setLocalProof(undefined);setGpsReady(false);setGpsOverrideReason("");setGpsTip("")},[addressId,jobId]);
   const checkLocation=async()=>{
     if(!address||!hasConfirmedPin(address)){toast.error("Pirma patvirtinkite tikslų namo žymeklį");return;}
     if(checking)return;
@@ -154,9 +155,9 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
         if(!org)throw Error("Prisijunkite iš naujo");
         if(await locationPermissionState()==="denied")throw Error("GPS prieiga uždrausta. Įjunkite vietą telefono nustatymuose ir leiskite prieigą naršyklei.");
         const fix=await currentLocation();
-        const session=await verifyR2Gps(org,jobId,addressId,fix);
-        setGpsSession(session);onGpsProof?.(session.token);
-        toast.success("GPS patvirtinta šiam darbui.");
+        await verifyR2Gps(org,jobId,addressId,fix);
+        setGpsReady(true);setGpsOverrideReason("");
+        toast.success("GPS veikia. Vieta automatiškai tikrinama kiekvienai nuotraukai.");
       }else if(job){
         if(await verifyJobGPS(job.id))toast.success("Vieta patvirtinta");
       }else{
@@ -167,7 +168,7 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
       }
     }catch(e){
       const msg=e instanceof Error?e.message:"GPS nepavyko";
-      setGpsSession(null);onGpsProof?.(null);setGpsTip(msg);toast.error(msg,{duration:10000});
+      setGpsReady(false);setGpsTip(msg);toast.error(msg,{duration:10000});
     }finally{setChecking(false);setNow(Date.now())}
   };
   // Tries permission on entering protected job. Browser/OS may require an explicit retry tap.
@@ -175,21 +176,23 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
     if(protectedByGps&&isCloudMode()&&jobId)void checkLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   },[addressId,jobId]);
-  const doAdminOverride=async()=>{
-    if(!jobId)return;
+  const doAdminOverride=()=>{
+    if(getCloudRole()!=="admin")return;
     const reason=window.prompt("Administratoriaus GPS išimties priežastis (bent 15 simbolių):");
     if(!reason)return;
-    try{
-      const org=getCloudOrganizationId();if(!org)throw Error("Neprisijungta");
-      const result=await overrideR2Gps(org,jobId,addressId,reason);
-      setGpsSession(result);onGpsProof?.(result.token);setGpsTip("");
-      toast.success("GPS išimtis užfiksuota serveryje");
-    }catch(e){toast.error(e instanceof Error?e.message:"Išimties suteikti nepavyko")}
+    const normalized=reason.trim();
+    if(normalized.length<15||normalized.length>240){
+      toast.error("Priežastis turi būti 15–240 simbolių.");return;
+    }
+    // No reusable permission token. The Worker verifies the administrator role
+    // and records the reason with each individual photo submission.
+    setGpsOverrideReason(normalized);setGpsReady(false);setGpsTip("");
+    toast.info("Išimtis bus užregistruota su kiekviena įkelta nuotrauka.");
   };
   const gpsPanel=protectedByGps?<div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50/30 p-3 text-sm">
     <p className="flex items-center gap-2 font-semibold">{gpsAllowed?<ShieldCheck className="size-4 text-primary"/>:<LockKeyhole className="size-4 text-amber-700"/>}
-      {gpsAllowed?"GPS patvirtinta":"Fotografavimas užrakintas iki GPS patikros"}</p>
-    <p className="text-xs text-muted-foreground">Atstumas: {radius} m. GPS patvirtinimas be laiko limito, tik šiam darbui. Telefono GPS įjungti automatiškai svetainė negali.</p>
+      {gpsAllowed?(gpsOverrideReason?"Administratoriaus GPS išimtis":"GPS paruoštas"):"Fotografavimas užrakintas iki GPS patikros"}</p>
+    <p className="text-xs text-muted-foreground">Atstumas: {radius} m. Laiko limito nėra. Vieta tikrinama automatiškai fotografuojant ir užbaigiant darbą. Telefono GPS įjungti automatiškai svetainė negali.</p>
     {!gpsAllowed&&<Button type="button" variant="outline" disabled={checking} onClick={()=>void checkLocation()}>
       <MapPin className="size-4"/>{checking?"Tikrinama…":"Patikrinti GPS / leisti vietą"}</Button>}
     {gpsTip&&<p className="text-xs text-destructive">{gpsTip}</p>}
@@ -218,7 +221,14 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
         if(isCloudMode()){
           const org=getCloudOrganizationId();
           if(!org)throw new Error("Prisijungimas prie organizacijos nepatvirtintas");
-          await uploadR2Photo(org,addressId,jobId,tag,r.full,r.thumb,r.width,r.height,protectedByGps?gpsSession?.token:undefined);
+          let fix:LocationFix|undefined;
+          if(protectedByGps&&!gpsOverrideReason){
+            if(await locationPermissionState()==="denied")
+              throw Error("Vietos leidimas išjungtas. Įjunkite GPS telefono nustatymuose.");
+            fix=await currentLocation(); // fresh location for EACH picture, even 2+ hours later
+          }
+          await uploadR2Photo(org,addressId,jobId,tag,r.full,r.thumb,r.width,r.height,
+            fix,protectedByGps?gpsOverrideReason:undefined);
         }else{
           await putPhotoBlobs(id, r.full, r.thumb);
           addPhotoMeta({ id, addressId, jobId, tag, createdAt: new Date().toISOString(), width: r.width, height: r.height, size: r.full.size, type: r.full.type });
@@ -286,7 +296,7 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
       </div>
       <input ref={cam} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handle(e.target.files)} />
       {!protectedByGps&&<input ref={gal} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handle(e.target.files)} />}
-      {protectedByGps&&<p className="text-xs text-muted-foreground">GPS saugomam darbui – tiesioginė kamera, be galerijos įkėlimo. Laiką fiksuoja serveris.</p>}
+      {protectedByGps&&<p className="text-xs text-muted-foreground">GPS saugomam darbui – tiesioginė kamera, be galerijos įkėlimo. GPS automatiškai tikrinamas kaskart; sesijų ir laikmačio nėra.</p>}
       {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 15 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
       {busy > 0 ? (
         <p className="flex items-center gap-2 text-sm text-primary" role="status">
