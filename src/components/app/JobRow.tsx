@@ -12,6 +12,7 @@ import { fmtShort, overdueLabel, todayISO } from "@/lib/dates";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { MapsLink } from "./MapsLink";
+import { hasConfirmedPin } from "@/lib/address-gps";
 
 export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const { addresses, photos, people } = useAppState();
@@ -79,14 +80,14 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           <Trash2 className="size-5"/>Ištrinti
         </button>
       </div>}
-      <div className="relative min-w-0 bg-card transition-transform duration-200 ease-out"
+      <div className="card-surface relative min-w-0 bg-card transition-transform duration-200 ease-out"
         style={{transform:!employee&&actionsOpen?"translateX(-186px)":"translateX(0)"}}>
         <button type="button" onClick={()=>{
           if(justSwiped.current){justSwiped.current=false;return}
           if(actionsOpen){setActionsOpen(false);return}
           setDetailsOpen(true);
         }} aria-label={"Atidaryti darbą: "+(address?.street??"Adresas ištrintas")}
-          className={cn("card-surface group relative flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12 lg:pr-56",
+          className={cn("group relative flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12",
             overdue&&"border-l-4 border-l-warning",done&&"bg-muted/30")}>
           <span aria-hidden="true" className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border-2",
             done?"border-primary bg-primary text-primary-foreground":"border-input text-transparent")}>
@@ -118,17 +119,18 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
               {done&&<span className="inline-flex items-center gap-1 text-primary"><Check className="size-3.5"/>Atlikta</span>}
             </div>
           </div>
-          <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground lg:absolute lg:right-3 lg:top-1/2 lg:mt-0 lg:-translate-y-1/2"/>
+          <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground"/>
         </button>
-        {address&&<div className="absolute right-12 top-1/2 z-10 hidden -translate-y-1/2 lg:block">
-          <MapsLink street={address.street} city={address.city} compact/>
+        {address&&<div className="relative flex items-center justify-end gap-2 border-t border-border/70 px-3 py-2.5 sm:px-4" data-testid="job-card-footer">
+          <MapsLink street={address.street} city={address.city}
+            latitude={address.latitude} longitude={address.longitude}
+            confirmed={hasConfirmedPin(address)} compact/>
         </div>}
         {!employee&&<button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
           className="absolute right-1 top-1 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted/70"
           onClick={()=>setActionsOpen(v=>!v)}><MoreHorizontal className="size-5"/></button>}
       </div>
     </div>
-    {address&&<div className="-mt-1 mb-2 flex justify-end lg:hidden"><MapsLink street={address.street} city={address.city} compact/></div>}
     {detailsOpen&&<JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen}/>}
     {!employee&&editing&&<JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>}
     {!employee&&<Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
