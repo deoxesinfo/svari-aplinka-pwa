@@ -230,7 +230,7 @@ test("delete remains disabled",async()=>assert.equal((await worker.fetch(request
 test("read-only R2 /health probe reports actual storage readiness",async()=>{
  const r=await worker.fetch(request("/health","GET",{"x-organization-id":""}),env);
  assert.equal(r.status,200);
- assert.deepEqual(await r.json(),{status:"ok",storage:"ready"});
+ assert.deepEqual(await r.json(),{status:"ok",storage:"ready",apiVersion:"2.3.14",storageStatsEnabled:true});
 });
 test("production mode permits multiple sequential admin uploads without pilot reservation",async()=>{
  env.PILOT_ENABLED="false";
