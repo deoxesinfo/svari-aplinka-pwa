@@ -34,27 +34,19 @@ const job: Job = {
 describe("Universalus darbo kortelės atidarymas", () => {
   beforeEach(() => cleanup());
 
-  it("desktop navigacija rodoma darbo kortelės viduje, mobilus išdėstymas išlieka", () => {
+  it("vienintelis Važiuoti mygtukas yra tos pačios kortelės viduje telefone ir kompiuteryje", () => {
     render(<JobRow job={job} />);
-    const links=screen.getAllByRole("link", { name: /Važiuoti į Pavyzdžio g. 12/ });
-    expect(links).toHaveLength(2);
-    const desktop=links.find(link=>link.parentElement?.className.includes("lg:block"));
-    const mobile=links.find(link=>link.parentElement?.className.includes("lg:hidden"));
-    expect(desktop).toBeTruthy();
-    expect(mobile).toBeTruthy();
-    const innerCard=desktop!.parentElement!.parentElement!;
-    expect(innerCard.querySelector('button[aria-label^="Atidaryti darbą"]')).toBeTruthy();
-    expect(innerCard.contains(mobile!)).toBe(false);
-    expect(desktop!.parentElement).toHaveClass("absolute", "right-12", "top-1/2", "-translate-y-1/2", "lg:block");
-    expect(desktop!.parentElement).not.toHaveClass("bottom-4");
-    const openJob=screen.getByRole("button", { name: /Atidaryti darbą.*Pavyzdžio g. 12/ });
-    expect(openJob).toHaveClass("lg:pr-56", "relative");
-    expect(openJob).not.toHaveClass("lg:pb-16");
-    const chevron=openJob.querySelector("svg.lg\\:absolute");
-    expect(chevron).toBeTruthy();
-    expect(chevron).toHaveClass("lg:top-1/2", "lg:right-3");
-    expect(mobile!.parentElement).toHaveClass("lg:hidden", "justify-end");
-    expect(mobile!.parentElement).toHaveClass("-mt-1", "mb-2");
+    const links=screen.getAllByRole("link",{name:/Važiuoti į Pavyzdžio g. 12/});
+    expect(links).toHaveLength(1);
+    const footer=links[0].closest('[data-testid="job-card-footer"]');
+    expect(footer).toBeTruthy();
+    expect(footer).toHaveClass("border-t","justify-end");
+    const card=footer!.closest(".card-surface");
+    const openJob=screen.getByRole("button",{name:/Atidaryti darbą.*Pavyzdžio g. 12/});
+    expect(card).toContainElement(openJob);
+    expect(card).toContainElement(links[0]);
+    expect(openJob).not.toContainElement(links[0]); // no nested interactive controls
+    expect(links[0].getAttribute("href")).toContain("google.com/maps/dir/");
   });
 
   it("perbraukus kortelę į kairę atveria veiksmus, bet neatidaro darbo", () => {
