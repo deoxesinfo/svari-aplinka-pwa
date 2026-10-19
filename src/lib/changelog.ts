@@ -8,6 +8,16 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.8 DRAFT",category:"infrastruktūra",
+    title:"Cloudflare R2 saugus nuotraukų API (nepublikuotas 2 etapas)",
+    details:[
+      "Tik atskiroje GitHub DRAFT šakoje: saugus Worker API su Supabase JWT ir RLS, privačiu R2 binding, failų dydžio/parašo patikra, serveriniais failų keliais ir klaidų atkūrimu.",
+      "Supabase DB STEP 1 jau įdiegtas – daugiausia 15 nuotraukų vienam darbui; DELETE politika nepakeista.",
+      "PWA įkėlimo / peržiūros kodas paruoštas, bet CLOUD_R2_PHOTOS_READY=false. Worker ENABLE_UPLOADS=false iki atskiro leidimo; Cloudflare ir PWA Deploy nebuvo.",
+      "GPS saugomų objektų, darbuotojų įkėlimo ir nuotraukų trynimo aktyvavimas atidėtas iki serverinių prieigos taisyklių ir realių įrenginių testų.",
+      "GitHub CI vykdo PWA Build, Vitest ir Worker API testus. Instrukcija: cloudflare/CLOUDFLARE_SETUP_LT.md."
+    ],commits:[]},
+
   {date:"2026-10-19",version:"V2.2.7",category:"taisymas",
     title:"Kompaktiškos desktop darbų kortelės be tuščios vietos navigacijai",
     details:[
