@@ -30,30 +30,30 @@ export async function downloadR2Photo(org:string,id:string,kind:"full"|"thumb"){
  }));
  return r.blob();
 }
-export type GpsSession={token:string;issuedAt:string;radius:number;mode:"gps_live"|"admin_override";distanceMeters:number|null;accuracyMeters:number|null};
-export async function verifyR2Gps(org:string,jobId:string,addressId:string,fix:{latitude:number;longitude:number;accuracy:number}):Promise<GpsSession>{
+export type LocationFix={latitude:number;longitude:number;accuracy:number};
+export type GpsCheck={ok:boolean;radius:number;distanceMeters:number;accuracyMeters:number};
+/** A read-only, stateless pre-camera GPS check. No session/token/time limit. */
+export async function verifyR2Gps(org:string,jobId:string,addressId:string,fix:LocationFix):Promise<GpsCheck>{
  const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/verify",{
   method:"POST",headers:{...await headers(org),"content-type":"application/json"},
   body:JSON.stringify({jobId,addressId,...fix}),cache:"no-store"
  }));
- return response.json() as Promise<GpsSession>;
-}
-export async function overrideR2Gps(org:string,jobId:string,addressId:string,reason:string):Promise<GpsSession>{
- const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/override",{
-  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
-  body:JSON.stringify({jobId,addressId,reason}),cache:"no-store"
- }));
- return response.json() as Promise<GpsSession>;
+ return response.json() as Promise<GpsCheck>;
 }
 export async function uploadR2Photo(
  org:string, addressId:string, jobId:string|undefined, tag:PhotoTag,
- full:Blob, thumb:Blob, width:number,height:number,gpsToken?:string
+ full:Blob, thumb:Blob, width:number,height:number,gps?:LocationFix,overrideReason?:string
 ):Promise<PhotoMeta>{
  const f=new FormData();
  f.set("addressId",addressId);
  if(jobId)f.set("jobId",jobId);
  f.set("tag",tag);f.set("width",String(width));f.set("height",String(height));
- if(gpsToken)f.set("gpsProof",gpsToken);
+ if(gps){
+  f.set("gpsLatitude",String(gps.latitude));
+  f.set("gpsLongitude",String(gps.longitude));
+  f.set("gpsAccuracy",String(gps.accuracy));
+ }
+ if(overrideReason)f.set("gpsOverrideReason",overrideReason);
  const ext=(b:Blob)=>b.type==="image/jpeg"?"jpg":"webp";
  f.set("full",full,"full."+ext(full));f.set("thumb",thumb,"thumb."+ext(thumb));
  const r=await checked(await fetch(R2_WORKER_URL+"/v1/photos",{
@@ -62,11 +62,11 @@ export async function uploadR2Photo(
  return r.json() as Promise<PhotoMeta>;
 }
 
-/** Employee-only completion: the Worker checks own job, fresh GPS proof and
+/** Employee-only completion: the Worker checks own job, fresh GPS position and
  * Supabase's narrow RPC. Never mutate the entire job JSON from the browser. */
-export async function completeR2AssignedJob(org:string,jobId:string,addressId:string,proofToken:string,note:string):Promise<void>{
+export async function completeR2AssignedJob(org:string,jobId:string,addressId:string,gps:LocationFix,note:string):Promise<void>{
  await checked(await fetch(R2_WORKER_URL+"/v1/jobs/"+encodeURIComponent(jobId)+"/complete",{
   method:"POST",headers:{...await headers(org),"content-type":"application/json"},
-  body:JSON.stringify({addressId,gpsProof:proofToken,note}),cache:"no-store"
+  body:JSON.stringify({addressId,...gps,note}),cache:"no-store"
  }));
 }
