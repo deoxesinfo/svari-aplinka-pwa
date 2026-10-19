@@ -207,7 +207,7 @@ async function upload(request,env,jwt,org,pilot,userId,role){
   if(existing.length)fail(409,"DUPLICATE_PHOTO");
  }
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
-  data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag,sha256,
+  data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag,sha256,uploadedBy:userId,
     ...(gpsData?{proofMode:gpsData.mode,gpsVerifiedAt:new Date().toISOString(),
        gpsDistanceMeters:gpsData.distanceMeters??null,gpsAccuracyMeters:gpsData.accuracyMeters??null,
        gpsRadiusMeters:gpsData.radius,...(gpsData.reason?{gpsOverrideReason:gpsData.reason}:{})}:{})

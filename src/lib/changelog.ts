@@ -8,6 +8,16 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.3.11",category:"funkcija",
+   title:"Išmanesnis nuotraukų raiškos ir R2 vietos optimizavimas",
+   details:[
+    "Testuota 1600, 1800 ir 2000 px WebP/JPEG kokybė su sintetiniu tekstūruoto paviršiaus vaizdu. Tikrų telefonų nuotraukų rezultatai gali skirtis.",
+    "Programėlė bando 2000 px WebP (JPEG atsarginis variantas), kai tai neviršija 35% didesnio failo dydžio už 1600 px bazinį ar 1,6 MiB. Kitu atveju – 1800 arba 1600 px.",
+    "Įkėlimas laikosi R2 3 MiB ir miniatiūros 512 KiB limitų, iPhone JPEG atsarginis kodavimas išsaugotas.",
+    "Cloudflare Worker saugo įkėlusio naudotojo ID; darbuotojo užbaigimo auditui naudojamos tik jo paties įkeltos GPS nuotraukos.",
+    "Jokių mokamų Google Places API neintegruota. Adresų tikrinimas lieka rankinis su žemėlapiu.",
+    "Po publikavimo reikalingas realus vienos iPhone/Android nuotraukos kokybės patikrinimas."
+   ],commits:[]},
   {date:"2026-10-19",version:"V2.3.10",category:"funkcija",
     title:"Šiandien / Atlikti / Visi darbai ir GPS fotografavimas be sesijos limito",
     details:[
