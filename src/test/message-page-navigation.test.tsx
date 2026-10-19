@@ -1,6 +1,6 @@
 import {describe,expect,it,vi} from "vitest";
 import {render,screen} from "@testing-library/react";
-vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>({component:(component:unknown)=>({component})})}));
+vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options}))}));
 vi.mock("@/lib/cloud-sync",()=>({getCloudRole:()=>"admin"}));
 vi.mock("@/lib/store",()=>({useAppState:()=>({}),getCloudOrganizationId:()=>"org",isCloudMode:()=>true}));
 vi.mock("@/lib/staff-messages",()=>({
