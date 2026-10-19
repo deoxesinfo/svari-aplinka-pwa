@@ -6,7 +6,8 @@
 
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
-|---|---|---|
+|---|---|---|---|
+| 2026-10-19 | **Švari Aplinka V2.3.11** – nuotraukų kokybė | Adaptyvus 2000 / 1800 / 1600 px WebP/JPEG, failo dydžio kontrolė, iPhone JPEG atsarginis variantas; Worker fotografijos audito įkėlėjo ID. Mokamų Google Places API nepridėta. | PR V2.3.11 |
 | 2026-10-19 | **Švari Aplinka V2.3.10** – darbai ir GPS be laiko limitų | Nauji Šiandien / Atlikti / Visi darbai skirtukai, atliktų datos filtrai; GPS patikra fotografuojant ir užbaigiant, **be sesijų ir laikmačio**, 30/50/100 m; iOS/Android leidimų patikra, R2 serverio laikas ir tikslus nuotraukų dubliavimas, ribotos darbuotojų teisės. | GitHub PR #7 |
 | 2026-10-19 | V2.2.10 – R2 Worker 500 klaidos taisymas | Pagal gyvą Cloudflare žurnalą nustatyta Supabase užklausų `redirect: error` sukeliama `TypeError`. Gyvas Worker be nuotraukų patvirtino `manual` režimą (HTTP 200). Pakeista į `redirect:manual`, tikri 3xx atmetami, JWT į kitą domeną neperduodamas. Laikina vieša diagnostika pašalinta, Supabase ir R2 duomenys nekeičiami. | GitHub branch `fix/r2-worker-supabase-egress-20261019` |
 | 2026-10-19 | V2.2.9 – iPhone/R2 fotografavimo pataisa | Kamera iPhone naudoja patikimesnį JPEG kodavimą, papildomas nuotraukos dekodavimo atsarginis kelias; PWA rodo tikrą nuotraukos įkėlimo API kodą, o nesėkmės atveju automatiškai netęsia kelių failų siuntimo. Worker turi saugų etapinių klaidų registravimą. Realus įkėlimas dar nepatvirtintas. | GitHub branch `fix/r2-mobile-upload-error-20261019` |
