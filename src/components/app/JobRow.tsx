@@ -108,7 +108,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
               {job.priority==="auksta"&&!done&&<Pill tone="danger">Skubu</Pill>}
               {job.inspection==="patikrinta"&&<Pill tone="success">Patikrinta</Pill>}
               {job.inspection==="taisyti"&&<Pill tone="danger">Reikia taisyti</Pill>}
-              {job.parentJobId&&<Pill tone="danger">Taisymas</Pill>}
+              {/* Legacy follow-ups retain their history; do not add a second redundant „Taisymas“ badge. */}
               {job.archivedAt&&<Pill>Archyvuota</Pill>}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
