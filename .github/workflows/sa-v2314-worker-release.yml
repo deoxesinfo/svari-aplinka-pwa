@@ -1,0 +1,78 @@
+name: ŠA V2.3.14 Worker controlled release
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cloudflare/photo-worker.mjs'
+      - 'wrangler.toml'
+      - '.github/workflows/sa-v2314-worker-release.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'cloudflare/photo-worker.mjs'
+      - 'wrangler.toml'
+      - '.github/workflows/sa-v2314-worker-release.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test GPS, photo upload and storage guards without mutations
+        run: |
+          node --check cloudflare/photo-worker.mjs
+          node --test cloudflare/photo-worker.test.mjs cloudflare/storage-admin.test.mjs
+      - name: Check Wrangler configuration without deployment
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.toml --outdir /tmp/sa-v2314-worker
+
+  release:
+    needs: verify
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, 'SA_V2314_WORKER_RELEASE_APPROVED')
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Cloudflare deployment credentials without printing secrets
+        id: creds
+        env:
+          HAS_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN != '' }}
+          HAS_CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
+        shell: bash
+        run: |
+          if [ "$HAS_CF_TOKEN" = 'true' ] && [ "$HAS_CF_ACCOUNT" = 'true' ]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Cloudflare deployment credentials configured.'
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo '::warning::Cloudflare credentials not configured in GitHub Secrets. Worker NOT deployed.'
+            echo 'Worker NOT deployed: add CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID securely.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Deploy same private Worker; preserve dashboard vars; leave deletion OFF
+        if: steps.creds.outputs.ready == 'true'
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          wranglerVersion: '4'
+          command: deploy --config wrangler.toml --keep-vars
+      - name: Probe actual live version (no auth, no photo operations)
+        if: steps.creds.outputs.ready == 'true'
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const url='https://svari-aplinka-photos.svariaplinka-lt.workers.dev/health';
+          let result;
+          for (let i=0;i<6;i++) {
+            const response=await fetch(url,{signal:AbortSignal.timeout(12000),cache:'no-store'});
+            result=await response.json();
+            if (response.status===200&&result.apiVersion==='2.3.14'&&result.storageStatsEnabled===true) break;
+            await new Promise(resolve=>setTimeout(resolve,2000));
+          }
+          assert.equal(result?.apiVersion,'2.3.14','Live Worker still old version');
+          assert.equal(result.storageStatsEnabled,true);
+          console.log('PASS Worker V2.3.14 live. Storage writes remain OFF.');
+          NODE
