@@ -3,6 +3,10 @@ import { fillAssignments } from "./work-assignments";
 import type { AppState } from "./store";
 import type { Address, Job, Person, PhotoMeta, RecruitmentLink } from "./types";
 
+export type LiveCloudRole="admin"|"worker";
+let currentRole:LiveCloudRole="admin";
+export const getCloudRole=()=>currentRole;
+export const resetCloudRole=()=>{currentRole="admin"};
 type Collection="addresses"|"jobs"|"people"|"recruitmentLinks";
 type Entity=Address|Job|Person|RecruitmentLink;
 const TABLE:Record<Collection,string>={addresses:"sa_addresses",jobs:"sa_jobs",people:"sa_people",recruitmentLinks:"sa_recruitment_links"};
@@ -48,15 +52,18 @@ export async function loadCloudState(org:string):Promise<Pick<AppState,"addresse
   if(error||!data.user)throw new Error("Sesija nepatvirtinta");
   const verified=await supabase.from("sa_memberships").select("role").eq("organization_id",org)
     .eq("user_id",data.user.id).eq("active",true).single();
-  if(verified.error||verified.data?.role!=="admin")throw new Error("Šiame etape debesijos valdymas leidžiamas tik administratoriui");
-  // Rolling 28-day window. Unique index prevents repeated jobs on every login/refresh.
-  // When no one opens the app, nothing runs; a true daily background task is a later option.
-  await fillAssignments(org);
+  if(verified.error||!["admin","worker"].includes(verified.data?.role||""))
+    throw new Error("Įmonės paskyrai nesuteiktos šios programėlės teisės");
+  const isAdmin=verified.data?.role==="admin";
+  // The rolling horizon and all administrative writes remain admin-only.
+  if(isAdmin)await fillAssignments(org);
   const [addresses,jobs,people,recruitmentLinks,photos]=await Promise.all([
     fetchCollection<Address>(org,"addresses"),fetchCollection<Job>(org,"jobs"),
-    fetchCollection<Person>(org,"people"),fetchCollection<RecruitmentLink>(org,"recruitmentLinks"),
+    fetchCollection<Person>(org,"people"),
+    isAdmin?fetchCollection<RecruitmentLink>(org,"recruitmentLinks"):Promise.resolve([]),
     fetchPhotoMetadata(org)
   ]);
+  currentRole=isAdmin?"admin":"worker";
   return {addresses,jobs,people,recruitmentLinks,photos,
     workers:people.filter(p=>p.role==="darbuotojas"&&(p.status==="aktyvus"||p.status==="atostogos")).map(p=>p.name)};
 }
