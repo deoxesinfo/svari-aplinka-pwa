@@ -16,7 +16,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Darbo Redaguoti / Naujo darbo iššokantis langas apribotas mobiliojo ekrano pločiu. Horizontalus slinkimas užblokuotas, paliktas vertikalus, formos laukai negali išplėsti lango.",
       "Pataisytas išsaugojimo ir atšaukimo mygtukų tarpas darbo redagavimo lange. Supabase, GPS, R2 ir kitos funkcijos nekeičiamos.",
       "Automatiniai išdėstymo testai nepakeičia vizualaus iPhone Safari bandymo.",
-    ],commits:[]},
+    ],commits:["a284463d","eb29a824"]},
 
   {date:"2026-10-19",version:"V2.2.4",category:"taisymas",
    title:"Vienodi darbuotojo datų laukai ir patogūs išsaugojimo mygtukai",
