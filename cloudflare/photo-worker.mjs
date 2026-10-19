@@ -262,7 +262,7 @@ async function upload(request,env,jwt,org,pilot,userId,role){
 }
 async function readImage(env,jwt,org,photoId,kind){
  const row=await one(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,data&organization_id=eq."+org+"&id=eq."+photoId+"&limit=1");
- if(!row||row.object_key!=="sa/"+org+"/"+photoId)fail(404,"PHOTO_NOT_FOUND");
+ if(!row||row.object_key!=="sa/"+org+"/"+photoId||row.data?.trashedAt||row.data?.purgingAt)fail(404,"PHOTO_NOT_FOUND");
  const details=row.data;
  if(!details||!["image/webp","image/jpeg"].includes(details.type)||
    !["image/webp","image/jpeg"].includes(details.thumbType))fail(404,"PHOTO_NOT_FOUND");
@@ -272,6 +272,85 @@ async function readImage(env,jwt,org,photoId,kind){
  return new Response(item.body,{headers:{"content-type":kind==="full"?row.data.type:row.data.thumbType,
   "content-disposition":"inline","cache-control":NO_STORE,"x-content-type-options":"nosniff"}});
 }
+
+/* V2.3.13: admin-only storage controls. Flags are OFF unless explicitly enabled. */
+const STORAGE_PERIODS=new Set(["30d","6m","12m","24m"]);
+function storageCutoff(period,now=new Date()){
+ if(!STORAGE_PERIODS.has(period))fail(400,"INVALID_PERIOD");
+ if(period==="30d")return new Date(now.getTime()-30*86400000);
+ const m=now.getUTCMonth()-Number(period.slice(0,-1)),y=now.getUTCFullYear();
+ const d=Math.min(now.getUTCDate(),new Date(Date.UTC(y,m+1,0)).getUTCDate());
+ return Date.UTC(y,m,d,now.getUTCHours(),now.getUTCMinutes(),now.getUTCSeconds(),now.getUTCMilliseconds());
+}
+function storageKeys(org,row){
+ if(row.object_key!=="sa/"+org+"/"+row.id)fail(409,"STORAGE_SCOPE_INVALID");
+ if(!row.data||!["image/webp","image/jpeg"].includes(row.data.type)||
+   !["image/webp","image/jpeg"].includes(row.data.thumbType))fail(409,"STORAGE_FORMAT_INVALID");
+ return objectPaths(row.object_key,row.data);
+}
+async function patchStorageRow(env,jwt,org,row,data){
+ const res=await call(env,jwt,"/rest/v1/sa_photo_metadata?organization_id=eq."+org+"&id=eq."+row.id,{
+  method:"PATCH",headers:{"content-type":"application/json","prefer":"return=representation"},body:JSON.stringify({data})});
+ const changed=res.ok?await res.json().catch(()=>[]):[];
+ if(!Array.isArray(changed)||changed.length!==1)fail(503,"STORAGE_UPDATE_FAILED");
+}
+async function usageStorage(env,org){
+ let cursor,bytes=0,objects=0;const folders=new Set(),prefix="sa/"+org+"/";
+ for(let page=0;page<150;page++){
+  const batch=await env.R2_BUCKET.list({prefix,limit:1000,...(cursor?{cursor}:{})});
+  if(!batch||!Array.isArray(batch.objects))fail(503,"R2_LIST_FAILED");
+  for(const object of batch.objects){objects++;bytes+=object.size;
+   const id=object.key.slice(prefix.length).split("/")[0];if(UUID.test(id))folders.add(id);}
+  if(!batch.truncated)return response({r2Bytes:bytes,r2Objects:objects,r2PhotoFolders:folders.size});
+  if(!batch.cursor||batch.cursor===cursor)fail(503,"R2_CURSOR_FAILED");
+  cursor=batch.cursor;
+ }
+ fail(503,"R2_LIST_LIMIT");
+}
+async function editStorage(req,env,jwt,org,userId,action){
+ if(env.ENABLE_STORAGE_ACTIONS!=="true")fail(503,"STORAGE_ACTIONS_DISABLED");
+ if(action==="purge"&&env.ENABLE_STORAGE_PURGE!=="true")fail(503,"STORAGE_PURGE_DISABLED");
+ const raw=await req.text();if(raw.length>4000)fail(413,"BODY_TOO_LARGE");
+ let input;try{input=JSON.parse(raw)}catch{fail(400,"INVALID_BODY")}
+ const ids=input?.ids;
+ if(!Array.isArray(ids)||!ids.length||ids.length>50||new Set(ids).size!==ids.length)fail(400,"INVALID_IDS");
+ ids.forEach(uuid);
+ if(action==="trash"&&!STORAGE_PERIODS.has(input.period))fail(400,"INVALID_PERIOD");
+ if(action==="purge"&&input.confirmation!=="SALINTI VISAM LAIKUI")fail(400,"CONFIRMATION_REQUIRED");
+ const photoRows=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,created_at,data"+
+  "&organization_id=eq."+org+"&id=in.("+ids.join(",")+")");
+ if(photoRows.length!==ids.length)fail(409,"STORAGE_SELECTION_CHANGED");
+ const found=new Map(photoRows.map(x=>[x.id,x]));
+ const items=ids.map(id=>found.get(id));
+ const limit=action==="trash"?Number(storageCutoff(input.period)):0;
+ for(const row of items){
+  const d=row.data||{},paths=storageKeys(org,row);
+  if(action==="trash"&&(d.trashedAt||d.purgingAt||!(Date.parse(row.created_at)<limit)))
+   fail(409,"STORAGE_CANDIDATE_CHANGED");
+  if(action!=="trash"&&!d.trashedAt)fail(409,"STORAGE_NOT_TRASHED");
+  if(action==="restore"&&d.purgingAt)fail(409,"STORAGE_ALREADY_PURGING");
+  if(action!=="purge")for(const path of paths)if(!await env.R2_BUCKET.head(path))fail(409,"R2_FILE_MISSING");
+ }
+ let changed=0;
+ for(const row of items){
+  const d=row.data;
+  if(action==="trash")await patchStorageRow(env,jwt,org,row,{...d,trashedAt:new Date().toISOString(),trashedBy:userId});
+  else if(action==="restore"){
+   const {trashedAt,trashedBy,...rest}=d;await patchStorageRow(env,jwt,org,row,rest);
+  }else{
+   // Tombstone BEFORE touching R2. Retry purge if storage/DB fails.
+   if(!d.purgingAt)await patchStorageRow(env,jwt,org,row,{...d,purgingAt:new Date().toISOString(),purgingBy:userId});
+   await env.R2_BUCKET.delete(storageKeys(org,row));
+   const res=await call(env,jwt,"/rest/v1/sa_photo_metadata?organization_id=eq."+org+"&id=eq."+row.id,
+    {method:"DELETE",headers:{"prefer":"return=representation"}});
+   const deleted=res.ok?await res.json().catch(()=>[]):[];
+   if(!Array.isArray(deleted)||deleted.length!==1)fail(503,"STORAGE_PURGE_METADATA_PENDING");
+  }
+  changed++;
+ }
+ return response({ok:true,changed});
+}
+
 export default {async fetch(req,env){
  let origin=req.headers.get("origin");
  try{
@@ -308,6 +387,18 @@ export default {async fetch(req,env){
    if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
    const {jwt,userId,role}=await authenticated(env,req,org,false);
    return cors(await verifyLocation(req,env,jwt,org,userId,role),origin,env);
+  }
+
+  const storageAction=/^\/v1\/storage\/(trash|restore|purge)$/.exec(path);
+  if(req.method==="GET"&&path==="/v1/storage/usage"){
+   const {role}=await authenticated(env,req,org,false);
+   if(role!=="admin")fail(403,"ADMIN_ONLY");
+   return cors(await usageStorage(env,org),origin,env);
+  }
+  if(req.method==="POST"&&storageAction){
+   const {jwt,userId,role}=await authenticated(env,req,org,false);
+   if(role!=="admin")fail(403,"ADMIN_ONLY");
+   return cors(await editStorage(req,env,jwt,org,userId,storageAction[1]),origin,env);
   }
   const complete=/^\/v1\/jobs\/([0-9a-f-]{36})\/complete$/.exec(path);
   if(req.method==="POST"&&complete){
