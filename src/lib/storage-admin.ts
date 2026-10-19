@@ -7,7 +7,8 @@ export type StoragePhoto = {
   size: number; thumbSize?: number; uploadedBy?: string; trashedAt?: string;
   purgingAt?: string;
 };
-export type R2Usage = { r2Bytes: number; r2Objects: number; r2PhotoFolders: number };
+export type R2Usage = { r2Bytes: number; r2Objects: number; r2PhotoFolders: number;
+  photoRecords: number; missingR2Files: number; unlinkedR2Files: number };
 export type SupabaseUsage = { database_bytes: number; document_bytes: number; document_files: number };
 export type StorageUsage = { r2: R2Usage | null; supabase: SupabaseUsage | null; errors: string[] };
 const PERIODS: readonly RetentionPeriod[] = ["30d", "6m", "12m", "24m"];
