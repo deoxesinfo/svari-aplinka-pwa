@@ -61,7 +61,7 @@ test.beforeEach(()=>{
 test("usage: admin sees exact R2 bytes without exposing raw object keys",async()=>{
  const result=await worker.fetch(req("/v1/storage/usage"),env);
  assert.equal(result.status,200,await result.clone().text());
- assert.deepEqual(await result.json(),{r2Bytes:9216,r2Objects:2,r2PhotoFolders:1});
+ assert.deepEqual(await result.json(),{r2Bytes:9216,r2Objects:2,r2PhotoFolders:1,photoRecords:1,missingR2Files:0,unlinkedR2Files:0});
 });
 test("usage: workers are denied before touching bucket",async()=>{
  role="worker";const result=await worker.fetch(req("/v1/storage/usage"),env);
