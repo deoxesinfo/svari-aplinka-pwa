@@ -49,6 +49,11 @@ globalThis.fetch=async (url,init={})=>{
    return new Response(null,{status:201});
  }
  if(p.endsWith("/sa_photo_metadata")&&u.searchParams.get("select")==="id"){
+   const hashFilter=u.searchParams.get("data->>sha256");
+   if(hashFilter){
+    return Response.json(db.filter(row=>row.data?.sha256===hashFilter.replace(/^eq\./,""))
+      .map(row=>({id:row.id})));
+   }
    const idQuery=u.searchParams.get("id");
    if(idQuery)return Response.json(db.filter(row=>row.id===idQuery.slice(3)).map(row=>({id:row.id})));
    return Response.json(Array.from({length:nPhotos},(_,i)=>({id:String(i)})));
