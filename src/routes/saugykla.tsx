@@ -116,6 +116,13 @@ function StoragePage() {
       <p className="text-muted-foreground">{renderNum(rows.filter(p => !p.trashedAt).length)} aktyvios nuotraukos,
         {renderNum(rows.filter(p => !!p.trashedAt).length)} šiukšlinėje.
         {usage?.supabase ? " Supabase dokumentų: " + renderNum(usage.supabase.document_files) + "." : ""}</p>
+      {usage?.r2&&<p className={usage.r2.missingR2Files||usage.r2.unlinkedR2Files?"text-amber-700":"text-muted-foreground"}>
+        R2–Supabase sutikrinimas: {usage.r2.photoRecords} metaduomenų įrašai,
+        {usage.r2.missingR2Files} trūkstami R2 failai,
+        {usage.r2.unlinkedR2Files} nesusieti R2 failai.
+      </p>}
+      <p className="text-muted-foreground">Perkėlus į šiukšlinę vieta dar neatlaisvinama.
+        Ji atlaisvinama tik rankiniu būdu galutinai pašalinus failus iš R2.</p>
       {usage?.errors.map((e,i)=><p key={i} className="text-amber-700">Statistika nepasiekiama: {e}</p>)}
       {error && <p role="alert" className="text-destructive">{error}</p>}
     </div>
