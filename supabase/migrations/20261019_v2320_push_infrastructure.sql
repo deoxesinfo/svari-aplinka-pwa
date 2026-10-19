@@ -6,7 +6,7 @@ create table if not exists public.sa_push_subscriptions (
   organization_id uuid not null,
   user_id uuid not null,
   endpoint text not null unique check(length(endpoint) between 25 and 2048
-    and endpoint ~* '^https://(fcm\\.googleapis\\.com|updates\\.push\\.services\\.mozilla\\.com|web\\.push\\.apple\\.com|[a-z0-9-]+\\.push\\.apple\\.com)/'),
+    and endpoint ~* '^https://(fcm[.]googleapis[.]com|updates[.]push[.]services[.]mozilla[.]com|web[.]push[.]apple[.]com|[a-z0-9-]+[.]push[.]apple[.]com)/'),
   p256dh text not null check(length(p256dh) between 25 and 256),
   auth text not null check(length(auth) between 10 and 256),
   created_at timestamptz not null default now(),
@@ -18,6 +18,8 @@ returns trigger language plpgsql security definer set search_path='' as $
 begin
   if (select count(*) from public.sa_push_subscriptions s
       where s.organization_id=new.organization_id and s.user_id=new.user_id)>=5
+      and not exists (select 1 from public.sa_push_subscriptions s where s.endpoint=new.endpoint
+        and s.organization_id=new.organization_id and s.user_id=new.user_id)
   then raise exception 'TOO_MANY_PUSH_DEVICES' using errcode='23514'; end if;
   return new;
 end;
