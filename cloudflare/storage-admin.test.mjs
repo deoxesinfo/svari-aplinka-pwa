@@ -67,6 +67,27 @@ test("usage: workers are denied before touching bucket",async()=>{
  role="worker";const result=await worker.fetch(req("/v1/storage/usage"),env);
  assert.equal(result.status,403);assert.equal(dbCalls,0);
 });
+test("read-only estimate includes full and thumbnail with exact R2 sizes",async()=>{
+ const result=await worker.fetch(req("/v1/storage/estimate","POST",{ids:[id]}),env);
+ assert.equal(result.status,200,await result.clone().text());
+ assert.deepEqual(await result.json(),{photos:1,bytes:9216,objects:2,missing:0});
+ assert.equal(record.data.trashedAt,undefined);
+});
+test("estimate blocks worker access and reports missing thumbnails",async()=>{
+ role="worker";
+ let result=await worker.fetch(req("/v1/storage/estimate","POST",{ids:[id]}),env);
+ assert.equal(result.status,403);
+ role="admin";objects.delete(thumb);
+ result=await worker.fetch(req("/v1/storage/estimate","POST",{ids:[id]}),env);
+ assert.equal(result.status,200,await result.clone().text());
+ assert.deepEqual(await result.json(),{photos:1,bytes:8192,objects:1,missing:1});
+});
+test("estimate refuses non-unique and invalid photo IDs",async()=>{
+ let result=await worker.fetch(req("/v1/storage/estimate","POST",{ids:[id,id]}),env);
+ assert.equal(result.status,400);
+ result=await worker.fetch(req("/v1/storage/estimate","POST",{ids:["../../path"]}),env);
+ assert.equal(result.status,400);
+});
 test("trash and purge operations are fail closed without flags",async()=>{
  const args={ids:[id],period:"12m"};
  let result=await worker.fetch(req("/v1/storage/trash","POST",args),env);
