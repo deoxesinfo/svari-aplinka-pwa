@@ -4,8 +4,10 @@ import type { PhotoMeta, PhotoTag } from "./types";
 /** Explicit release gate: false until Worker, policy, GPS and end-to-end QA are approved. */
 /** Only an explicitly built one-photo pilot UI may expose R2 controls; default builds stay OFF. */
 export const R2_PILOT_JOB_ID=import.meta.env.VITE_SA_R2_PILOT_JOB_ID||"";
-export const CLOUD_R2_PHOTOS_READY=import.meta.env.VITE_SA_R2_PILOT==="admin-one-photo"
- && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(R2_PILOT_JOB_ID);
+export const CLOUD_R2_PHOTOS_READY=
+ import.meta.env.VITE_SA_R2_PHOTOS==="enabled" ||
+ (import.meta.env.VITE_SA_R2_PILOT==="admin-one-photo"
+  && /^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(R2_PILOT_JOB_ID));
 export const R2_WORKER_URL="https://svari-aplinka-photos.svariaplinka-lt.workers.dev";
 /** User access token only. Worker validates JWT and performs RLS-bound reads. */
 async function headers(org:string){
