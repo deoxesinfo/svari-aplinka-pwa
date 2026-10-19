@@ -11,7 +11,9 @@ import { JobFormDialog } from "@/components/app/forms";
 import { AccessCode, Confirm, Pill, textareaCls } from "@/components/app/ui-bits";
 import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink } from "./MapsLink";
-import { useAppState, addComment, setJobStatus, setInspection, deleteJob } from "@/lib/store";
+import { useAppState, addComment, setJobStatus, setInspection, deleteJob, isCloudMode, getCloudOrganizationId, refreshCloudWorkspace } from "@/lib/store";
+import { getCloudRole } from "@/lib/cloud-sync";
+import { completeR2AssignedJob } from "@/lib/r2-photos";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { currentAdminOrg } from "@/lib/work-assignments";
 import { fmtDateTime, fmtLong, overdueLabel, todayISO } from "@/lib/dates";
@@ -39,6 +41,8 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
   const [finishOpen, setFinishOpen] = useState(false);
   const [fixOpen, setFixOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [gpsProofToken,setGpsProofToken]=useState<string|null>(null);
+  const employee=isCloudMode()&&getCloudRole()==="worker";
 
   if (!job) {
     return <div className="p-5">
@@ -61,12 +65,22 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
     }
   };
 
-  const complete = () => {
-    if (draft.trim()) {
-      addComment(job.id, draft.trim());
-      setDraft("");
+  const complete = async () => {
+    if(employee){
+      const org=getCloudOrganizationId();
+      if(!org){toast.error("Nepatvirtinta organizacija");return}
+      if(!gpsProofToken){toast.error("Pirmiausia patvirtinkite GPS ir nufotografuokite darbą");return}
+      try{
+        await completeR2AssignedJob(org,job.id,job.addressId,gpsProofToken,draft.trim());
+        await refreshCloudWorkspace();
+        setDraft("");
+        toast.success("Darbas užbaigtas ir perkeltas į „Atlikti“.");
+        onClose();
+      }catch(e){toast.error(e instanceof Error?e.message:"Darbo užbaigti nepavyko",{duration:10000})}
+      return;
     }
-    if(!setJobStatus(job.id, "atlikta"))return;
+    if (draft.trim()) {addComment(job.id,draft.trim());setDraft("")}
+    if(!setJobStatus(job.id,"atlikta"))return;
     toast.success("Darbas užbaigtas – rasite skiltyje „Atlikti“.");
     onClose();
   };
@@ -123,7 +137,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         <section className="card-surface space-y-3 p-4 sm:p-5">
           <h3 className="flex items-center gap-2 text-base font-bold"><Camera className="size-5 text-primary"/> Nuotraukos · {related.length}/15</h3>
           <p className="text-xs text-muted-foreground">Pasirinkite žymą „Prieš“, „Po“ arba „Problema“. Nuotraukos WebP formatu saugomos tik šio įrenginio naršyklėje.</p>
-          {address && <PhotoUploader addressId={address.id} jobId={job.id} />}
+          {address && <PhotoUploader addressId={address.id} jobId={job.id} onGpsProof={setGpsProofToken} />}
           <PhotoGrid photos={related} empty="Nuotraukų dar nėra." />
         </section>
       </div>
@@ -134,7 +148,8 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
           <label className="text-sm font-medium" htmlFor={"note-" + job.id}>Darbo komentaras</label>
           <textarea id={"note-" + job.id} className={textareaCls} rows={4} value={draft}
             onChange={e => setDraft(e.target.value)} placeholder="Įrašykite, ką reikia atlikti ar patikrinti…" />
-          <Button variant="outline" disabled={!draft.trim()} onClick={save}><Save /> Išsaugoti pastabą</Button>
+          {!employee&&<Button variant="outline" disabled={!draft.trim()} onClick={save}><Save /> Išsaugoti pastabą</Button>}
+          {employee&&<p className="text-xs text-muted-foreground">Darbuotojo komentaras išsaugomas kartu užbaigiant darbą.</p>}
           <div className="space-y-2">{[...job.comments].reverse().map(c =>
             <div className="rounded-lg bg-muted p-3 text-sm" key={c.id}>
               <p className="mb-1 text-xs text-muted-foreground">{fmtDateTime(c.at)}</p>
@@ -145,18 +160,18 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
 
         <section className="card-surface space-y-3 p-4 sm:p-5">
           <h3 className="text-base font-bold">Patikrinimas ir istorija</h3>
-          <div className="flex flex-wrap gap-2">
+          {!employee&&<div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => { setInspection(job.id, "patikrinta"); toast.success("Darbas patikrintas"); }}>
               <ShieldCheck /> Patikrinta
             </Button>
             <Button variant="outline" disabled={job.inspection === "taisyti"} onClick={() => setFixOpen(true)}>
               <AlertCircle /> Reikia taisyti
             </Button>
-          </div>
-          <div className="flex flex-wrap gap-2 border-b pb-3">
+          </div>}
+          {!employee&&<div className="flex flex-wrap gap-2 border-b pb-3">
             <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Pencil /> Redaguoti darbą</Button>
             <Button size="sm" variant="ghost" onClick={() => setDeleteOpen(true)}><Trash2 /> Ištrinti</Button>
-          </div>
+          </div>}
           {[...job.history].reverse().map((h, i) =>
             <div className="border-l-2 border-primary/20 pl-3 text-sm" key={i}>
               <p className="text-xs text-muted-foreground">{fmtDateTime(h.at)}</p>{h.text}
@@ -171,9 +186,9 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         Vien lango uždarymas neužbaigia darbo. Nuotraukos saugomos įkėlimo metu.
       </p>
       <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
-        <Button variant="outline" className="min-h-11" onClick={save}><Save /> Išsaugoti</Button>
+        {!employee?<Button variant="outline" className="min-h-11" onClick={save}><Save /> Išsaugoti</Button>:<div className="text-xs text-muted-foreground">GPS + nuotrauka → Užbaigti</div>}
         {done
-          ? <Button variant="outline" className="min-h-11" onClick={() => { setJobStatus(job.id, "laukia"); toast.success("Darbas atidarytas iš naujo"); }}>
+          ? <Button variant="outline" className="min-h-11" disabled={employee} onClick={() => { setJobStatus(job.id, "laukia"); toast.success("Darbas atidarytas iš naujo"); }}>
               <RotateCcw /> Atidaryti iš naujo
             </Button>
           : <Button className="min-h-11" onClick={() => setFinishOpen(true)}>
@@ -184,7 +199,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
 
     <JobFormDialog open={editOpen} onOpenChange={setEditOpen} job={job} />
     <Confirm open={finishOpen} onOpenChange={setFinishOpen}
-      title="Užbaigti darbą?" text="Darbas bus pažymėtas atliktu ir perkeltas į atliktų darbų sąrašo apačią. Jei yra neišsaugota pastaba, ji bus išsaugota."
+      title="Užbaigti darbą?" text="Darbas bus perkeltas į skirtuką „Atlikti“. Darbuotojui būtina GPS patikra ir bent viena šio darbo nuotrauka."
       confirmLabel="Užbaigti darbą" onConfirm={complete} />
     <Confirm open={fixOpen} onOpenChange={setFixOpen} title="Sukurti taisymo darbą?"
       text="Bus sukurtas atskiras skubus darbas šiandienai." confirmLabel="Sukurti"
