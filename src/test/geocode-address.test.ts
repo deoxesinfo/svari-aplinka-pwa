@@ -27,9 +27,9 @@ describe("ŠA V2.3.15 lietuviškų adresų paieška",()=>{
     }));
     const result=await findAddressCandidates("Partizanų g. 166","Kaunas");
     expect(requests).toHaveLength(2);
-    expect(new URL(requests[0]).searchParams.get("q")).toContain("Partizanų gatvė 166");
+    expect(new URL(requests[0]!).searchParams.get("q")).toContain("Partizanų gatvė 166");
     expect(result[0]).toMatchObject({exactHouse:true,source:"OpenStreetMap",lat:54.913});
-    expect(result[1].exactHouse).toBe(false);
+    expect(result[1]!.exactHouse).toBe(false);
     expect((await findAddressCandidates("Partizanų g. 166","Kaunas"))).toEqual(result);
     expect(requests).toHaveLength(2); // cached; respects public search provider
   });
@@ -41,7 +41,7 @@ describe("ŠA V2.3.15 lietuviškų adresų paieška",()=>{
     }));
     const found=await findAddressCandidates("Partizanų g. 167","Kaunas");
     expect(found).toHaveLength(1);
-    expect(found[0].exactHouse).toBe(false);
+    expect(found[0]!.exactHouse).toBe(false);
   });
   it("tiekėjams neveikiant nepateikia išgalvotos koordinatės",async()=>{
     vi.stubGlobal("fetch",vi.fn(async()=>new Response("unavailable",{status:503})));

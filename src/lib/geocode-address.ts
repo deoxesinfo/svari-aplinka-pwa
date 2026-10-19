@@ -23,7 +23,7 @@ const valid=(lat:unknown,lon:unknown):lat is number=>
   typeof lat==="number"&&typeof lon==="number"&&Number.isFinite(lat)&&Number.isFinite(lon)
   &&lat>=-90&&lat<=90&&lon>=-180&&lon<=180;
 function photonLabel(p:Record<string,unknown>):string{
- return [p.name,p.street,p.housenumber,p.city,p.state,p.country].filter(v=>typeof v==="string"&&v.trim()).join(", ");
+ return [p["name"],p["street"],p["housenumber"],p["city"],p["state"],p["country"]].filter(v=>typeof v==="string"&&v.trim()).join(", ");
 }
 async function photon(street:string,city:string):Promise<AddressCandidate[]>{
  const url=new URL("https://photon.komoot.io/api/");
@@ -39,10 +39,10 @@ async function photon(street:string,city:string):Promise<AddressCandidate[]>{
    const lat=pair[1],lon=pair[0];
    if(typeof lat!=="number"||typeof lon!=="number"||!valid(lat,lon))return [];
    const p=f.properties||{};
-   const resultCity=String(p.city||p.county||"");
+   const resultCity=String(p["city"]||p["county"]||"");
    const cityMatches=!resultCity||resultCity.toLocaleLowerCase("lt").includes(city.toLocaleLowerCase("lt"));
    return [{name:photonLabel(p)||"Vieta žemėlapyje",lat,lon,
-     exactHouse:cityMatches&&exact(house,p.housenumber),source:"Photon" as const}];
+     exactHouse:cityMatches&&exact(house,p["housenumber"]),source:"Photon" as const}];
  });
 }
 async function nominatim(street:string,city:string):Promise<AddressCandidate[]>{
@@ -67,7 +67,7 @@ async function nominatim(street:string,city:string):Promise<AddressCandidate[]>{
    const label=p.display_name||"Vieta žemėlapyje";
    const cityMatch=label.toLocaleLowerCase("lt").includes(city.toLocaleLowerCase("lt"));
    return [{name:label,lat,lon,
-     exactHouse:cityMatch&&exact(house,place.house_number),source:"OpenStreetMap" as const}];
+     exactHouse:cityMatch&&exact(house,place["house_number"]),source:"OpenStreetMap" as const}];
  });
 }
 export async function findAddressCandidates(street:string,city:string):Promise<AddressCandidate[]>{
