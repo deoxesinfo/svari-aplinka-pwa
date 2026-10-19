@@ -1,0 +1,43 @@
+name: ŠA V2.3.20 Push TypeScript and regression checks
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lib/web-push.ts'
+      - 'src/components/app/PushSettings.tsx'
+      - 'src/components/app/StaffInbox.tsx'
+      - 'src/lib/cloud-sync.ts'
+      - 'src/lib/staff-messages.ts'
+      - 'src/test/web-push.test.ts'
+      - 'public/push-sw.js'
+      - '.github/workflows/sa-v2320-push-typecheck.yml'
+permissions: {contents: read}
+jobs:
+  push-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build and generate TanStack route types
+        run: npm run build
+      - name: Validate public scoped Push service worker JS
+        run: node --check public/push-sw.js
+      - name: TypeScript strict diagnostic guard for changed Push files
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/sa-push-ts.log 2>&1
+          result=$?
+          set -e
+          if grep -Eq '^src/(lib/web-push[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log; then
+            grep -E '^src/(lib/web-push[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log
+            exit 1
+          fi
+          if [ "$result" -ne 0 ]; then
+            echo "::warning::Unrelated pre-existing TypeScript diagnostics $(grep -c 'error TS' /tmp/sa-push-ts.log || true)"
+          fi
+      - name: Push and staff message unit tests
+        run: npm test -- src/test/web-push.test.ts src/test/staff-messages.test.ts src/test/message-page-navigation.test.tsx

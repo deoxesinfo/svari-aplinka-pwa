@@ -96,7 +96,9 @@ export function cloudMutations(before:AppState,after:AppState,org:string):CloudM
   return [...deletes,...adds,...changes];
 }
 export async function saveCloudMutations(org:string,mutations:CloudMutation[]){
+  let touchedJobs=false;
   for(const change of mutations){
+    if(change.table==="sa_jobs")touchedJobs=true;
     if(change.kind==="add"){
       const {error}=await supabase.from(change.table).insert(change.row!);
       if(error)throw new Error(change.table+": "+error.message);
@@ -108,5 +110,10 @@ export async function saveCloudMutations(org:string,mutations:CloudMutation[]){
       const {error}=await supabase.from(change.table).delete().eq("organization_id",org).eq("id",change.id);
       if(error)throw new Error(change.table+": "+error.message);
     }
+  }
+  if(touchedJobs){
+    // Dispatch only after the DB confirmed the job mutation and created notifications.
+    // Offline and scheduled cases will be handled by server-side scheduling.
+    void supabase.functions?.invoke?.("sa-push-dispatch",{body:{action:"dispatch",organizationId:org}})?.catch(()=>{});
   }
 }
