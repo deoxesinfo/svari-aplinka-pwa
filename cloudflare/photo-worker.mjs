@@ -1,7 +1,7 @@
 /**
  * Švari Aplinka private photos API — DRAFT, NOT DEPLOYED.
  * R2 binding: R2_BUCKET
- * Text vars: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, ALLOWED_ORIGIN
+ * Text vars: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, ALLOWED_ORIGIN, ENABLE_UPLOADS
  * Never use a service_role token or public bucket.
  */
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
@@ -10,7 +10,7 @@ const TAGS=new Set(["pries","po","problema"]);
 const NO_STORE="private, no-store, max-age=0";
 class Problem extends Error{constructor(status,code){super(code);this.status=status;this.code=code}}
 function fail(status,code){throw new Problem(status,code)}
-function response(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":NO_STORE,"x-content-type-options":"nosniff"}})}
+function response(data,status=200){return new Response(JSON.stringify(data),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":NO_STORE,"x-content-type-options":"nosniff","referrer-policy":"no-referrer"}})}
 function cors(res,origin,env){if(!origin||origin!==env.ALLOWED_ORIGIN)return res;const x=new Response(res.body,res);x.headers.set("access-control-allow-origin",origin);x.headers.set("vary","Origin");return x}
 function validate(env){
  if(!env.R2_BUCKET||!env.SUPABASE_URL||!env.SUPABASE_PUBLISHABLE_KEY||!env.ALLOWED_ORIGIN)fail(503,"NOT_CONFIGURED");
@@ -46,17 +46,20 @@ async function authenticated(env,request,org,write){
  return jwt; // every subsequent Supabase request uses this JWT => RLS applies
 }
 async function limitedForm(req){
- const expected=Number(req.headers.get("content-length")||0);
- if(expected>MAX_REQUEST)fail(413,"BODY_TOO_LARGE");
+ const type=req.headers.get("content-type")||"";
+ if(!/^multipart\/form-data\s*;\s*boundary=/i.test(type))fail(415,"MULTIPART_REQUIRED");
+ const declared=req.headers.get("content-length");
+ if(declared!==null&&(!/^\d+$/.test(declared)||Number(declared)>MAX_REQUEST))fail(413,"BODY_TOO_LARGE");
  if(!req.body)fail(400,"EMPTY_BODY");
  const reader=req.body.getReader(),parts=[];let length=0;
  try{
   for(;;){const {value,done}=await reader.read();if(done)break;length+=value.byteLength;
    if(length>MAX_REQUEST){await reader.cancel();fail(413,"BODY_TOO_LARGE")}parts.push(value)}
  }finally{try{reader.releaseLock()}catch{}}
- const type=req.headers.get("content-type")||"";
- if(!type.toLowerCase().startsWith("multipart/form-data;"))fail(415,"MULTIPART_REQUIRED");
- return new Response(new Blob(parts),{headers:{"content-type":type}}).formData();
+ const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>fail(400,"MALFORMED_MULTIPART"));
+ const keys=new Set(["addressId","jobId","tag","width","height","full","thumb"]);
+ for(const [name] of form)if(!keys.has(name)||form.getAll(name).length!==1)fail(400,"INVALID_FORM_FIELDS");
+ return form;
 }
 function value(fd,name,limit=80){const s=fd.get(name);if(typeof s!=="string"||!s||s.length>limit)fail(400,"INVALID_"+name.toUpperCase());return s}
 async function checkFile(blob,limit){
@@ -64,7 +67,16 @@ async function checkFile(blob,limit){
  if(blob.size<20||blob.size>limit)fail(413,"IMAGE_SIZE_INVALID");
  const x=new Uint8Array(await blob.slice(0,12).arrayBuffer());
  const prefix=String.fromCharCode(...x.slice(0,4)),suffix=String.fromCharCode(...x.slice(8,12));
- if(blob.type==="image/webp"?(prefix!=="RIFF"||suffix!=="WEBP"):(x[0]!==255||x[1]!==216||x[2]!==255))fail(415,"IMAGE_SIGNATURE_INVALID");
+ if(blob.type==="image/webp"){
+  const chunk=new Uint8Array(await blob.slice(12,16).arrayBuffer());
+  const fourcc=String.fromCharCode(...chunk);
+  const declared=new DataView(x.buffer).getUint32(4,true);
+  if(prefix!=="RIFF"||suffix!=="WEBP"||declared!==blob.size-8||
+    !["VP8 ","VP8L","VP8X"].includes(fourcc))fail(415,"IMAGE_SIGNATURE_INVALID");
+ }else{
+  const last=new Uint8Array(await blob.slice(-2).arrayBuffer());
+  if(x[0]!==255||x[1]!==216||x[2]!==255||last[0]!==255||last[1]!==217)fail(415,"IMAGE_SIGNATURE_INVALID");
+ }
  return blob;
 }
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
@@ -74,6 +86,9 @@ async function upload(request,env,jwt,org){
  const addressId=uuid(value(fd,"addressId"));
  const jr=fd.get("jobId");
  const jobId=typeof jr==="string"&&jr?uuid(jr):null;
+ // Phase 1 requires a job: DB has transactional 15-photo guard only for job photos.
+ // Address-only photos need a separately approved server-side quota/lock.
+ if(!jobId)fail(409,"JOB_REQUIRED_FOR_PILOT");
  const tag=value(fd,"tag",16);if(!TAGS.has(tag))fail(400,"INVALID_TAG");
  const width=Number(value(fd,"width",8)),height=Number(value(fd,"height",8));
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>1600||height>1600)fail(400,"INVALID_DIMENSIONS");
@@ -93,18 +108,49 @@ async function upload(request,env,jwt,org){
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
   data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag}};
  const [fk,tk]=objectPaths(key,meta.data);
+ let wroteR2=false;
  try{
   await env.R2_BUCKET.put(fk,full,{httpMetadata:{contentType:full.type}});
   await env.R2_BUCKET.put(tk,thumb,{httpMetadata:{contentType:thumb.type}});
-  const r=await call(env,jwt,"/rest/v1/sa_photo_metadata",{method:"POST",headers:{"content-type":"application/json","prefer":"return=minimal"},body:JSON.stringify(meta)});
-  if(!r.ok)fail(409,"METADATA_SAVE_FAILED");
- }catch(e){await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);throw e}
+  wroteR2=true;
+ }catch(e){
+  // Unique server-generated names mean cleanup never deletes another user's object.
+  await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
+  throw e;
+ }
+ const dbInsert=()=>call(env,jwt,"/rest/v1/sa_photo_metadata",{
+  method:"POST",headers:{"content-type":"application/json","prefer":"return=minimal"},body:JSON.stringify(meta)
+ });
+ try{
+  const res=await dbInsert();
+  if(!res.ok){
+   await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
+   fail(res.status===409?409:502,"METADATA_SAVE_FAILED");
+  }
+ }catch(e){
+  if(e instanceof Problem)throw e;
+  // The network may have failed AFTER Supabase committed the row.
+  // Query before cleanup, and keep R2 blobs on an indeterminate result.
+  try{
+   const saved=await one(env,jwt,"/rest/v1/sa_photo_metadata?select=id&organization_id=eq."+org+"&id=eq."+photoId+"&limit=1");
+   if(!saved){
+    await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
+    fail(503,"DATABASE_UNAVAILABLE");
+   }
+  }catch(checkError){
+   if(checkError instanceof Problem&&checkError.code==="DATABASE_UNAVAILABLE")throw checkError;
+   fail(503,"UPLOAD_OUTCOME_UNKNOWN");
+  }
+ }
  return response({id:photoId,addressId,jobId,createdAt:new Date().toISOString(),tag,width,height,size:full.size,type:full.type},201);
 }
 async function readImage(env,jwt,org,photoId,kind){
  const row=await one(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,data&organization_id=eq."+org+"&id=eq."+photoId+"&limit=1");
  if(!row||row.object_key!=="sa/"+org+"/"+photoId)fail(404,"PHOTO_NOT_FOUND");
- const files=objectPaths(row.object_key,row.data||{});
+ const details=row.data;
+ if(!details||!["image/webp","image/jpeg"].includes(details.type)||
+   !["image/webp","image/jpeg"].includes(details.thumbType))fail(404,"PHOTO_NOT_FOUND");
+ const files=objectPaths(row.object_key,details);
  const item=await env.R2_BUCKET.get(kind==="full"?files[0]:files[1]);
  if(!item)fail(404,"FILE_NOT_FOUND");
  return new Response(item.body,{headers:{"content-type":kind==="full"?row.data.type:row.data.thumbType,
@@ -125,6 +171,7 @@ export default {async fetch(req,env){
   if(req.method==="GET"&&path==="/health")return cors(response({status:"ok"}),origin,env);
   const org=orgFrom(req);
   if(req.method==="POST"&&path==="/v1/photos"){
+   if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
    const jwt=await authenticated(env,req,org,true);
    return cors(await upload(req,env,jwt,org),origin,env);
   }
@@ -134,7 +181,8 @@ export default {async fetch(req,env){
    const jwt=await authenticated(env,req,org,false);
    return cors(await readImage(env,jwt,org,photoId,m[2]),origin,env);
   }
-  // No public list or delete endpoints; deletion remains disabled until approved migration.
+  // No public list or delete endpoints; DELETE RLS policy remains unchanged.
+  // Image GET uses the caller's JWT; Supabase RLS decides visibility.
   if(req.method==="DELETE"&&path.startsWith("/v1/photos/"))fail(403,"DELETE_DISABLED");
   fail(404,"UNKNOWN_ROUTE");
  }catch(e){
