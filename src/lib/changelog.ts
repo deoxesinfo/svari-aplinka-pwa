@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.4",category:"taisymas",
+   title:"Vienodi darbuotojo datų laukai ir patogūs išsaugojimo mygtukai",
+   details:[
+    "Personalo profilio Redaguoti formoje „Dirba nuo“ ir „Darbo pabaigos data“ dabar turi vienodo aukščio ir pločio iPhone Safari pritaikytus vietinius datos laukus.",
+    "Darbo pabaigos data turi atskirą X išvalymo mygtuką, kurį paspaudus data pašalinama, o tuščia reikšmė išsaugoma. Jei darbo pabaiga nežinoma, jos neišgalvojame; darbo laikotarpių istorijoje rodoma „Pabaigos data nenurodyta“.",
+    "„Išsaugoti“ ir „Atšaukti“ personalo redagavimo lange atskirti 16 px tarpu, padidintas mygtukų patogumas telefonu.",
+    "Standartinis iOS datos pasirinkimo langas nepakeistas, Supabase schema ir nuotraukų saugykla nekeičiama. Vizualinis iPhone Safari patikrinimas dar reikalingas.",
+   ],commits:["6cc56c49","2e935383"]},
+
   {date:"2026-10-19",version:"V2.2.3",category:"taisymas",
    title:"Adresų Swipe ir saugus archyvas, nebaigtų darbų archyvavimas, personalo nuotraukos redagavime",
    details:[
