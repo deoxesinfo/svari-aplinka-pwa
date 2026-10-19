@@ -32,7 +32,8 @@ export function NotificationBell(){
   const refresh=()=>{if(document.visibilityState==="visible")void fetchNotices()};
   const timer=window.setInterval(refresh,45000);
   window.addEventListener("focus",refresh);
-  return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh)};
+  window.addEventListener("sa-message-updated",refresh);
+  return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("sa-message-updated",refresh)};
  },[]);
  // Close the panel on navigation, backdrop taps, drawer opening and Escape.
  // Outside pointer presses should NOT block the original click/navigation.
