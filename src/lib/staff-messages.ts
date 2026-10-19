@@ -43,7 +43,7 @@ export async function sendStaffMessage(org:string,params:{
  });
  const id=assert(data as string|null,error,"Nepavyko išsiųsti pranešimo");
  // Best-effort immediate Web Push; messages still deliver to inbox even if Push is disabled.
- void supabase.functions.invoke("sa-push-dispatch",{body:{action:"dispatch",organizationId:org}}).catch(()=>{});
+ void supabase.functions?.invoke?.("sa-push-dispatch",{body:{action:"dispatch",organizationId:org}})?.catch(()=>{});
  return id;
 }
 export async function listSentStaffMessages(org:string):Promise<{messages:StaffMessage[];receipts:MessageReceipt[]}>{
