@@ -37,7 +37,7 @@ async function photon(street:string,city:string):Promise<AddressCandidate[]>{
    const pair=f.geometry?.coordinates;
    if(!Array.isArray(pair)||pair.length<2)return [];
    const lat=pair[1],lon=pair[0];
-   if(!valid(lat,lon))return [];
+   if(typeof lat!=="number"||typeof lon!=="number"||!valid(lat,lon))return [];
    const p=f.properties||{};
    const resultCity=String(p.city||p.county||"");
    const cityMatches=!resultCity||resultCity.toLocaleLowerCase("lt").includes(city.toLocaleLowerCase("lt"));
@@ -60,6 +60,7 @@ async function nominatim(street:string,city:string):Promise<AddressCandidate[]>{
  const data=await res.json() as NominatimPlace[];
  const house=requestedHouseNumber(street);
  return (Array.isArray(data)?data:[]).flatMap(p=>{
+   if(!p.lat||!p.lon)return [];
    const lat=Number(p.lat),lon=Number(p.lon);
    if(!valid(lat,lon))return [];
    const place=p.address||{};
