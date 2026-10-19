@@ -112,7 +112,7 @@ async function checkFile(blob,limit){
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
 
-const GPS_TTL_MS=10*60*1000;
+// No time limit: proof is scoped to the verified user and the specific work item.
 function gpsDistance(lat1,lon1,lat2,lon2){
  const rad=n=>n*Math.PI/180;
  const a=Math.sin(rad(lat2-lat1)/2)**2+
@@ -131,8 +131,7 @@ async function gpsProof(env,token,org,userId,jobId){
  try{file=await env.R2_BUCKET.get("__sa_gps_proofs__/"+token)}catch{fail(503,"GPS_PROOF_STORAGE_UNAVAILABLE")}
  if(!file)fail(409,"GPS_PROOF_EXPIRED");
  let p;try{p=JSON.parse(await file.text())}catch{fail(409,"GPS_PROOF_INVALID")}
- if(p.org!==org||p.userId!==userId||p.jobId!==jobId||!Number.isFinite(p.expiresAt)||
-    p.expiresAt<Date.now()||p.expiresAt>Date.now()+GPS_TTL_MS)fail(409,"GPS_PROOF_EXPIRED");
+ if(p.org!==org||p.userId!==userId||p.jobId!==jobId)fail(409,"GPS_PROOF_INVALID");
  if(!["gps_live","admin_override"].includes(p.mode))fail(409,"GPS_PROOF_INVALID");
  return p;
 }
@@ -164,11 +163,11 @@ async function gpsSession(req,env,jwt,org,userId,role,override=false){
   if(distance>radius)fail(409,"GPS_OUTSIDE_RADIUS");
   proof={mode:"gps_live",radius,distanceMeters:distance,accuracyMeters:Math.round(accuracy)};
  }
- const issuedAt=new Date().toISOString(),key=crypto.randomUUID(),expiresAt=Date.now()+GPS_TTL_MS;
+ const issuedAt=new Date().toISOString(),key=crypto.randomUUID();
  await env.R2_BUCKET.put("__sa_gps_proofs__/"+key,JSON.stringify({
-  ...proof,org,userId,jobId,addressId,issuedAt,expiresAt
+  ...proof,org,userId,jobId,addressId,issuedAt
  }),{httpMetadata:{contentType:"application/json"}});
- return response({token:key,mode:proof.mode,issuedAt,expiresAt,
+ return response({token:key,mode:proof.mode,issuedAt,
   radius:proof.radius,distanceMeters:proof.distanceMeters??null,accuracyMeters:proof.accuracyMeters??null},201);
 }
 
