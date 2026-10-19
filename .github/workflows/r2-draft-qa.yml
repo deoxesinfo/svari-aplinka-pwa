@@ -20,6 +20,11 @@ jobs:
         run: npm install --legacy-peer-deps --no-audit --no-fund
       - name: Build PWA
         run: npm run build
+      - name: Build isolated one-photo pilot UI (NO DEPLOY)
+        env:
+          VITE_SA_R2_PILOT: admin-one-photo
+          VITE_SA_R2_PILOT_JOB_ID: 72f0699e-e446-4379-b93f-c702c4f70c46
+        run: npm run build
       - name: Test PWA
         run: npm test
       - name: Test private Worker API
