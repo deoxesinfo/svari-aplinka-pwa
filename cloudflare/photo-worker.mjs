@@ -51,8 +51,8 @@ async function authenticated(env,request,org,write){
  if(!UUID.test(user?.id||""))fail(401,"AUTH_INVALID");
  const membership=await one(env,jwt,"/rest/v1/sa_memberships?select=role&organization_id=eq."+org+"&user_id=eq."+user.id+"&active=eq.true&limit=1");
  if(!membership)fail(403,"NO_MEMBERSHIP");
- if(write&&membership.role!=="admin")fail(403,"ADMIN_ONLY");
- return {jwt,userId:user.id}; // every subsequent Supabase request uses this JWT => RLS applies
+ if(write&&!["admin","worker"].includes(membership.role))fail(403,"ROLE_FORBIDDEN");
+ return {jwt,userId:user.id,role:membership.role}; // RLS applies
 }
 function pilotConfiguration(env){
  if(env.PILOT_ENABLED!=="true" ||
@@ -87,7 +87,7 @@ async function limitedForm(req){
    if(length>MAX_REQUEST){await reader.cancel();fail(413,"BODY_TOO_LARGE")}parts.push(value)}
  }finally{try{reader.releaseLock()}catch{}}
  const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>{throw new Problem(400,"MALFORMED_MULTIPART");});
- const keys=new Set(["addressId","jobId","tag","width","height","full","thumb"]);
+ const keys=new Set(["addressId","jobId","tag","width","height","full","thumb","gpsProof"]);
  for(const [name] of form)if(!keys.has(name)||form.getAll(name).length!==1)fail(400,"INVALID_FORM_FIELDS");
  return form;
 }
@@ -111,7 +111,68 @@ async function checkFile(blob,limit){
 }
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
-async function upload(request,env,jwt,org,pilot){
+
+const GPS_TTL_MS=10*60*1000;
+function gpsDistance(lat1,lon1,lat2,lon2){
+ const rad=n=>n*Math.PI/180;
+ const a=Math.sin(rad(lat2-lat1)/2)**2+
+   Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(rad(lon2-lon1)/2)**2;
+ return 6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));
+}
+async function assignedJob(env,jwt,org,jobId,addressId,userId,role){
+ const job=await one(env,jwt,"/rest/v1/sa_jobs?select=id,address_id,assigned_user_id,data&organization_id=eq."+org+"&id=eq."+uuid(jobId)+"&limit=1");
+ if(!job||job.data?.deletedAt||job.data?.archivedAt||job.address_id!==addressId)fail(404,"JOB_UNAVAILABLE");
+ if(role!=="admin"&&job.assigned_user_id!==userId)fail(403,"JOB_NOT_ASSIGNED");
+ return job;
+}
+async function gpsProof(env,token,org,userId,jobId){
+ if(!UUID.test(token||""))fail(409,"GPS_SESSION_REQUIRED");
+ let file;
+ try{file=await env.R2_BUCKET.get("__sa_gps_proofs__/"+token)}catch{fail(503,"GPS_PROOF_STORAGE_UNAVAILABLE")}
+ if(!file)fail(409,"GPS_PROOF_EXPIRED");
+ let p;try{p=JSON.parse(await file.text())}catch{fail(409,"GPS_PROOF_INVALID")}
+ if(p.org!==org||p.userId!==userId||p.jobId!==jobId||!Number.isFinite(p.expiresAt)||
+    p.expiresAt<Date.now()||p.expiresAt>Date.now()+GPS_TTL_MS)fail(409,"GPS_PROOF_EXPIRED");
+ if(!["gps_live","admin_override"].includes(p.mode))fail(409,"GPS_PROOF_INVALID");
+ return p;
+}
+async function gpsSession(req,env,jwt,org,userId,role,override=false){
+ const raw=await req.text();
+ if(raw.length>1400)fail(413,"GPS_REQUEST_TOO_LARGE");
+ let input;try{input=JSON.parse(raw)}catch{fail(400,"GPS_REQUEST_INVALID")}
+ if(!input||typeof input!=="object")fail(400,"GPS_REQUEST_INVALID");
+ const jobId=uuid(input.jobId),addressId=uuid(input.addressId);
+ const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+ const adr=await one(env,jwt,"/rest/v1/sa_addresses?select=id,data&organization_id=eq."+org+"&id=eq."+addressId+"&limit=1");
+ if(!adr||adr.data?.archivedAt||adr.data?.deletedAt)fail(404,"ADDRESS_UNAVAILABLE");
+ if(!adr.data?.gpsLocationConfirmed||!Number.isFinite(Number(adr.data?.latitude))||
+    !Number.isFinite(Number(adr.data?.longitude)))fail(409,"GPS_OBJECT_PIN_REQUIRED");
+ const radius=[30,50,100].includes(Number(job.data?.gpsRadiusMeters))?Number(job.data.gpsRadiusMeters):50;
+ let proof;
+ if(override){
+  if(role!=="admin")fail(403,"ADMIN_ONLY");
+  const reason=typeof input.reason==="string"?input.reason.trim():"";
+  if(reason.length<15||reason.length>240)fail(400,"GPS_OVERRIDE_REASON_REQUIRED");
+  proof={mode:"admin_override",radius,reason};
+ }else{
+  const lat=input.latitude,lon=input.longitude,accuracy=input.accuracy;
+  if(typeof lat!=="number"||typeof lon!=="number"||typeof accuracy!=="number"||
+     !Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||
+     Math.abs(lat)>90||Math.abs(lon)>180||accuracy<=0)fail(400,"GPS_POSITION_INVALID");
+  const distance=Math.round(gpsDistance(lat,lon,Number(adr.data.latitude),Number(adr.data.longitude)));
+  if(accuracy>Math.min(50,radius))fail(409,"GPS_ACCURACY_LOW");
+  if(distance>radius)fail(409,"GPS_OUTSIDE_RADIUS");
+  proof={mode:"gps_live",radius,distanceMeters:distance,accuracyMeters:Math.round(accuracy)};
+ }
+ const issuedAt=new Date().toISOString(),key=crypto.randomUUID(),expiresAt=Date.now()+GPS_TTL_MS;
+ await env.R2_BUCKET.put("__sa_gps_proofs__/"+key,JSON.stringify({
+  ...proof,org,userId,jobId,addressId,issuedAt,expiresAt
+ }),{httpMetadata:{contentType:"application/json"}});
+ return response({token:key,mode:proof.mode,issuedAt,expiresAt,
+  radius:proof.radius,distanceMeters:proof.distanceMeters??null,accuracyMeters:proof.accuracyMeters??null},201);
+}
+
+async function upload(request,env,jwt,org,pilot,userId,role){
  let stage="FORM_PARSE";
  try{
  const fd=await limitedForm(request);
