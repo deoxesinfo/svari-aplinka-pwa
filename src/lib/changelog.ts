@@ -17,7 +17,8 @@ export const CHANGELOG: ChangeEntry[] = [
       "GPS saugomų objektų, darbuotojų įkėlimo ir nuotraukų trynimo aktyvavimas atidėtas iki serverinių prieigos taisyklių ir realių įrenginių testų.",
       "GitHub CI vykdo PWA Build, Vitest ir Worker API testus. Instrukcija: cloudflare/CLOUDFLARE_SETUP_LT.md.",
       "Vienos administratoriaus nuotraukos PILOT DRAFT: atskirai ribojami organizacijos/admin/darbo UUID, dvigubas ENABLE_UPLOADS ir PILOT_ENABLED užraktas, atomarinė R2 If-None-Match rezervacija neleidžia įkelti dviejų nuotraukų net lygiagrečiai.",
-      "Po pilotinės rezervacijos klaidos automatiniai bandymai draudžiami; R2/DB/PWA veikiantys duomenys nekeisti, dabartinė Cloudflare versija tebėra su įkėlimu išjungtu. R2_PILOT_GUARD_SETUP_LT.md – DRAFT instrukcija."
+      "Po pilotinės rezervacijos klaidos automatiniai bandymai draudžiami; R2/DB/PWA veikiantys duomenys nekeisti, dabartinė Cloudflare versija tebėra su įkėlimu išjungtu. R2_PILOT_GUARD_SETUP_LT.md – DRAFT instrukcija.",
+      "Atskiram GitHub Pages R2 pilotui DRAFT pridėtas minimalistinis administratoriaus prisijungimo ir vieno failo ekranas (pilot.html, src/pilot.tsx), izoliuoto base path surinkimas ir repo diegimo workflow šablonas; testas nepublikuotas, nes dar nesukurta atskira repo."
     ],commits:[]},
 
   {date:"2026-10-19",version:"V2.2.7",category:"taisymas",
