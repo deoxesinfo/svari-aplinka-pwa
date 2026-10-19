@@ -108,11 +108,9 @@ async function upload(request,env,jwt,org){
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
   data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag}};
  const [fk,tk]=objectPaths(key,meta.data);
- let wroteR2=false;
  try{
   await env.R2_BUCKET.put(fk,full,{httpMetadata:{contentType:full.type}});
   await env.R2_BUCKET.put(tk,thumb,{httpMetadata:{contentType:thumb.type}});
-  wroteR2=true;
  }catch(e){
   // Unique server-generated names mean cleanup never deletes another user's object.
   await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
@@ -125,7 +123,7 @@ async function upload(request,env,jwt,org){
   const res=await dbInsert();
   if(!res.ok){
    await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
-   fail(res.status===409?409:502,"METADATA_SAVE_FAILED");
+   fail(res.status===403?403:(res.status===409||res.status===400)?409:502,"METADATA_SAVE_FAILED");
   }
  }catch(e){
   if(e instanceof Problem)throw e;
