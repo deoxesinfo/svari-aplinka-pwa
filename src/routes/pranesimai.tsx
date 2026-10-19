@@ -29,7 +29,7 @@ function MessagesPage(){
  const [success,setSuccess]=useState("");
  const [messages,setMessages]=useState<StaffMessage[]>([]);
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
- const [showInbox,setShowInbox]=useState(false);
+ const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">("gauti");
  const labels=useMemo(()=>new Map(recipients.map(p=>[p.userId,p.name])),[recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!admin)return;
@@ -56,6 +56,7 @@ function MessagesPage(){
    setSuccess(scheduled?"Pranešimas suplanuotas":"Pranešimas įrašytas ir pasiekiamas gavėjams");
    setTitle("");setBody("");setSelected([]);setScheduled(false);setSchedule("");
    await refresh();
+   setTab("issiusti");
   }catch(e){setError(e instanceof Error?e.message:"Pranešimo išsiųsti nepavyko")}
   finally{setSending(false)}
  };
@@ -63,7 +64,13 @@ function MessagesPage(){
  return <div className="space-y-6">
   <PageHeader title="Pranešimai" subtitle={admin?"Asmeninės žinutės, planavimas ir gavėjų būsenos":"Gauti įmonės pranešimai"}/>
   {admin&&<>
-   <section className="rounded-xl border bg-card p-4 sm:p-6">
+   <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Pranešimų skiltys">
+    {([["gauti","Gauti"],["kurti","Kurti"],["issiusti","Išsiųsti"]] as const).map(([key,label])=><button
+     key={key} type="button" role="tab" aria-selected={tab===key} onClick={()=>{setTab(key);if(key==="issiusti")void refresh()}}
+     className={"min-h-11 rounded-lg border px-2 text-sm font-semibold "+(tab===key?"border-primary bg-primary text-primary-foreground":"bg-card")}>{label}</button>)}
+   </div>
+   {tab==="gauti"&&<StaffInbox/>}
+   {tab==="kurti"&&<section className="rounded-xl border bg-card p-4 sm:p-6">
     <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Send className="size-5"/> Naujas pranešimas</h2>
     <form className="space-y-4" onSubmit={e=>void send(e)}>
      <div>
@@ -106,8 +113,8 @@ function MessagesPage(){
      </Button>
      <p className="text-xs text-muted-foreground">Kol Push neįjungtas, gavėjai žinutę matys programėlėje. Suplanuota žinutė iki nurodyto laiko jiems nerodoma.</p>
     </form>
-   </section>
-   <section className="space-y-3">
+   </section>}
+   {tab==="issiusti"&&<section className="space-y-3">
     <h2 className="flex items-center gap-2 text-lg font-bold"><MessageSquare className="size-5"/> Išsiųsti ir suplanuoti</h2>
     {messages.length===0?<p className="rounded-xl border p-4 text-sm text-muted-foreground">Pranešimų istorija tuščia.</p>:
      messages.map(m=>{
@@ -128,11 +135,7 @@ function MessagesPage(){
        </div>
       </article>;
      })}
-   </section>
-   <div>
-    <Button variant="outline" onClick={()=>setShowInbox(s=>!s)}>{showInbox?"Slėpti":"Rodyti"} mano gautus pranešimus</Button>
-    {showInbox&&<div className="mt-3"><StaffInbox/></div>}
-   </div>
+   </section>}
   </>}
   {!admin&&<StaffInbox/>}
  </div>;
