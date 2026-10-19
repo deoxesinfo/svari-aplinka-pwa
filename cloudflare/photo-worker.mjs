@@ -217,12 +217,17 @@ export default {async fetch(req,env){
    // Probe both redirect strategies because Cloudflare can reject a redirect with
    // redirect:"error" before an HTTP response is returned.
    const methods=[];
-   for(const redirect of ["error","follow"]){
+   for(const redirect of ["error","manual","follow"]){
     try{
      const r=await fetch(env.SUPABASE_URL+"/auth/v1/health",{
       method:"GET",headers:{"apikey":env.SUPABASE_PUBLISHABLE_KEY},redirect
      });
-     methods.push({redirect,http:r.status,reachable:true});
+     const rawLocation=r.headers.get("location");
+     let redirectTarget="none";
+     if(rawLocation){
+      try{const url=new URL(rawLocation,env.SUPABASE_URL);redirectTarget=url.origin===env.SUPABASE_URL?"same-origin":url.hostname.endsWith(".supabase.co")?"supabase-host":"other-host"}catch{redirectTarget="invalid"}
+     }
+     methods.push({redirect,http:r.status,reachable:true,redirectTarget});
     }catch(e){
      // Only log a fixed JS error class; never log exception text, request or secrets.
      console.warn("R2_SUPABASE_EGRESS_FAIL",{redirect,errorType:e instanceof Error?e.name:"unknown"});
