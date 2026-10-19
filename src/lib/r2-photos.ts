@@ -30,14 +30,30 @@ export async function downloadR2Photo(org:string,id:string,kind:"full"|"thumb"){
  }));
  return r.blob();
 }
+export type GpsSession={token:string;expiresAt:number;issuedAt:string;radius:number;mode:"gps_live"|"admin_override";distanceMeters:number|null;accuracyMeters:number|null};
+export async function verifyR2Gps(org:string,jobId:string,addressId:string,fix:{latitude:number;longitude:number;accuracy:number}):Promise<GpsSession>{
+ const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/verify",{
+  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
+  body:JSON.stringify({jobId,addressId,...fix}),cache:"no-store"
+ }));
+ return response.json() as Promise<GpsSession>;
+}
+export async function overrideR2Gps(org:string,jobId:string,addressId:string,reason:string):Promise<GpsSession>{
+ const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/override",{
+  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
+  body:JSON.stringify({jobId,addressId,reason}),cache:"no-store"
+ }));
+ return response.json() as Promise<GpsSession>;
+}
 export async function uploadR2Photo(
  org:string, addressId:string, jobId:string|undefined, tag:PhotoTag,
- full:Blob, thumb:Blob, width:number,height:number
+ full:Blob, thumb:Blob, width:number,height:number,gpsToken?:string
 ):Promise<PhotoMeta>{
  const f=new FormData();
  f.set("addressId",addressId);
  if(jobId)f.set("jobId",jobId);
  f.set("tag",tag);f.set("width",String(width));f.set("height",String(height));
+ if(gpsToken)f.set("gpsProof",gpsToken);
  const ext=(b:Blob)=>b.type==="image/jpeg"?"jpg":"webp";
  f.set("full",full,"full."+ext(full));f.set("thumb",thumb,"thumb."+ext(thumb));
  const r=await checked(await fetch(R2_WORKER_URL+"/v1/photos",{
