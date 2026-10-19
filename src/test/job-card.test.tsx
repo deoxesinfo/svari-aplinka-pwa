@@ -33,6 +33,20 @@ const job: Job = {
 describe("Universalus darbo kortelės atidarymas", () => {
   beforeEach(() => cleanup());
 
+  it("desktop navigacija rodoma darbo kortelės viduje, mobilus išdėstymas išlieka", () => {
+    render(<JobRow job={job} />);
+    const links=screen.getAllByRole("link", { name: /Važiuoti į Pavyzdžio g. 12/ });
+    expect(links).toHaveLength(2);
+    const desktop=links.find(link=>link.parentElement?.className.includes("lg:block"));
+    const mobile=links.find(link=>link.parentElement?.className.includes("lg:hidden"));
+    expect(desktop).toBeTruthy();
+    expect(mobile).toBeTruthy();
+    const innerCard=desktop!.parentElement!.parentElement!;
+    expect(innerCard.querySelector('button[aria-label^="Atidaryti darbą"]')).toBeTruthy();
+    expect(innerCard.contains(mobile!)).toBe(false);
+    expect(desktop!.parentElement).toHaveClass("absolute", "bottom-4", "right-4");
+  });
+
   it("perbraukus kortelę į kairę atveria veiksmus, bet neatidaro darbo", () => {
     render(<JobRow job={job} />);
     const button=screen.getByRole("button",{name:/Atidaryti darbą.*Pavyzdžio g. 12/});
