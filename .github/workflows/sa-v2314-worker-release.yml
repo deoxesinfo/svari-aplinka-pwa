@@ -31,7 +31,7 @@ jobs:
           node --check cloudflare/photo-worker.mjs
           node --test cloudflare/photo-worker.test.mjs cloudflare/storage-admin.test.mjs
       - name: Check Wrangler configuration without deployment
-        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.toml --outdir /tmp/sa-v2314-worker
+        run: npx --yes wrangler@4 deploy --dry-run --config wrangler.toml --outdir /tmp/sa-v2314-worker --no-x-provision
 
   release:
     needs: verify
@@ -55,6 +55,27 @@ jobs:
             echo 'Worker NOT deployed: check CLOUDFLARE_API_TOKEN secret and CLOUDFLARE_ACCOUNT_ID variable.' >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+      - name: Require existing EU R2 bucket before any Worker deployment
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const endpoint='https://api.cloudflare.com/client/v4/accounts/'+process.env.CLOUDFLARE_ACCOUNT_ID+'/r2/buckets/svari-aplinka-foto';
+          const response=await fetch(endpoint,{
+            method:'GET',
+            headers:{authorization:'Bearer '+process.env.CLOUDFLARE_API_TOKEN,'cf-r2-jurisdiction':'eu'},
+            signal:AbortSignal.timeout(20000)
+          });
+          const body=await response.json();
+          assert.equal(response.status,200,'Existing EU R2 bucket GET failed');
+          assert.equal(body.success,true,'Existing EU R2 bucket absent');
+          assert.equal(body.result?.jurisdiction,'eu','Not the EU jurisdiction');
+          assert.equal(body.result?.name,'svari-aplinka-foto');
+          console.log('PASS existing EU R2 bucket present; no new bucket may be provisioned.');
+          NODE
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -64,7 +85,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || vars.CLOUDFLARE_ACCOUNT_ID }}
           CI: 'true'
-        run: npx --yes wrangler@4 deploy --config wrangler.toml --keep-vars
+        run: npx --yes wrangler@4 deploy --config wrangler.toml --keep-vars --no-x-provision
       - name: Probe actual live version (no auth, no photo operations)
         if: steps.creds.outputs.ready == 'true'
         shell: bash
