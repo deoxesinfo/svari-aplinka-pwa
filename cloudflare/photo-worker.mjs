@@ -330,6 +330,24 @@ async function usageStorage(env,jwt,org){
   photoRecords,missingR2Files:missing,unlinkedR2Files:files.size
  });
 }
+async function storageEstimate(req,env,jwt,org){
+ const raw=await req.text();if(raw.length>4000)fail(413,"BODY_TOO_LARGE");
+ let input;try{input=JSON.parse(raw)}catch{fail(400,"INVALID_BODY")}
+ const ids=input?.ids;
+ if(!Array.isArray(ids)||!ids.length||ids.length>50||new Set(ids).size!==ids.length)fail(400,"INVALID_IDS");
+ ids.forEach(uuid);
+ const photos=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,data"+
+  "&organization_id=eq."+org+"&id=in.("+ids.join(",")+")");
+ if(photos.length!==ids.length)fail(409,"STORAGE_SELECTION_CHANGED");
+ let bytes=0,objects=0,missing=0;
+ for(const p of photos){
+  for(const key of storageKeys(org,p)){
+   const info=await env.R2_BUCKET.head(key);
+   if(info){bytes+=info.size;objects++}else missing++;
+  }
+ }
+ return response({photos:photos.length,bytes,objects,missing});
+}
 async function editStorage(req,env,jwt,org,userId,action){
  if(env.ENABLE_STORAGE_ACTIONS!=="true")fail(503,"STORAGE_ACTIONS_DISABLED");
  if(action==="purge"&&env.ENABLE_STORAGE_PURGE!=="true")fail(503,"STORAGE_PURGE_DISABLED");
@@ -418,6 +436,11 @@ export default {async fetch(req,env){
    const {jwt,role}=await authenticated(env,req,org,false);
    if(role!=="admin")fail(403,"ADMIN_ONLY");
    return cors(await usageStorage(env,jwt,org),origin,env);
+  }
+  if(req.method==="POST"&&path==="/v1/storage/estimate"){
+   const {jwt,role}=await authenticated(env,req,org,false);
+   if(role!=="admin")fail(403,"ADMIN_ONLY");
+   return cors(await storageEstimate(req,env,jwt,org),origin,env);
   }
   if(req.method==="POST"&&storageAction){
    const {jwt,userId,role}=await authenticated(env,req,org,false);
