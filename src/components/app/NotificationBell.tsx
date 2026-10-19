@@ -1,12 +1,14 @@
-import { useEffect,useState } from "react";
+import { useEffect,useRef,useState } from "react";
 import { Bell, Check, CircleAlert } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase-client";
 
 type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;read_at:string|null;created_at:string};
 export function NotificationBell(){
  const [notices,setNotices]=useState<Notice[]>([]);
  const [expanded,setExpanded]=useState(false);
+ const rootRef=useRef<HTMLDivElement>(null);
+ const path=useRouterState({select:s=>s.location.pathname});
  const [error,setError]=useState("");
  const fetchNotices=async()=>{
   const {data:auth}=await supabase.auth.getUser();
@@ -24,6 +26,25 @@ export function NotificationBell(){
   window.addEventListener("focus",refresh);
   return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh)};
  },[]);
+ // Close the panel on navigation, backdrop taps, drawer opening and Escape.
+ // Outside pointer presses should NOT block the original click/navigation.
+ useEffect(()=>{setExpanded(false)},[path]);
+ useEffect(()=>{
+  if(!expanded)return;
+  const onOutside=(event:PointerEvent)=>{
+   const root=rootRef.current;
+   if(root&&!root.contains(event.target as Node))setExpanded(false);
+  };
+  const onKey=(event:KeyboardEvent)=>{
+   if(event.key==="Escape")setExpanded(false);
+  };
+  document.addEventListener("pointerdown",onOutside,true);
+  document.addEventListener("keydown",onKey);
+  return()=>{
+   document.removeEventListener("pointerdown",onOutside,true);
+   document.removeEventListener("keydown",onKey);
+  };
+ },[expanded]);
  const markRead=async(notice:Notice)=>{
   if(notice.read_at)return;
   const now=new Date().toISOString();
@@ -33,7 +54,7 @@ export function NotificationBell(){
   setNotices(items=>items.map(item=>item.id===notice.id?{...item,read_at:now}:item));
  };
  const unread=notices.filter(n=>!n.read_at).length;
- return <div className="relative">
+ return <div ref={rootRef} className="relative">
   <button type="button" onClick={()=>{setExpanded(o=>!o);void fetchNotices()}}
     aria-expanded={expanded} aria-label={"Pranešimai, neperskaitytų: "+unread}
     className="relative flex min-h-10 items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm hover:bg-muted">
