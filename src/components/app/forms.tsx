@@ -52,12 +52,12 @@ export function AddressFormDialog({
           <DialogTitle>{address ? "Redaguoti adresą" : "Naujas adresas"}</DialogTitle>
           <DialogDescription>Adresai išsaugomi prisijungusios įmonės Supabase saugykloje.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={submit} className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4">
+        <form onSubmit={submit} className="grid gap-4">
           <div className="grid gap-4 sm:grid-cols-[2fr_1fr]">
             <Field label="Gatvė, namo nr."><input className={inputCls} value={v.street} onChange={(e) => up("street", e.target.value)} placeholder="Pavyzdžio g. 12" autoFocus /></Field>
             <Field label="Miestas"><input className={inputCls} value={v.city} onChange={(e) => up("city", e.target.value)} placeholder="Kaunas" /></Field>
           </div>
-          <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Valymo tipas">
               <select className={inputCls} value={v.type} onChange={(e) => up("type", e.target.value as AddressInput["type"])}>
                 {Object.entries(ADDRESS_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
@@ -171,14 +171,14 @@ export function JobFormDialog({
           <DialogTitle>{job ? "Redaguoti darbą" : "Naujas darbas"}</DialogTitle>
           <DialogDescription>Neužbaigti darbai automatiškai perkeliami į šiandieną.</DialogDescription>
         </DialogHeader>
-        <form onSubmit={submit} className="grid gap-4">
+        <form onSubmit={submit} className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4">
           <Field label="Adresas">
             <select className={inputCls} value={v.addressId} onChange={(e) => up("addressId", e.target.value)}>
               {addresses.length === 0 && <option value="">Nėra adresų</option>}
               {addresses.map((a) => <option key={a.id} value={a.id}>{a.street}, {a.city}</option>)}
             </select>
           </Field>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Tipas">
               <select className={inputCls} value={v.type} onChange={(e) => up("type", e.target.value as JobInput["type"])}>
                 {Object.entries(JOB_TYPE_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}

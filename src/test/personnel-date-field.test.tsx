@@ -27,7 +27,10 @@ describe("V2.2.4 personalo datos",()=>{
    const inputs=Array.from(container.querySelectorAll('input[type="date"]'));
    expect(inputs).toHaveLength(2);
    for(const input of inputs){
-     expect(input.parentElement?.className).toContain("h-11 w-full min-w-0 max-w-full");
+     expect(input.parentElement?.classList.contains("h-11")).toBe(true);
+     expect(input.parentElement?.classList.contains("w-full")).toBe(true);
+     expect(input.parentElement?.classList.contains("min-w-0")).toBe(true);
+     expect(input.parentElement?.classList.contains("max-w-full")).toBe(true);
    }
  });
  it("pabaigos data pasirenkama ir aktyviam darbuotojui, o po X vėl įvedama",()=>{
