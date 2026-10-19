@@ -30,18 +30,43 @@ export async function downloadR2Photo(org:string,id:string,kind:"full"|"thumb"){
  }));
  return r.blob();
 }
+export type LocationFix={latitude:number;longitude:number;accuracy:number};
+export type GpsCheck={ok:boolean;radius:number;distanceMeters:number;accuracyMeters:number};
+/** A read-only, stateless pre-camera GPS check. No session/token/time limit. */
+export async function verifyR2Gps(org:string,jobId:string,addressId:string,fix:LocationFix):Promise<GpsCheck>{
+ const response=await checked(await fetch(R2_WORKER_URL+"/v1/gps/verify",{
+  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
+  body:JSON.stringify({jobId,addressId,...fix}),cache:"no-store"
+ }));
+ return response.json() as Promise<GpsCheck>;
+}
 export async function uploadR2Photo(
  org:string, addressId:string, jobId:string|undefined, tag:PhotoTag,
- full:Blob, thumb:Blob, width:number,height:number
+ full:Blob, thumb:Blob, width:number,height:number,gps?:LocationFix,overrideReason?:string
 ):Promise<PhotoMeta>{
  const f=new FormData();
  f.set("addressId",addressId);
  if(jobId)f.set("jobId",jobId);
  f.set("tag",tag);f.set("width",String(width));f.set("height",String(height));
+ if(gps){
+  f.set("gpsLatitude",String(gps.latitude));
+  f.set("gpsLongitude",String(gps.longitude));
+  f.set("gpsAccuracy",String(gps.accuracy));
+ }
+ if(overrideReason)f.set("gpsOverrideReason",overrideReason);
  const ext=(b:Blob)=>b.type==="image/jpeg"?"jpg":"webp";
  f.set("full",full,"full."+ext(full));f.set("thumb",thumb,"thumb."+ext(thumb));
  const r=await checked(await fetch(R2_WORKER_URL+"/v1/photos",{
    method:"POST",headers:await headers(org),body:f,cache:"no-store"
  }));
  return r.json() as Promise<PhotoMeta>;
+}
+
+/** Employee-only completion: the Worker checks own job, fresh GPS position and
+ * Supabase's narrow RPC. Never mutate the entire job JSON from the browser. */
+export async function completeR2AssignedJob(org:string,jobId:string,addressId:string,gps:LocationFix,note:string):Promise<void>{
+ await checked(await fetch(R2_WORKER_URL+"/v1/jobs/"+encodeURIComponent(jobId)+"/complete",{
+  method:"POST",headers:{...await headers(org),"content-type":"application/json"},
+  body:JSON.stringify({addressId,...gps,note}),cache:"no-store"
+ }));
 }

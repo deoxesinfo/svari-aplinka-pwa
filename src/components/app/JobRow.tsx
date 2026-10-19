@@ -4,7 +4,8 @@ import { JobDetailDialog } from "./JobDetailDialog";
 import { JobFormDialog } from "./forms";
 import { Confirm,Pill } from "./ui-bits";
 import { Check, Camera, MessageSquare, User, AlertTriangle, ChevronRight, Star, MoreHorizontal, Pencil, Archive, ArchiveRestore, Trash2 } from "lucide-react";
-import { archiveJob,restoreJob,deleteJob,useAppState } from "@/lib/store";
+import { archiveJob,restoreJob,deleteJob,useAppState,isCloudMode } from "@/lib/store";
+import { getCloudRole } from "@/lib/cloud-sync";
 import { currentAdminOrg } from "@/lib/work-assignments";
 import { isOverdue } from "@/lib/scheduling";
 import { fmtShort, overdueLabel, todayISO } from "@/lib/dates";
@@ -14,6 +15,7 @@ import { MapsLink } from "./MapsLink";
 
 export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const { addresses, photos, people } = useAppState();
+  const employee=isCloudMode()&&getCloudRole()==="worker";
   const [detailsOpen,setDetailsOpen]=useState(false);
   const [editing,setEditing]=useState(false);
   const [actionsOpen,setActionsOpen]=useState(false);
@@ -34,7 +36,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
   const endTouch=(e:TouchEvent<HTMLDivElement>)=>{
     const point=e.changedTouches[0],starting=touch.current;
     touch.current=null;
-    if(!point||!starting)return;
+    if(employee||!point||!starting)return;
     const dx=point.clientX-starting.x,dy=point.clientY-starting.y;
     if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.35){
       justSwiped.current=true;
@@ -62,7 +64,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
 
   return <>
     <div className="relative overflow-hidden rounded-xl" onTouchStart={startTouch} onTouchEnd={endTouch}>
-      <div aria-hidden={!actionsOpen} className="absolute inset-y-0 right-0 flex w-[186px] items-stretch justify-end gap-px bg-muted/80 p-1">
+      {!employee&&<div aria-hidden={!actionsOpen} className="absolute inset-y-0 right-0 flex w-[186px] items-stretch justify-end gap-px bg-muted/80 p-1">
         <button type="button" className="flex w-[61px] flex-col items-center justify-center gap-1 rounded-lg bg-card px-1 text-[11px] font-semibold text-primary disabled:opacity-40"
           disabled={false} tabIndex={actionsOpen?0:-1} onClick={changeArchive} aria-label={job.archivedAt?"Atkurti darbą":"Archyvuoti darbą"}>
           {job.archivedAt?<ArchiveRestore className="size-5"/>:<Archive className="size-5"/>}
@@ -76,9 +78,9 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           tabIndex={actionsOpen?0:-1} onClick={()=>{setDeleteOpen(true);setActionsOpen(false)}} aria-label="Ištrinti darbą (administratoriui)">
           <Trash2 className="size-5"/>Ištrinti
         </button>
-      </div>
+      </div>}
       <div className="relative min-w-0 bg-card transition-transform duration-200 ease-out"
-        style={{transform:actionsOpen?"translateX(-186px)":"translateX(0)"}}>
+        style={{transform:!employee&&actionsOpen?"translateX(-186px)":"translateX(0)"}}>
         <button type="button" onClick={()=>{
           if(justSwiped.current){justSwiped.current=false;return}
           if(actionsOpen){setActionsOpen(false);return}
@@ -121,16 +123,16 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         {address&&<div className="absolute right-12 top-1/2 z-10 hidden -translate-y-1/2 lg:block">
           <MapsLink street={address.street} city={address.city} compact/>
         </div>}
-        <button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
+        {!employee&&<button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
           className="absolute right-1 top-1 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted/70"
-          onClick={()=>setActionsOpen(v=>!v)}><MoreHorizontal className="size-5"/></button>
+          onClick={()=>setActionsOpen(v=>!v)}><MoreHorizontal className="size-5"/></button>}
       </div>
     </div>
     {address&&<div className="-mt-1 mb-2 flex justify-end lg:hidden"><MapsLink street={address.street} city={address.city} compact/></div>}
     {detailsOpen&&<JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen}/>}
-    {editing&&<JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>}
-    <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
+    {!employee&&editing&&<JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>}
+    {!employee&&<Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
       text="Tik administratoriui. Darbas bus paslėptas iš aktyvių sąrašų, tačiau istorija išsaugota auditui. Tai nėra fizinis duomenų ištrynimas."
-      onConfirm={()=>void confirmDelete()}/>
+      onConfirm={()=>void confirmDelete()}/>}
   </>;
 }

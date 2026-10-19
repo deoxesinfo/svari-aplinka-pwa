@@ -8,6 +8,7 @@ vi.mock("@/components/app/JobDetailDialog", () => ({
 }));
 
 vi.mock("@/lib/store", () => ({
+  isCloudMode: () => false,
   useAppState: () => ({
     addresses: [{ id: "ad1", street: "Pavyzdžio g. 12", city: "Kaunas" }],
     photos: [],

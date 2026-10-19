@@ -51,8 +51,8 @@ async function authenticated(env,request,org,write){
  if(!UUID.test(user?.id||""))fail(401,"AUTH_INVALID");
  const membership=await one(env,jwt,"/rest/v1/sa_memberships?select=role&organization_id=eq."+org+"&user_id=eq."+user.id+"&active=eq.true&limit=1");
  if(!membership)fail(403,"NO_MEMBERSHIP");
- if(write&&membership.role!=="admin")fail(403,"ADMIN_ONLY");
- return {jwt,userId:user.id}; // every subsequent Supabase request uses this JWT => RLS applies
+ if(write&&!["admin","worker"].includes(membership.role))fail(403,"ROLE_FORBIDDEN");
+ return {jwt,userId:user.id,role:membership.role}; // RLS applies
 }
 function pilotConfiguration(env){
  if(env.PILOT_ENABLED!=="true" ||
@@ -87,7 +87,7 @@ async function limitedForm(req){
    if(length>MAX_REQUEST){await reader.cancel();fail(413,"BODY_TOO_LARGE")}parts.push(value)}
  }finally{try{reader.releaseLock()}catch{}}
  const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>{throw new Problem(400,"MALFORMED_MULTIPART");});
- const keys=new Set(["addressId","jobId","tag","width","height","full","thumb"]);
+ const keys=new Set(["addressId","jobId","tag","width","height","full","thumb","gpsLatitude","gpsLongitude","gpsAccuracy","gpsOverrideReason"]);
  for(const [name] of form)if(!keys.has(name)||form.getAll(name).length!==1)fail(400,"INVALID_FORM_FIELDS");
  return form;
 }
@@ -111,7 +111,57 @@ async function checkFile(blob,limit){
 }
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
-async function upload(request,env,jwt,org,pilot){
+
+// No GPS session countdown or indefinitely reusable GPS tokens: the browser
+// supplies fresh geolocation at each photo upload and at job completion.
+// Server computes distance against the administrator-confirmed object pin.
+function gpsDistance(lat1,lon1,lat2,lon2){
+ const rad=n=>n*Math.PI/180;
+ const a=Math.sin(rad(lat2-lat1)/2)**2+
+  Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(rad(lon2-lon1)/2)**2;
+ return 6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));
+}
+async function assignedJob(env,jwt,org,jobId,addressId,userId,role){
+ const job=await one(env,jwt,"/rest/v1/sa_jobs?select=id,address_id,assigned_user_id,data&organization_id=eq."+org+"&id=eq."+uuid(jobId)+"&limit=1");
+ if(!job||job.data?.deletedAt||job.data?.archivedAt||job.address_id!==addressId)fail(404,"JOB_UNAVAILABLE");
+ if(role!=="admin"&&job.assigned_user_id!==userId)fail(403,"JOB_NOT_ASSIGNED");
+ return job;
+}
+async function verifiedPosition(env,jwt,org,addressId,job,lat,lon,accuracy,role,reason){
+ const adr=await one(env,jwt,"/rest/v1/sa_addresses?select=id,data&organization_id=eq."+org+"&id=eq."+uuid(addressId)+"&limit=1");
+ if(!adr||adr.data?.deletedAt||adr.data?.archivedAt)fail(404,"ADDRESS_UNAVAILABLE");
+ if(!adr.data?.gpsLocationConfirmed||!Number.isFinite(Number(adr.data?.latitude))||
+    !Number.isFinite(Number(adr.data?.longitude)))fail(409,"GPS_OBJECT_PIN_REQUIRED");
+ const radius=[30,50,100].includes(Number(job.data?.gpsRadiusMeters))
+  ?Number(job.data.gpsRadiusMeters):50;
+ if(reason){
+  if(role!=="admin")fail(403,"ADMIN_ONLY");
+  if(typeof reason!=="string"||reason.trim().length<15||reason.trim().length>240)
+   fail(400,"GPS_OVERRIDE_REASON_REQUIRED");
+  return {mode:"admin_override",radius,reason:reason.trim()};
+ }
+ if(typeof lat!=="number"||typeof lon!=="number"||typeof accuracy!=="number"||
+    !Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||
+    Math.abs(lat)>90||Math.abs(lon)>180||accuracy<=0)fail(400,"GPS_POSITION_INVALID");
+ const distance=Math.round(gpsDistance(lat,lon,Number(adr.data.latitude),Number(adr.data.longitude)));
+ if(accuracy>Math.min(50,radius))fail(409,"GPS_ACCURACY_LOW");
+ if(distance>radius)fail(409,"GPS_OUTSIDE_RADIUS");
+ return {mode:"gps_live",radius,distanceMeters:distance,accuracyMeters:Math.round(accuracy)};
+}
+function readPosition(payload){
+ return [payload?.latitude,payload?.longitude,payload?.accuracy];
+}
+async function verifyLocation(req,env,jwt,org,userId,role){
+ const raw=await req.text();if(raw.length>1200)fail(413,"GPS_REQUEST_TOO_LARGE");
+ let p;try{p=JSON.parse(raw)}catch{fail(400,"GPS_REQUEST_INVALID")}
+ if(!p||typeof p!=="object")fail(400,"GPS_REQUEST_INVALID");
+ const jobId=uuid(p.jobId),addressId=uuid(p.addressId);
+ const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+ const pos=await verifiedPosition(env,jwt,org,addressId,job,...readPosition(p),role,null);
+ return response({ok:true,radius:pos.radius,
+   distanceMeters:pos.distanceMeters,accuracyMeters:pos.accuracyMeters},200);
+}
+async function upload(request,env,jwt,org,pilot,userId,role){
  let stage="FORM_PARSE";
  try{
  const fd=await limitedForm(request);
@@ -132,20 +182,36 @@ async function upload(request,env,jwt,org,pilot){
  if(!adr||adr.data?.deletedAt||adr.data?.archivedAt)fail(404,"ADDRESS_UNAVAILABLE");
  let job=null;
  if(jobId){
-  job=await one(env,jwt,"/rest/v1/sa_jobs?select=id,address_id,data&organization_id=eq."+org+"&id=eq."+jobId+"&limit=1");
-  if(!job||job.address_id!==addressId||job.data?.deletedAt||job.data?.archivedAt)fail(404,"JOB_UNAVAILABLE");
+  job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
   const photos=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id&organization_id=eq."+org+"&job_id=eq."+jobId+"&limit=16");
   if(photos.length>=15)fail(409,"PHOTO_LIMIT");
  }
- // Never trust GPS confirmation from browser/localStorage/JWT claims.
- if(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired)fail(409,"SERVER_GPS_REQUIRED");
+ // Server-only session scoped to authenticated user and target job.
+ // Geolocation supplied by browser can still be spoofed by the device user.
+ const gpsProtected=Boolean(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired||role==="worker");
+ const reason=typeof fd.get("gpsOverrideReason")==="string"?fd.get("gpsOverrideReason"):"";
+ const gpsData=gpsProtected?await verifiedPosition(env,jwt,org,addressId,job,
+  fd.has("gpsLatitude")?Number(fd.get("gpsLatitude")):undefined,
+  fd.has("gpsLongitude")?Number(fd.get("gpsLongitude")):undefined,
+  fd.has("gpsAccuracy")?Number(fd.get("gpsAccuracy")):undefined,role,reason):null;
+
  // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
  stage="R2_RESERVATION";
  if(pilot)await claimOneAttempt(env);
  stage="R2_BLOBS";
  const photoId=crypto.randomUUID(),key="sa/"+org+"/"+photoId;
+ const digest=await crypto.subtle.digest("SHA-256",await full.arrayBuffer());
+ const sha256=Array.from(new Uint8Array(digest)).map(n=>n.toString(16).padStart(2,"0")).join("");
+ if(gpsData){
+  const existing=await rows(env,jwt,"/rest/v1/sa_photo_metadata?select=id&organization_id=eq."+org+"&data->>sha256=eq."+sha256+"&limit=1");
+  if(existing.length)fail(409,"DUPLICATE_PHOTO");
+ }
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
-  data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag}};
+  data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag,sha256,
+    ...(gpsData?{proofMode:gpsData.mode,gpsVerifiedAt:new Date().toISOString(),
+       gpsDistanceMeters:gpsData.distanceMeters??null,gpsAccuracyMeters:gpsData.accuracyMeters??null,
+       gpsRadiusMeters:gpsData.radius,...(gpsData.reason?{gpsOverrideReason:gpsData.reason}:{})}:{})
+  }};
  const [fk,tk]=objectPaths(key,meta.data);
  try{
   await env.R2_BUCKET.put(fk,full,{httpMetadata:{contentType:full.type}});
@@ -163,7 +229,8 @@ async function upload(request,env,jwt,org,pilot){
   const res=await dbInsert();
   if(!res.ok){
    await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
-   fail(res.status===403?403:(res.status===409||res.status===400)?409:502,"METADATA_SAVE_FAILED");
+   fail(res.status===403?403:(res.status===409||res.status===400)?409:502,
+     res.status===409?"DUPLICATE_PHOTO":"METADATA_SAVE_FAILED");
   }
  }catch(e){
   if(e instanceof Problem)throw e;
@@ -233,9 +300,35 @@ export default {async fetch(req,env){
    // continue under JWT, organization RLS, GPS exclusion and 15-photo DB trigger.
    const pilot=env.PILOT_ENABLED==="true"?pilotConfiguration(env):null;
    if(pilot&&org!==pilot.organizationId)fail(403,"PILOT_SCOPE_DENIED");
-   const {jwt,userId}=await authenticated(env,req,org,true);
+   const {jwt,userId,role}=await authenticated(env,req,org,true);
    if(pilot&&userId!==pilot.userId)fail(403,"PILOT_SCOPE_DENIED");
-   return cors(await upload(req,env,jwt,org,pilot),origin,env);
+   return cors(await upload(req,env,jwt,org,pilot,userId,role),origin,env);
+  }
+  if(req.method==="POST"&&path==="/v1/gps/verify"){
+   if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
+   const {jwt,userId,role}=await authenticated(env,req,org,false);
+   return cors(await verifyLocation(req,env,jwt,org,userId,role),origin,env);
+  }
+  const complete=/^\/v1\/jobs\/([0-9a-f-]{36})\/complete$/.exec(path);
+  if(req.method==="POST"&&complete){
+   const jobId=uuid(complete[1]);
+   const {jwt,userId,role}=await authenticated(env,req,org,false);
+   if(role!=="worker")fail(403,"WORKER_ONLY");
+   const raw=await req.text();if(raw.length>1600)fail(413,"REQUEST_TOO_LARGE");
+   let payload;try{payload=JSON.parse(raw)}catch{fail(400,"INVALID_COMPLETION")}
+   if(!payload||typeof payload!=="object")fail(400,"INVALID_COMPLETION");
+   const addressId=uuid(payload.addressId);
+   await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+   const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+   await verifiedPosition(env,jwt,org,addressId,job,...readPosition(payload),role,null);
+   const note=typeof payload.note==="string"?payload.note.trim():"";
+   if(note.length>1200)fail(413,"NOTE_TOO_LONG");
+   const res=await call(env,jwt,"/rest/v1/rpc/sa_complete_assigned_job",{
+     method:"POST",headers:{"content-type":"application/json"},
+     body:JSON.stringify({p_org:org,p_job:jobId,p_note:note})
+   });
+   if(!res.ok)fail(res.status===403?403:409,"COMPLETION_REQUIREMENTS_NOT_MET");
+   return cors(response({ok:true,completedAt:new Date().toISOString()}),origin,env);
   }
   const m=/^\/v1\/photos\/([0-9a-f-]{36})\/(full|thumb)$/.exec(path);
   if(m&&req.method==="GET"){
