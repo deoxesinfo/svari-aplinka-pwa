@@ -137,7 +137,7 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
   const proof=jobId?job?.gpsVerification:localProof;
   const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
   const gpsAllowed=isCloudMode()
-    ? Boolean(gpsSession&&gpsSession.expiresAt>now&&gpsSession.token)
+    ? Boolean(gpsSession?.token)
     : Boolean(address&&hasConfirmedPin(address)&&
        ((jobId&&job?.gpsOverride)||validGpsForCompletion(proof,address,now)));
   const locked=protectedByGps&&!gpsAllowed;
@@ -156,7 +156,7 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
         const fix=await currentLocation();
         const session=await verifyR2Gps(org,jobId,addressId,fix);
         setGpsSession(session);onGpsProof?.(session.token);
-        toast.success("GPS patvirtinta · galioja 10 min.");
+        toast.success("GPS patvirtinta šiam darbui.");
       }else if(job){
         if(await verifyJobGPS(job.id))toast.success("Vieta patvirtinta");
       }else{
@@ -189,7 +189,7 @@ export function PhotoUploader({ addressId, jobId, onGpsProof }: { addressId: str
   const gpsPanel=protectedByGps?<div className="space-y-2 rounded-lg border border-amber-300 bg-amber-50/30 p-3 text-sm">
     <p className="flex items-center gap-2 font-semibold">{gpsAllowed?<ShieldCheck className="size-4 text-primary"/>:<LockKeyhole className="size-4 text-amber-700"/>}
       {gpsAllowed?"GPS patvirtinta":"Fotografavimas užrakintas iki GPS patikros"}</p>
-    <p className="text-xs text-muted-foreground">Atstumas: {radius} m. Sesija galioja 10 min. Telefono GPS įjungti automatiškai svetainė negali.</p>
+    <p className="text-xs text-muted-foreground">Atstumas: {radius} m. GPS patvirtinimas be laiko limito, tik šiam darbui. Telefono GPS įjungti automatiškai svetainė negali.</p>
     {!gpsAllowed&&<Button type="button" variant="outline" disabled={checking} onClick={()=>void checkLocation()}>
       <MapPin className="size-4"/>{checking?"Tikrinama…":"Patikrinti GPS / leisti vietą"}</Button>}
     {gpsTip&&<p className="text-xs text-destructive">{gpsTip}</p>}
