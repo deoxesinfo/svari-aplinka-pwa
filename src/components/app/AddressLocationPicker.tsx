@@ -37,7 +37,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
  const confirmed=hasConfirmedPin(value);
  const updatePin=(lat:number,lon:number,deviceAccuracy:number|null=null)=>{
    // A map click, search result, or phone location only proposes a pin; never confirms it.
-   onChange({latitude:+lat.toFixed(7),longitude:+lon.toFixed(7),gpsLocationConfirmed:false,gpsReference:undefined});
+   onChange({latitude:+lat.toFixed(7),longitude:+lon.toFixed(7),gpsLocationConfirmed:false,gpsReference:""});
    setAccuracy(deviceAccuracy);
    markerSetRef.current?.(lat,lon);
    mapRef.current?.setView([lat,lon],18);
@@ -95,6 +95,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
        setError("Adresas nerastas. Patikrinkite rašybą arba ranka pasirinkite namą žemėlapyje.");
      }else{
        const best=found[0];
+       if(!best)return;
        mapRef.current?.setView([best.lat,best.lon],best.exactHouse?18:16);
        // Only select an automatically returned pin if the number is explicitly matched;
        // even then a human must tap the confirmation button to enable GPS.
