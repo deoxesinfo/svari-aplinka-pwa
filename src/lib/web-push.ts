@@ -1,7 +1,7 @@
 import {supabase} from "./supabase-client";
 
 export function supportsWebPush():boolean{
- return typeof window!=="undefined" && window.isSecureContext &&
+ return typeof window!=="undefined" && window.isSecureContext===true &&
   "serviceWorker"in navigator && "PushManager"in window && "Notification"in window;
 }
 export function needsIosHomeScreen():boolean{
