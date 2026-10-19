@@ -13,7 +13,7 @@ export const CHANGELOG: ChangeEntry[] = [
     details:[
       "Tik atskiroje GitHub DRAFT šakoje: saugus Worker API su Supabase JWT ir RLS, privačiu R2 binding, failų dydžio/parašo patikra, serveriniais failų keliais ir klaidų atkūrimu.",
       "Supabase DB STEP 1 jau įdiegtas – daugiausia 15 nuotraukų vienam darbui; DELETE politika nepakeista.",
-      "PWA įkėlimo / peržiūros kodas paruoštas, bet CLOUD_R2_PHOTOS_READY=false. Worker ENABLE_UPLOADS=false iki atskiro leidimo; Cloudflare ir PWA Deploy nebuvo.",
+      "PWA įkėlimo / peržiūros kodas DRAFT šakoje paruoštas; pagal nutylėjimą CLOUD_R2_PHOTOS_READY=false. Tik specialus VITE_SA_R2_PILOT=admin-one-photo build su konkrečiu VITE_SA_R2_PILOT_JOB_ID atveria vieno darbo UI; PWA Deploy nebuvo.",
       "GPS saugomų objektų, darbuotojų įkėlimo ir nuotraukų trynimo aktyvavimas atidėtas iki serverinių prieigos taisyklių ir realių įrenginių testų.",
       "GitHub CI vykdo PWA Build, Vitest ir Worker API testus. Instrukcija: cloudflare/CLOUDFLARE_SETUP_LT.md.",
       "Vienos administratoriaus nuotraukos PILOT DRAFT: atskirai ribojami organizacijos/admin/darbo UUID, dvigubas ENABLE_UPLOADS ir PILOT_ENABLED užraktas, atomarinė R2 If-None-Match rezervacija neleidžia įkelti dviejų nuotraukų net lygiagrečiai.",
