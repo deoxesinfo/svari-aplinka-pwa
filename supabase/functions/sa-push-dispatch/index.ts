@@ -24,8 +24,7 @@ Deno.serve(async(req:Request)=>{
  const url=Deno.env.get("SUPABASE_URL")||"";
  const anon=Deno.env.get("SUPABASE_ANON_KEY")||"";
  const service=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")||"";
- const publicKey=Deno.env.get("SA_VAPID_PUBLIC_KEY")||"";
- const privateKey=Deno.env.get("SA_VAPID_PRIVATE_KEY")||"";
+
  const subject=Deno.env.get("SA_VAPID_SUBJECT")||"mailto:info@svariaplinka.lt";
  if(!url||!anon||!service)return respond({error:"SERVER_MISCONFIGURED"},503);
  const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
@@ -34,6 +33,37 @@ Deno.serve(async(req:Request)=>{
  try{input=await req.json()}catch{return respond({error:"BAD_BODY"},400)}
  const isServer=token===service;
  const userClient=createClient(url,anon,{global:{headers:{Authorization:"Bearer "+token}}});
+ const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
+ // Generate keys INSIDE the Edge runtime; encrypt them with Supabase Vault once.
+ // Never return the private key to clients or GitHub. Server-side RPCs enforce service_role.
+ async function getServerVapid():Promise<{publicKey:string;privateKey:string}>{
+  async function readKeys(){
+   const {data,error}=await db.rpc("sa_push_get_vapid");
+   if(error)throw new Error("VAPID_READ_FAILED");
+   const row=Array.isArray(data)?data[0]:data;
+   return {
+    publicKey:String(row?.public_key||""),
+    privateKey:String(row?.private_key||""),
+   };
+  }
+  let keys=await readKeys();
+  if(!keys.publicKey||!keys.privateKey){
+   const generated=webpush.generateVAPIDKeys();
+   const {error}=await db.rpc("sa_push_store_vapid",{
+    p_public:generated.publicKey,p_private:generated.privateKey
+   });
+   if(error)throw new Error("VAPID_STORE_FAILED");
+   keys=await readKeys();
+  }
+  if(!keys.publicKey||!keys.privateKey)throw new Error("VAPID_UNAVAILABLE");
+  // Protected one-minute cron sends due notifications even when PWA is closed.
+  // Credentials are stored only encrypted at rest in Supabase Vault.
+  const {error:schedulerError}=await db.rpc("sa_push_register_scheduler",{
+   p_service_key:service,p_edge_url:url.replace(/\/$/,"")+"/functions/v1/sa-push-dispatch"
+  });
+  if(schedulerError)throw new Error("SCHEDULER_SETUP_FAILED");
+  return keys;
+ }
  let userId:string|null=null;
  if(!isServer){
   const {data,error}=await userClient.auth.getUser(token);
@@ -45,10 +75,13 @@ Deno.serve(async(req:Request)=>{
   const {data,error}=await userClient.from("sa_memberships").select("organization_id")
    .eq("user_id",userId).eq("active",true).limit(1);
   if(error||!data?.length)return respond({error:"FORBIDDEN"},403);
-  return respond({enabled:Boolean(publicKey&&privateKey),publicKey:publicKey&&privateKey?publicKey:null});
+  try{
+   const keys=await getServerVapid();
+   return respond({enabled:true,publicKey:keys.publicKey});
+  }catch{return respond({enabled:false,publicKey:null,error:"PUSH_SETUP_UNAVAILABLE"},503)}
  }
  if(input.action!=="dispatch"&&input.action!=="scheduler")return respond({error:"INVALID_ACTION"},400);
- if(!publicKey||!privateKey)return respond({error:"PUSH_NOT_CONFIGURED"},503);
+
  if(input.action==="scheduler"&&!isServer)return respond({error:"FORBIDDEN"},403);
  let org:string|null=null;
  if(input.action==="dispatch"){
@@ -58,8 +91,9 @@ Deno.serve(async(req:Request)=>{
    .eq("organization_id",org).eq("user_id",userId).eq("active",true).single();
   if(error||data?.role!=="admin")return respond({error:"FORBIDDEN"},403);
  }
- const db=createClient(url,service,{auth:{persistSession:false,autoRefreshToken:false}});
- webpush.setVapidDetails(subject,publicKey,privateKey);
+ let keys:{publicKey:string;privateKey:string};
+ try{keys=await getServerVapid()}catch{return respond({error:"PUSH_SETUP_UNAVAILABLE"},503)}
+ webpush.setVapidDetails(subject,keys.publicKey,keys.privateKey);
  const {data:due,error:claimError}=await db.rpc("sa_push_claim_due",{p_limit:20,p_org:org});
  if(claimError)return respond({error:"CLAIM_FAILED"},503);
  let sent=0,none=0,failed=0;

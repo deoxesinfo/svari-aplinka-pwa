@@ -10,10 +10,21 @@ export function PushSettings(){
  const [busy,setBusy]=useState(false);
  const [error,setError]=useState("");
  const [status,setStatus]=useState("");
+ const [checking,setChecking]=useState(false);
+ const checkKey=async()=>{
+  if(!org||!supportsWebPush())return;
+  setChecking(true);setError("");
+  try{
+   const found=await getPushPublicKey();
+   setKey(found);
+   if(!found)setError("Push aktyvavimas serveryje dar nepasiekiamas. Pabandykite vėliau.");
+  }catch{setError("Nepavyko patikrinti Push siuntėjo. Pabandykite dar kartą.")}
+  finally{setChecking(false)}
+ };
  useEffect(()=>{
   if(!org||!supportsWebPush())return;
   let canceled=false;
-  void getPushPublicKey().then(k=>{if(!canceled)setKey(k)}).catch(()=>{if(!canceled)setKey(null)});
+  void getPushPublicKey().then(k=>{if(!canceled)setKey(k)}).catch(()=>{});
   return ()=>{canceled=true};
  },[org]);
  const enable=async()=>{
@@ -37,7 +48,11 @@ export function PushSettings(){
    needsIosHomeScreen()?
     <p className="text-sm text-muted-foreground">iPhone: atidarykite programėlę Safari → Dalintis → Pridėti į pradžios ekraną. Tada atverkite įdiegtą PWA ir čia įjunkite pranešimus.</p>:
    !key?
-    <p className="text-sm text-muted-foreground">Push siuntėjas dar neaktyvuotas serveryje. Vidiniai programėlės pranešimai jau veikia.</p>:
+    <div className="space-y-2">
+     <p className="text-sm text-muted-foreground">Push raktai ruošiami serveryje. Jei mygtukas nepasirodo, patikrinkite aktyvavimą.</p>
+     <Button type="button" variant="outline" disabled={checking} onClick={()=>void checkKey()}>
+      {checking?"Tikrinama…":"Patikrinti Push aktyvavimą"}</Button>
+    </div>:
     <div className="flex flex-wrap gap-2">
      <Button type="button" disabled={busy} onClick={()=>void enable()}><BellRing className="size-4"/> Įjungti Push šiame įrenginyje</Button>
      <Button type="button" variant="outline" disabled={busy} onClick={()=>void disable()}><BellOff className="size-4"/> Išjungti</Button>

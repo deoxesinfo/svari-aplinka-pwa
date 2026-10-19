@@ -25,7 +25,7 @@ export function StaffInbox(){
  const ack=async(item:InboxMessage,reply?: "sutinku"|"nesutinku")=>{
   if(!org)return;
   setBusy(item.receipt.id);
-  try{await acknowledgeStaffMessage(org,item.receipt.id,reply);await load()}
+  try{await acknowledgeStaffMessage(org,item.receipt.id,reply);await load();window.dispatchEvent(new Event("sa-message-updated"))}
   catch(e){setError(e instanceof Error?e.message:"Nepavyko atnaujinti pranešimo")}
   finally{setBusy("")}
  };
