@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.6",category:"taisymas",
+    title:"Google Maps navigacijos mygtukas darbų kortelės viduje kompiuteryje",
+    details:[
+      "Kompiuterio (nuo lg pločio) darbų kortelėse mygtukas „Važiuoti“ perkeltas į tos pačios kortelės dešinį apatinį kampą. Anksčiau jis buvo atskira eilutė po kortele.",
+      "Mažesniame ekrane navigacijos mygtuko vieta nekeičiama; paliekamas atskirai po kortele.",
+      "Palikta esama Google Maps navigacijos nuoroda; mygtukas nepakeičia darbo atidarymo ir trijų taškų valdymo.",
+      "Pataisa parengta GitHub atskiroje šakoje – kol nepatvirtintas sujungimas ir Deploy, vieša programėlė lieka V2.2.5. Realių įrenginių vizualinė patikra dar neatlikta.",
+    ],commits:[]},
+
   {date:"2026-10-19",version:"V2.2.5",category:"taisymas",
     title:"iPhone darbuotojo pabaigos datos ir darbo redagavimo slinkimo pataisa",
     details:[
