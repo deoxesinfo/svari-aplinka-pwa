@@ -1,7 +1,7 @@
 import { supabase } from "./supabase-client";
 import { fillAssignments } from "./work-assignments";
 import type { AppState } from "./store";
-import type { Address, Job, Person, RecruitmentLink } from "./types";
+import type { Address, Job, Person, PhotoMeta, RecruitmentLink } from "./types";
 
 type Collection="addresses"|"jobs"|"people"|"recruitmentLinks";
 type Entity=Address|Job|Person|RecruitmentLink;
@@ -21,6 +21,27 @@ async function fetchCollection<T>(org:string,key:Collection):Promise<T[]>{
   }
   throw new Error("Duomenų skaitymo limitas; būtinas papildomas puslapiavimas");
 }
+/** Photo bytes live exclusively in private R2; only metadata is stored in Supabase. */
+async function fetchPhotoMetadata(org:string):Promise<PhotoMeta[]>{
+  const all:PhotoMeta[]=[];
+  for(let start=0;start<100000;start+=500){
+    const {data,error}=await supabase.from("sa_photo_metadata")
+      .select("id,address_id,job_id,created_at,data")
+      .eq("organization_id",org).order("id",{ascending:true}).range(start,start+499);
+    if(error)throw new Error("Nepavyko nuskaityti nuotraukų");
+    for(const p of data||[]){
+      const d=(p.data||{}) as Record<string,unknown>;
+      all.push({
+        id:p.id,addressId:p.address_id,jobId:p.job_id||undefined,createdAt:p.created_at,
+        width:Number(d.width)||0,height:Number(d.height)||0,size:Number(d.size)||0,
+        type:typeof d.type==="string"?d.type:"image/webp",
+        tag:d.tag==="pries"||d.tag==="po"||d.tag==="problema"?d.tag:undefined
+      });
+    }
+    if((data?.length||0)<500)return all;
+  }
+  throw new Error("Nuotraukų skaitymo limitas – reikia papildomo puslapiavimo");
+}
 export async function loadCloudState(org:string):Promise<Pick<AppState,"addresses"|"jobs"|"people"|"photos"|"workers"|"recruitmentLinks">>{
   if(!isCloudUUID(org))throw new Error("Neteisingas organizacijos ID");
   const {data,error}=await supabase.auth.getUser();
@@ -31,11 +52,12 @@ export async function loadCloudState(org:string):Promise<Pick<AppState,"addresse
   // Rolling 28-day window. Unique index prevents repeated jobs on every login/refresh.
   // When no one opens the app, nothing runs; a true daily background task is a later option.
   await fillAssignments(org);
-  const [addresses,jobs,people,recruitmentLinks]=await Promise.all([
+  const [addresses,jobs,people,recruitmentLinks,photos]=await Promise.all([
     fetchCollection<Address>(org,"addresses"),fetchCollection<Job>(org,"jobs"),
-    fetchCollection<Person>(org,"people"),fetchCollection<RecruitmentLink>(org,"recruitmentLinks")
+    fetchCollection<Person>(org,"people"),fetchCollection<RecruitmentLink>(org,"recruitmentLinks"),
+    fetchPhotoMetadata(org)
   ]);
-  return {addresses,jobs,people,recruitmentLinks,photos:[],
+  return {addresses,jobs,people,recruitmentLinks,photos,
     workers:people.filter(p=>p.role==="darbuotojas"&&(p.status==="aktyvus"||p.status==="atostogos")).map(p=>p.name)};
 }
 export function cloudMutations(before:AppState,after:AppState,org:string):CloudMutation[]{

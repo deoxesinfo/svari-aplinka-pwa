@@ -1,0 +1,42 @@
+name: R2 DRAFT – build and security tests (no deploy)
+on:
+  push:
+    branches:
+      - feature/r2-photos-draft-no-deploy
+  pull_request:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  verify-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build PWA
+        run: npm run build
+      - name: Build isolated one-photo pilot UI (NO DEPLOY)
+        env:
+          VITE_SA_R2_PILOT: admin-one-photo
+          VITE_SA_R2_PILOT_JOB_ID: 72f0699e-e446-4379-b93f-c702c4f70c46
+        run: npm run build
+      - name: Build standalone pilot page (NO DEPLOY)
+        env:
+          VITE_PWA_BASE_PATH: /svari-aplinka-r2-pilot/
+          VITE_SA_R2_PILOT: admin-one-photo
+          VITE_SA_R2_PILOT_ORG_ID: ef6edcc2-1c7d-4dd1-8ef2-67c2b5a89bff
+          VITE_SA_R2_PILOT_JOB_ID: 72f0699e-e446-4379-b93f-c702c4f70c46
+        run: |
+          cp pilot.html index.html
+          npm run build
+          grep -q 'Švari Aplinka.*bandomoji nuotrauka' dist/index.html
+          git checkout -- index.html
+      - name: Test PWA
+        run: npm test
+      - name: Test private Worker API
+        run: node --test cloudflare/photo-worker.test.mjs

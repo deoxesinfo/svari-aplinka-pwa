@@ -4,7 +4,8 @@ import { Camera, ImagePlus, Loader2, Trash2, ZoomIn, ZoomOut, ImageOff, ChevronL
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode,verifyJobGPS } from "@/lib/store";
+import { addPhotoMeta, removePhoto, setPhotoTag, useAppState,isCloudMode,getCloudOrganizationId,refreshCloudWorkspace,verifyJobGPS } from "@/lib/store";
+import { CLOUD_R2_PHOTOS_READY, R2_PILOT_JOB_ID, uploadR2Photo } from "@/lib/r2-photos";
 import { isQuotaError, processImage, putPhotoBlobs, usePhotoUrl } from "@/lib/photos";
 import { fmtDateTime } from "@/lib/dates";
 import { PHOTO_TAG_LABEL, type PhotoMeta, type PhotoTag } from "@/lib/types";
@@ -15,7 +16,7 @@ import type { LocationResult } from "@/lib/gps";
 import { hasConfirmedPin } from "@/lib/address-gps";
 
 export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => void }) {
-  const { url, missing } = usePhotoUrl(photo.id, "thumb");
+  const { url, missing } = usePhotoUrl(photo.id, "thumb",getCloudOrganizationId());
   return (
     <button
       onClick={onClick}
@@ -38,7 +39,7 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
   const { addresses, jobs, photos } = useAppState();
   const [zoom, setZoom] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const full = usePhotoUrl(photo.id, "full");
+  const full = usePhotoUrl(photo.id, "full",getCloudOrganizationId());
   const index = gallery.findIndex(p => p.id === photo.id);
   const previous = index > 0 ? gallery[index - 1] : undefined;
   const next = index >= 0 && index < gallery.length - 1 ? gallery[index + 1] : undefined;
@@ -56,7 +57,7 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
           {full.url ? (
             <img src={full.url} alt="Darbo nuotrauka" className={cn("mx-auto", zoom ? "max-w-none w-[200%]" : "max-h-[70vh] w-auto object-contain")} />
           ) : (
-            <div className="grid h-64 place-items-center text-sm text-muted-foreground">{full.missing ? "Nuotrauka nerasta šiame įrenginyje" : "Kraunama…"}</div>
+            <div className="grid h-64 place-items-center text-sm text-muted-foreground">{full.missing ? (isCloudMode()?"Nepavyko įkelti nuotraukos iš saugyklos":"Nuotrauka nerasta šiame įrenginyje") : "Kraunama…"}</div>
           )}
         </div>
         {gallery.length > 1 && <nav aria-label="Nuotraukų navigacija" className="flex items-center justify-center gap-3 rounded-lg border bg-background p-2">
@@ -75,7 +76,7 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
           </div>
           <div className="flex flex-wrap gap-2">
             <label className="flex items-center gap-1 text-xs text-muted-foreground">Žyma
-              <select aria-label="Nuotraukos žyma" className="rounded-md border border-input bg-card p-2 text-sm" value={current.tag ?? ""} onChange={(e) => setPhotoTag(photo.id, e.target.value ? e.target.value as PhotoTag : undefined)}>
+              <select aria-label="Nuotraukos žyma" disabled={isCloudMode()} title={isCloudMode()?"Debesijos žymų redagavimas bus įjungtas kitame etape":undefined} className="rounded-md border border-input bg-card p-2 text-sm" value={current.tag ?? ""} onChange={(e) => setPhotoTag(photo.id, e.target.value ? e.target.value as PhotoTag : undefined)}>
                 <option value="">Be žymos</option>
                 {Object.entries(PHOTO_TAG_LABEL).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
               </select>
@@ -83,7 +84,7 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
             <Button variant="outline" size="sm" onClick={() => setZoom((z) => !z)}>
               {zoom ? <ZoomOut /> : <ZoomIn />} {zoom ? "Sumažinti" : "Padidinti"}
             </Button>
-            <Button variant="destructive" size="sm" onClick={() => setConfirm(true)}><Trash2 /> Ištrinti</Button>
+            <Button variant="destructive" size="sm" disabled={isCloudMode()} title={isCloudMode()?"R2 trynimas išjungtas iki saugios serverinės politikos patvirtinimo":undefined} onClick={() => setConfirm(true)}><Trash2 /> Ištrinti</Button>
           </div>
         </div>
         <Confirm
@@ -128,6 +129,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const address=addresses.find(a=>a.id===addressId);
   const job=jobs.find(j=>j.id===jobId);
   const protectedByGps=Boolean(address?.gpsProtectionEnabled||job?.gpsRequired);
+  const pilotAllowed=!isCloudMode()||(CLOUD_R2_PHOTOS_READY && !!jobId && (import.meta.env.VITE_SA_R2_PHOTOS==="enabled" || jobId===R2_PILOT_JOB_ID));
   const proof=jobId?job?.gpsVerification:localProof;
   const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
   const gpsAllowed=Boolean(address&&hasConfirmedPin(address)&&
@@ -165,12 +167,13 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
-    if(isCloudMode()){toast.error("Iki R2 integracijos įkėlimas neleidžiamas");return;}
+    if(isCloudMode()&&!pilotAllowed){toast.error("R2 bandymas leidžiamas tik vienam patvirtintam darbui");return;}
     if(locked){toast.error("Pirmiausia patvirtinkite buvimo vietą");return;}
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
     if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 15 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
-    const list = incoming.slice(0, remaining);
+    // R2 and the database enforce the quota. Batch up to 5 sequentially.
+    const list = incoming.slice(0, isCloudMode() ? Math.min(5,remaining) : remaining);
     if (!list.length) return;
     setBusy(list.length);
     let ok = 0;
@@ -178,8 +181,14 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
       try {
         const r = await processImage(f);
         const id = crypto.randomUUID();
-        await putPhotoBlobs(id, r.full, r.thumb);
-        addPhotoMeta({ id, addressId, jobId, tag, createdAt: new Date().toISOString(), width: r.width, height: r.height, size: r.full.size, type: r.full.type });
+        if(isCloudMode()){
+          const org=getCloudOrganizationId();
+          if(!org)throw new Error("Prisijungimas prie organizacijos nepatvirtintas");
+          await uploadR2Photo(org,addressId,jobId,tag,r.full,r.thumb,r.width,r.height);
+        }else{
+          await putPhotoBlobs(id, r.full, r.thumb);
+          addPhotoMeta({ id, addressId, jobId, tag, createdAt: new Date().toISOString(), width: r.width, height: r.height, size: r.full.size, type: r.full.type });
+        }
         ok++;
       } catch (e) {
         toast.error(isQuotaError(e) ? "Įrenginio atmintis pilna – ištrinkite senas nuotraukas." : "Nepavyko išsaugoti nuotraukos.");
@@ -189,19 +198,22 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
       }
     }
     setBusy(0);
-    if (ok) toast.success(ok === 1 ? "Nuotrauka išsaugota šiame įrenginyje" : `Išsaugota nuotraukų: ${ok}`);
+    if(ok && isCloudMode()){
+      try{await refreshCloudWorkspace()}catch{toast.error("Nuotrauka išsaugota, tačiau jos sąrašo atnaujinti nepavyko");}
+    }
+    if (ok) toast.success(ok === 1 ? (isCloudMode()?"Nuotrauka išsaugota R2":"Nuotrauka išsaugota šiame įrenginyje") : `Išsaugota nuotraukų: ${ok}`);
     if (cam.current) cam.current.value = "";
     if (gal.current) gal.current.value = "";
   };
 
-  if(isCloudMode())return <div className="space-y-3">
+  if(isCloudMode()&&!pilotAllowed)return <div className="space-y-3">
     {gpsPanel}
     <div className="grid grid-cols-2 gap-2">
       <Button type="button" disabled className="min-h-14 whitespace-normal px-2 text-sm"><Camera className="size-4"/> Fotografuoti</Button>
       <Button type="button" variant="outline" disabled className="min-h-14 whitespace-normal px-2 text-sm"><ImagePlus className="size-4"/> Įkelti</Button>
     </div>
     <p className="rounded-lg border p-3 text-xs text-muted-foreground">
-      Nuotraukų įkėlimas vis dar išjungtas, kol neprijungta privati Cloudflare R2 saugykla ir serverio autorizacija. GPS patikra vien to neatrakina.
+      Nuotraukų įkėlimas šioje programėlės versijoje išjungtas. GPS patikra vien to neatrakina.
     </p>
   </div>;
   return (
@@ -228,7 +240,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
           <Loader2 className="size-4 animate-spin" /> Apdorojama nuotraukų: {busy}…
         </p>
       ) : (
-        <p className="text-xs text-muted-foreground">Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos.</p>
+        <p className="text-xs text-muted-foreground">{isCloudMode()?"Nuotraukos sumažinamos iki 1600 px ir saugomos privačioje R2 saugykloje. Vienam darbui – iki 15 nuotraukų.":"Nuotraukos sumažinamos iki 1600 px, konvertuojamos į WebP (jei įmanoma) ir saugomos tik šioje naršyklėje. Jos nesinchronizuojamos."}</p>
       )}
     </div>
   );

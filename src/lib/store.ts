@@ -16,6 +16,8 @@ let company:string|null=null;
 let saveQueue:Promise<void>=Promise.resolve();
 let saveError:string|null=null;
 export const isCloudMode=()=>backend!=="demo";
+/** Production org only after authenticated cloud workspace loaded. */
+export const getCloudOrganizationId=()=>backend==="cloud"?company:null;
 export const getCloudSaveError=()=>saveError;
 export function leaveCloudWorkspace(){
   backend="loading";company=null;saveError=null;state=EMPTY;listeners.forEach(l=>l());
@@ -418,16 +420,19 @@ export function deleteJob(id:string):boolean {
 
 // ---------- Photos ----------
 export function setPhotoTag(id: string, tag: PhotoMeta["tag"]) {
+  if(isCloudMode()){toast.error("R2 nuotraukų žymų keitimas kol kas išjungtas");return;}
   set((s) => ({ photos: s.photos.map((p) => p.id === id ? { ...p, tag } : p) }));
 }
 
 export function addPhotoMeta(meta: PhotoMeta) {
+  if(isCloudMode()){toast.error("Nuotraukų metadata saugoma per R2 API");return;}
   set((s) => ({
     photos: [meta, ...s.photos],
     jobs: meta.jobId ? s.jobs.map((j) => (j.id === meta.jobId ? hist(j, "Įkelta nuotrauka") : j)) : s.jobs,
   }));
 }
 export async function removePhoto(id: string) {
+  if(isCloudMode()){toast.error("R2 nuotraukų trynimas kol kas išjungtas");return;}
   await deletePhotoBlobs(id).catch(() => {});
   set((s) => ({ photos: s.photos.filter((p) => p.id !== id) }));
 }

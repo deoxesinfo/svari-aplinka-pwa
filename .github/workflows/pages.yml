@@ -23,7 +23,9 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --legacy-peer-deps --no-audit --no-fund
-      - name: Build
+      - name: Build (authenticated admin R2 photos enabled)
+        env:
+          VITE_SA_R2_PHOTOS: enabled
         run: npm run build
       - name: Test interactive work-card opening
         run: npm test

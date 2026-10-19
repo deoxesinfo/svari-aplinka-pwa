@@ -8,6 +8,22 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.8",category:"infrastruktūra",
+    title:"Privati R2 darbų nuotraukų saugykla ir fotografavimas PWA",
+    details:[
+      "Saugus Worker API su Supabase JWT ir RLS, privačiu ES R2 binding, failų dydžio/parašo patikra, serveriniais failų keliais ir klaidų atkūrimu.",
+      "Administratoriaus debesijos režime: fotografavimas ir įkėlimas darbo kortelėje, galerija su privačiu R2 peržiūros API, nuotraukų žymos, 15 nuotraukų / darbui, iki 5 failų vienu pasirinkimu.",
+      "GPS apsaugoti darbai, adreso nuotraukos be darbo ir darbuotojo paskyros dar nepalaikomi – iki atskiros serverinės GPS/autorizacijos plėtros. Nuotraukų trynimas R2 išjungtas.",
+      "Supabase DB STEP 1 jau įdiegtas – daugiausia 15 nuotraukų vienam darbui; DELETE politika nepakeista.",
+      "PWA įkėlimo / peržiūros kodas DRAFT šakoje paruoštas; pagal nutylėjimą CLOUD_R2_PHOTOS_READY=false. Tik specialus VITE_SA_R2_PILOT=admin-one-photo build su konkrečiu VITE_SA_R2_PILOT_JOB_ID atveria vieno darbo UI; PWA Deploy nebuvo.",
+      "GPS saugomų objektų, darbuotojų įkėlimo ir nuotraukų trynimo aktyvavimas atidėtas iki serverinių prieigos taisyklių ir realių įrenginių testų.",
+      "GitHub CI vykdo PWA Build, Vitest ir Worker API testus. Instrukcija: cloudflare/CLOUDFLARE_SETUP_LT.md.",
+      "Vienos administratoriaus nuotraukos PILOT DRAFT: atskirai ribojami organizacijos/admin/darbo UUID, dvigubas ENABLE_UPLOADS ir PILOT_ENABLED užraktas, atomarinė R2 If-None-Match rezervacija neleidžia įkelti dviejų nuotraukų net lygiagrečiai.",
+      "Po pilotinės rezervacijos klaidos automatiniai bandymai draudžiami; R2/DB/PWA nuotraukų duomenys nekeisti. Cloudflare Worker saugiai atnaujintas per GitHub Actions; ENABLE_UPLOADS=false ir PILOT_ENABLED=false, R2 EU jurisdikcija patvirtinta.",
+      "2026-10-19: po nesėkmingo 500 nuotraukos bandymo įdiegtas etapinis Worker klaidų klasifikavimas (FORM_PARSE, FILE_VALIDATION, DB_SCOPE_CHECK, R2_RESERVATION, R2_BLOBS, DB_METADATA), be asmens duomenų žurnaluose. R2 API laikinas objektas sėkmingai įrašytas, perskaitytas ir ištrintas. Tikras nuotraukos bandymas dar nepatvirtintas.",
+      "Atskiram GitHub Pages R2 pilotui DRAFT pridėtas minimalistinis administratoriaus prisijungimo ir vieno failo ekranas (pilot.html, src/pilot.tsx), izoliuoto base path surinkimas ir repo diegimo workflow šablonas; testas nepublikuotas, nes dar nesukurta atskira repo."
+    ],commits:[]},
+
   {date:"2026-10-19",version:"V2.2.7",category:"taisymas",
     title:"Kompaktiškos desktop darbų kortelės be tuščios vietos navigacijai",
     details:[
