@@ -101,6 +101,13 @@ export async function getStorageUsage(org: string): Promise<StorageUsage> {
   } else errors.push("Supabase statistikai būtina administratoriaus RPC migracija");
   return { r2: r2Value, supabase: dbValue, errors };
 }
+export type StorageEstimate = { photos: number; bytes: number; objects: number; missing: number };
+export async function estimateStorageSelection(org: string, ids: string[]): Promise<StorageEstimate> {
+  await assertStorageAdmin(org);
+  if (!ids.length || ids.length > 50 || new Set(ids).size !== ids.length)
+    throw new Error("Pasirinkite 1–50 nuotraukų");
+  return workerRequest<StorageEstimate>(org, "/v1/storage/estimate", { ids });
+}
 export async function storageAction(
   org: string, action: "trash" | "restore" | "purge",
   ids: string[], period?: RetentionPeriod
