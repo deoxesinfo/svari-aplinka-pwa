@@ -53,8 +53,14 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
       <DialogContent className="max-w-4xl gap-3 p-3 sm:p-4">
         <DialogTitle className="pr-8 text-base">{adr?.street ?? "Nuotrauka"}</DialogTitle>
         <DialogDescription className="-mt-2 text-xs">
-          {fmtDateTime(photo.createdAt)} · {(photo.size / 1024).toFixed(0)} KB {photo.width ? `· ${photo.width}×${photo.height}` : ""}
+          Įkelta: {fmtDateTime(photo.createdAt)} · {(photo.size / 1024).toFixed(0)} KB {photo.width ? `· ${photo.width}×${photo.height}` : ""}
         </DialogDescription>
+        {photo.proofMode&&<p className="text-xs text-muted-foreground">
+          {photo.proofMode==="gps_live"
+            ? `GPS patikrintas serveryje${photo.gpsDistanceMeters!==undefined?` · ${photo.gpsDistanceMeters} m nuo objekto`:""}${photo.gpsAccuracyMeters!==undefined?` · tikslumas ${photo.gpsAccuracyMeters} m`:""}`
+            : "Administratoriaus GPS išimtis"}
+          {photo.gpsVerifiedAt&&` · ${fmtDateTime(photo.gpsVerifiedAt)}`}
+        </p>}
         <div className={cn("max-h-[70vh] overflow-auto rounded-md bg-muted", zoom ? "cursor-zoom-out" : "cursor-zoom-in")} onClick={() => setZoom((z) => !z)}>
           {full.url ? (
             <img src={full.url} alt="Darbo nuotrauka" className={cn("mx-auto", zoom ? "max-w-none w-[200%]" : "max-h-[70vh] w-auto object-contain")} />
