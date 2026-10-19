@@ -21,6 +21,8 @@ jobs:
         with:
           node-version: '22'
       - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Generate current file-based route types via Vite build
+        run: npm run build
       - name: Strict diagnostics for new staff messaging code
         shell: bash
         run: |
