@@ -51,7 +51,7 @@ BEGIN
   IF v_job.data->>'status' = 'atlikta' THEN
     RETURN true;
   END IF;
-  -- A current work photo must have been uploaded by the protected Worker flow.
+  -- Requires a work photo with server-recorded GPS evidence. Employee records are RLS-restricted; browser coordinates themselves are not tamper-proof.
   SELECT count(*) INTO v_photo_count FROM public.sa_photo_metadata p
    WHERE p.organization_id=p_org AND p.job_id=p_job
      AND p.data->>'proofMode'='gps_live'
@@ -65,7 +65,7 @@ BEGIN
          '{completedAt}',to_jsonb(to_char(v_stamp AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI:SS.MS"Z"')),true
        ),
        '{history}',COALESCE(data->'history','[]'::jsonb)
-         || jsonb_build_array(jsonb_build_object('at',v_stamp,'text','Darbas užbaigtas darbuotojo GPS fotografavimo sesijoje')),true
+         || jsonb_build_array(jsonb_build_object('at',v_stamp,'text','Darbas užbaigtas po naujos GPS patikros')),true
      ),
      '{comments}',COALESCE(data->'comments','[]'::jsonb)
        || CASE WHEN length(trim(COALESCE(p_note,'')))>0
@@ -77,5 +77,5 @@ BEGIN
 END;
 $$;
 REVOKE ALL ON FUNCTION public.sa_complete_assigned_job(uuid,uuid,text) FROM PUBLIC,anon;
-GRANT EXECUTE ON FUNCTION public.sa_complete_assigned_job(uuid,uuid) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.sa_complete_assigned_job(uuid,uuid,text) TO authenticated;
 COMMIT;
