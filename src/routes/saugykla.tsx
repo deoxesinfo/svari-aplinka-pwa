@@ -21,6 +21,24 @@ const periods: { value: RetentionPeriod; label: string }[] = [
 const renderNum = (n: number) => n.toLocaleString("lt-LT");
 const dateText = (s: string) => new Date(s).toLocaleDateString("lt-LT");
 
+const MIB = 1024 ** 2, GIB = 1024 ** 3;
+function CapacityMeter({label, used, max, note}: {label: string; used?: number|null; max: number; note?: string}) {
+  const percentage = typeof used === "number" && Number.isFinite(used) ?
+    Math.max(0, Math.round((used / max) * 1000) / 10) : null;
+  return <div className="rounded-lg border p-3">
+    <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+      <strong>{label}</strong>
+      <span className="tabular-nums text-muted-foreground">{bytesLabel(used)}
+        {" / "}{bytesLabel(max)}{percentage !== null ? " · " + percentage + "%" : ""}</span>
+    </div>
+    <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-muted" role="progressbar"
+      aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage ?? undefined}>
+      <div className="h-full rounded-full bg-primary" style={{width: (percentage === null ? 0 : Math.min(100,percentage)) + "%"}}/>
+    </div>
+    {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
+  </div>;
+}
+
 function StoragePage() {
   const { addresses, jobs } = useAppState();
   const org = getCloudOrganizationId();
@@ -124,6 +142,12 @@ function StoragePage() {
       <Stat label="Supabase dokumentai" value={bytesLabel(usage?.supabase?.document_bytes)} />
       <Stat label="Cloudflare R2 (objektai)" value={bytesLabel(usage?.r2?.r2Bytes)} />
       <Stat label="R2 objektų skaičius" value={usage?.r2 ? renderNum(usage.r2.r2Objects) : "—"}/>
+    </div>
+    <div className="grid gap-3 lg:grid-cols-3">
+      <CapacityMeter label="Supabase duomenų bazė" used={usage?.supabase?.database_bytes} max={500*MIB}/>
+      <CapacityMeter label="Supabase dokumentai" used={usage?.supabase?.document_bytes} max={GIB}/>
+      <CapacityMeter label="Cloudflare R2 nuotraukos" used={usage?.r2?.r2Bytes} max={10*GIB}
+        note="Rodomas šio projekto užimamas dydis. Cloudflare 10 GB-mėn. nemokama apimtis skaičiuojama visai paskyrai."/>
     </div>
     <div className="card-surface space-y-2 p-4 text-sm">
       <div className="flex items-center gap-2 font-semibold"><Database className="size-4"/> Saugyklų limitai</div>
