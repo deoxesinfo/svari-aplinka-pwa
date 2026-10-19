@@ -16,7 +16,7 @@ describe("ŠA V2.3.19 staff messages client validation",()=>{
  });
  it("passes an explicitly scheduled timestamp",async()=>{
   await sendStaffMessage("org-1",{...base,sendAt:"2026-10-22T09:00:00.000Z"});
-  expect(mock.rpc.mock.calls[0][1].p_schedule).toBe("2026-10-22T09:00:00.000Z");
+  expect(mock.rpc.mock.calls[0]?.[1]?.p_schedule).toBe("2026-10-22T09:00:00.000Z");
  });
  it("refuses empty and duplicate recipients before calling database",async()=>{
   await expect(sendStaffMessage("org-1",{...base,recipients:[]})).rejects.toThrow();
