@@ -129,6 +129,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const address=addresses.find(a=>a.id===addressId);
   const job=jobs.find(j=>j.id===jobId);
   const protectedByGps=Boolean(address?.gpsProtectionEnabled||job?.gpsRequired);
+  const pilotAllowed=!isCloudMode()||(CLOUD_R2_PHOTOS_READY && jobId===R2_PILOT_JOB_ID);
   const proof=jobId?job?.gpsVerification:localProof;
   const radius=jobId?(job?.gpsRadiusMeters||address?.gpsPhotoRadiusMeters||50):(address?.gpsPhotoRadiusMeters||50);
   const gpsAllowed=Boolean(address&&hasConfirmedPin(address)&&
@@ -166,7 +167,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
-    if(isCloudMode()&&!CLOUD_R2_PHOTOS_READY){toast.error("Iki saugaus R2 API patvirtinimo įkėlimas neleidžiamas");return;}
+    if(isCloudMode()&&!pilotAllowed){toast.error("R2 bandymas leidžiamas tik vienam patvirtintam darbui");return;}
     if(locked){toast.error("Pirmiausia patvirtinkite buvimo vietą");return;}
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
@@ -205,14 +206,14 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (gal.current) gal.current.value = "";
   };
 
-  if(isCloudMode()&&!CLOUD_R2_PHOTOS_READY)return <div className="space-y-3">
+  if(isCloudMode()&&!pilotAllowed)return <div className="space-y-3">
     {gpsPanel}
     <div className="grid grid-cols-2 gap-2">
       <Button type="button" disabled className="min-h-14 whitespace-normal px-2 text-sm"><Camera className="size-4"/> Fotografuoti</Button>
       <Button type="button" variant="outline" disabled className="min-h-14 whitespace-normal px-2 text-sm"><ImagePlus className="size-4"/> Įkelti</Button>
     </div>
     <p className="rounded-lg border p-3 text-xs text-muted-foreground">
-      Nuotraukų įkėlimas vis dar išjungtas, kol neprijungta privati Cloudflare R2 saugykla ir serverio autorizacija. GPS patikra vien to neatrakina.
+      Nuotraukų įkėlimas išjungtas. Ribotas bandymas leidžiamas tik vienam administratoriaus darbui atskirai patvirtintoje versijoje. GPS patikra vien to neatrakina.
     </p>
   </div>;
   return (
@@ -232,7 +233,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
         </Button>
       </div>
       <input ref={cam} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => handle(e.target.files)} />
-      <input ref={gal} type="file" accept="image/*" multiple className="hidden" onChange={(e) => handle(e.target.files)} />
+      <input ref={gal} type="file" accept="image/*" multiple={!isCloudMode()} className="hidden" onChange={(e) => handle(e.target.files)} />
       {remaining === 0 && <p className="text-sm font-medium text-amber-700">Pasiektas 15 nuotraukų limitas. Norėdami pridėti naują, pirmiausia pašalinkite nereikalingą.</p>}
       {busy > 0 ? (
         <p className="flex items-center gap-2 text-sm text-primary" role="status">
