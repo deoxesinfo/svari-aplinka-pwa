@@ -10,6 +10,15 @@
 - **Tai nėra vienos nuotraukos įkėlimo aktyvavimas.** Jokio PWA Deploy, jokio Supabase pakeitimo, jokio nuotraukų įkėlimo ar DELETE.
 - Po Deploy būtina iš naujo paleisti išorinius Worker API read-only smoke testus (health 200, disabled POST 503, unauth GET 401, DELETE 403, CORS). Išorinės patikros įrodymas – atitinkamas GitHub Actions „R2 Live API read-only security probes“ paleidimas **po šio įrašo komito**.
 
+## Administratoriaus bandomoji PWA sąsaja (tik DRAFT, dar NEPUBLIKUOTA)
+
+- Įprastas PWA build **palieka R2 įkėlimą išjungtą**.
+- Tik specialus DRAFT build su aplinkos kintamaisiais `VITE_SA_R2_PILOT=admin-one-photo` ir `VITE_SA_R2_PILOT_JOB_ID=<patvirtintas-job-uuid>` rodo įkėlimo mygtuką tam **vienam darbui**. Galerijoje leidžiama vienu metu pasirinkti vieną failą.
+- Autorizacija neperduodama į GitHub ar pokalbį: PWA naudoja įprastą prisijungusio admin Supabase sesiją. Tik Worker patikros ir R2 rezervacija suteikia tikrą serverinį saugumą.
+- **SVARBUS testinės versijos apribojimas:** aktyvaus Worker `ALLOWED_ORIGIN=https://deoxesinfo.github.io` taisyklė įleidžia tik tos pačios kilmės PWA. Atskiro Vercel Preview domeno POST būtų atmestas 403 `ORIGIN_DENIED`. Testinė versija turi būti patvirtintu būdu pateikta tuo pačiu GitHub Pages origin arba po atskiro sutikimo praplėsti leidžiamų kilmių sąrašą ir vėl publikuoti Worker.
+- Joks realus PWA / Pages deploy ar PR merge **dar nepatvirtintas ir neįvykdytas** šiame pasiruošimo etape. Negalima įjungti `ENABLE_UPLOADS` ar `PILOT_ENABLED`, kol administratorius neturi saugaus vieno failo sąsajos ir sutarto nedelsiamo išjungimo plano.
+- CI su numatyta išjungta sąsaja ir atskiru pilot build atlieka tik kompiliaciją. CI **nepublikuoja** nei vieno build.
+
 ## Kokie saugikliai paruošti
 - `ENABLE_UPLOADS` lieka absoliutus užraktas: jei ne `true`, `POST /v1/photos` atsako 503 `UPLOADS_DISABLED`.
 - Papildomas `PILOT_ENABLED`: turi būti atskirai `true`, kitaip 503 `PILOT_NOT_CONFIGURED`.
