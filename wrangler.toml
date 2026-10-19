@@ -1,4 +1,4 @@
-# Švari Aplinka photo Worker V2.3.14
+# Švari Aplinka photo Worker V2.3.17 - only administrator-triggered deletes
 # Matches the EXISTING private Worker/bucket; no new bucket or public binding.
 # Dashboard-managed Supabase connection settings remain unchanged.
 name = "svari-aplinka-photos"
@@ -8,8 +8,8 @@ workers_dev = true
 keep_vars = true
 
 [vars]
-ENABLE_STORAGE_ACTIONS = "false"
-ENABLE_STORAGE_PURGE = "false"
+ENABLE_STORAGE_ACTIONS = "true"
+ENABLE_STORAGE_PURGE = "true"
 
 [[r2_buckets]]
 binding = "R2_BUCKET"
