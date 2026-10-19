@@ -119,6 +119,13 @@ export interface PhotoMeta {
   size: number;
   type: string;
   tag?: PhotoTag;
+  /** Server-checked GPS metadata; browser GPS is not an unforgeable proof. */
+  proofMode?: "gps_live" | "admin_override";
+  gpsVerifiedAt?: string;
+  gpsDistanceMeters?: number;
+  gpsAccuracyMeters?: number;
+  gpsRadiusMeters?: number;
+  gpsOverrideReason?: string;
 }
 
 export const PHOTO_TAG_LABEL: Record<PhotoTag, string> = {
