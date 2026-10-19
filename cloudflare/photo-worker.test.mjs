@@ -29,6 +29,9 @@ const env={R2_BUCKET:bucket,SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.
  PILOT_ENABLED:"true",PILOT_ORG_ID:ORG,PILOT_USER_ID:USER,PILOT_JOB_ID:JOB};
 const original=globalThis.fetch;
 globalThis.fetch=async (url,init={})=>{
+ // Regression: Cloudflare's redirect:"error" throws before Supabase replies.
+ // Never follow redirects while sending the user's Authorization header.
+ assert.equal(init.redirect,"manual","Supabase fetch must use manual, not error/follow redirect");
  const u=new URL(url),p=u.pathname;
  if(p==="/auth/v1/user")return new Response(JSON.stringify(auth?{id:USER}:{}),{status:auth?200:401});
  if(p.endsWith("/sa_memberships"))return Response.json(role?[{role}]:[]);
