@@ -14,7 +14,7 @@ export const CHANGELOG: ChangeEntry[] = [
       "Kompiuterio (nuo lg pločio) darbų kortelėse mygtukas „Važiuoti“ perkeltas į tos pačios kortelės dešinį apatinį kampą. Anksčiau jis buvo atskira eilutė po kortele.",
       "Mažesniame ekrane navigacijos mygtuko vieta nekeičiama; paliekamas atskirai po kortele.",
       "Palikta esama Google Maps navigacijos nuoroda; mygtukas nepakeičia darbo atidarymo ir trijų taškų valdymo.",
-      "Pataisa parengta GitHub atskiroje šakoje – kol nepatvirtintas sujungimas ir Deploy, vieša programėlė lieka V2.2.5. Realių įrenginių vizualinė patikra dar neatlikta.",
+      "Pataisa rodoma tik po sėkmingo GitHub Pages publikavimo; realių įrenginių vizualinė patikra dar neatlikta. Pakeitimas taikomas visoms skiltims, kuriose naudojamas bendras JobRow komponentas.",
     ],commits:[]},
 
   {date:"2026-10-19",version:"V2.2.5",category:"taisymas",
