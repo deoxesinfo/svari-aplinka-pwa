@@ -6,8 +6,8 @@
 
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
-|---|---|---| 
-| 2026-10-19 | V2.2.7 | Kompaktiškos desktop darbų kortelės: „Važiuoti“ ir rodyklė vienoje horizontalioje juostoje, be papildomo apatinio tarpo; mobilus vaizdas nekeistas; regresinis testas. | Šiame etape |
+|---|---|---|
+| 2026-10-19 | V2.2.7 | Kompaktiškos desktop darbų kortelės: „Važiuoti“ ir rodyklė vienoje horizontalioje juostoje, be papildomo apatinio tarpo; mobilus vaizdas nekeistas; regresinis testas. | [PR #3](https://github.com/deoxesinfo/svari-aplinka-pwa/pull/3) |
 | 2026-10-19 | V2.2.6 | Visuose puslapiuose, naudojančiuose JobRow darbo kortelę, desktop (lg) „Važiuoti“ perkeltas į balto konteinerio vidų, dešinį apatinį kampą. Mobilioji versija nepakeista. Pridėtas regresinis testas. | [PR #2](https://github.com/deoxesinfo/svari-aplinka-pwa/pull/2) |
 | 2026-10-19 | V2.2.5 | Pabaigos data pasirenkama ir aktyviam darbuotojui, išvaloma X; sutvarkytas datos teksto lygiavimas iPhone; darbo redagavimo modalo horizontalaus slinkimo ribos ir mygtukų tarpai. | [a284463d](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/a284463d) · [eb29a824](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/eb29a824) |
 | 2026-10-19 | V2.2.4 | Vienodo pločio/aukščio „Dirba nuo“ ir „Darbo pabaigos data“ laukai, X pabaigos datai išvalyti ir tuščiai reikšmei išsaugoti, 16 px tarpas tarp „Išsaugoti“ / „Atšaukti“ personalo formoje. Standartinis iOS kalendorius paliktas. | [6cc56c49](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/6cc56c49) · [2e935383](https://github.com/deoxesinfo/svari-aplinka-pwa/commit/2e935383) |
