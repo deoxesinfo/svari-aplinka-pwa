@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.9",category:"taisymas",
+    title:"iPhone fotografavimo ir R2 įkėlimo klaidų taisymas",
+    details:[
+      "Mobiliajame telefone R2 nuotraukų įkėlimo klaidos nebeslepiamos po bendru pranešimu: matomas serverio HTTP kodas arba konkreti nuotraukos apdorojimo klaida.",
+      "iOS/WebKit pirmiausia koduoja kamerų nuotraukas JPEG, kuris priimamas privačiame R2 API; alternatyviai palaikomas WebP. Bandomas ir atsarginis natyvaus atvaizdo dekoderis.",
+      "Nepavykus debesijos įkėlimui vienu pasirinkimu daugiau failų automatiškai nebesiunčiama; išsaugoti originalios nuotraukos be apdorojimo draudžiama.",
+      "Cloudflare Worker diagnostikai serveris registruoja tik saugius klaidos etapus, HTTP kodus ir klaidų tipus – be vartotojų duomenų, JWT ir nuotraukų.",
+      "Faktinis pirmos nuotraukos išsaugojimas dar turi būti patvirtintas po publikavimo; Supabase ir esamų nuotraukų įrašai šiuo taisymu nekeičiami."
+    ],commits:[]},
   {date:"2026-10-19",version:"V2.2.8",category:"infrastruktūra",
     title:"Privati R2 darbų nuotraukų saugykla ir fotografavimas PWA",
     details:[

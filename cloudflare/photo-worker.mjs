@@ -177,7 +177,11 @@ async function upload(request,env,jwt,org,pilot){
  }
  return response({id:photoId,addressId,jobId,createdAt:new Date().toISOString(),tag,width,height,size:full.size,type:full.type},201);
  }catch(e){
-   if(e instanceof Problem)throw e;
+   if(e instanceof Problem){
+    // Emit only fixed diagnostic identifiers. Never log JWT, customer details, file bytes or URLs.
+    console.warn("R2_UPLOAD_REJECTED",{stage,code:e.code,status:e.status});
+    throw e;
+   }
    // Record only stage and JS error class. Never log JWT, customer data, form, URLs or file bodies.
    console.error("R2_UPLOAD_UNEXPECTED",{stage,errorType:e instanceof Error?e.name:"unknown"});
    // Prevent unclassified 500: stage-specific recovery code makes future diagnosis self-serve.
@@ -240,6 +244,9 @@ export default {async fetch(req,env){
   fail(404,"UNKNOWN_ROUTE");
  }catch(e){
   const known=e instanceof Problem;
+  if(req.method==="POST"&&new URL(req.url).pathname==="/v1/photos")
+    console.warn("R2_UPLOAD_REQUEST_RESULT",{status:known?e.status:500,code:known?e.code:"INTERNAL_ERROR"});
+  if(!known)console.error("R2_WORKER_UNEXPECTED",{errorType:e instanceof Error?e.name:"unknown"});
   return cors(response({error:known?e.code:"INTERNAL_ERROR"},known?e.status:500),origin,env);
  }
 }};

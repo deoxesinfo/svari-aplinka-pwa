@@ -191,8 +191,26 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
         }
         ok++;
       } catch (e) {
-        toast.error(isQuotaError(e) ? "Įrenginio atmintis pilna – ištrinkite senas nuotraukas." : "Nepavyko išsaugoti nuotraukos.");
-        if (isQuotaError(e)) break;
+        if (isQuotaError(e)) {
+          toast.error("Įrenginio atmintis pilna – ištrinkite senas nuotraukas.");
+          break;
+        }
+        // Preserve the server's non-sensitive HTTP status and error code.
+        // Previously every real Worker error was silently hidden on iPhone.
+        const detail=e instanceof Error ? e.message : "Nežinoma klaida";
+        const reason=isCloudMode()
+          ? detail.startsWith("Nuotraukos API klaida")
+            ? detail
+            : /Failed to fetch|NetworkError|Load failed|fetch failed/i.test(detail)
+              ? "Nepavyko prisijungti prie R2 serverio. Patikrinkite internetą."
+              : detail
+          : "Nepavyko išsaugoti nuotraukos.";
+        toast.error(reason,{duration:12000});
+        console.warn("PHOTO_UPLOAD_FAILED",{mode:isCloudMode()?"cloud":"local",
+          category:detail.startsWith("Nuotraukos API klaida")?"api":"device"});
+        // When a cloud upload is unsuccessful its outcome may be unknown;
+        // don't continue a multi-file batch with automatic extra uploads.
+        if(isCloudMode())break;
       } finally {
         setBusy((b) => b - 1);
       }
