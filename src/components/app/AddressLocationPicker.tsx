@@ -130,7 +130,7 @@ export function AddressLocationPicker({value,onChange}:{value:AddressInput;onCha
          <ExternalLink className="size-4"/>Patikrinti Google Maps
        </a>
      </div>}
-     <p className="text-[11px] text-muted-foreground">Žemėlapis: © OpenStreetMap contributors. Adreso paieška: Photon (komoot), nemokamas bandomasis serveris be veikimo garantijos. Užklausos siunčiamos tik paspaudus paiešką.</p>
+     <p className="text-[11px] text-muted-foreground">Žemėlapis: © OpenStreetMap contributors. Adreso paieška: Photon (komoot) ir atsarginė OpenStreetMap Nominatim. Paslaugos gali būti laikinai nepasiekiamos. Užklausos siunčiamos tik paspaudus paiešką.</p>
    </div>}
    {value.gpsProtectionEnabled&&!confirmed&&<p className="mt-3 flex items-start gap-2 text-xs text-amber-700">
      <ShieldAlert className="size-4 shrink-0"/>GPS apsauga aktyvuojama tik patvirtinus tikslų namo žymeklį.
