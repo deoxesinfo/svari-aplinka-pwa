@@ -97,7 +97,13 @@ async function loadSource(file: File): Promise<Source> {
       const bmp = await createImageBitmap(file, { imageOrientation: "from-image" } as ImageBitmapOptions);
       return { el: bmp, w: bmp.width, h: bmp.height, close: () => bmp.close() };
     } catch {
-      /* fall through */
+      // iOS WebKit can reject imageOrientation even when native image decoding works.
+      try {
+        const bmp = await createImageBitmap(file);
+        return { el: bmp, w: bmp.width, h: bmp.height, close: () => bmp.close() };
+      } catch {
+        /* fall through to the HTMLImageElement decoder */
+      }
     }
   }
   const url = URL.createObjectURL(file);
@@ -126,11 +132,19 @@ function canvasBlob(c: HTMLCanvasElement, type: string, q: number) {
 }
 
 async function encode(c: HTMLCanvasElement, q: number): Promise<Blob> {
+  // JPEG is the most reliably supported canvas encoder for iPhone/WebKit cameras.
+  // The private R2 API validates both JPEG and WebP; other browsers still prefer WebP.
+  const ios = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (ios) {
+    const first = await canvasBlob(c, "image/jpeg", q);
+    if (first?.type === "image/jpeg") return first;
+  }
   const webp = await canvasBlob(c, "image/webp", q);
-  if (webp && webp.type === "image/webp") return webp;
+  if (webp?.type === "image/webp") return webp;
   const jpg = await canvasBlob(c, "image/jpeg", q);
-  if (jpg) return jpg;
-  throw new Error("Nepavyko apdoroti nuotraukos");
+  if (jpg?.type === "image/jpeg") return jpg;
+  throw new Error("Nepavyko užkoduoti nuotraukos kaip WebP/JPEG");
 }
 
 /** Resize to max 1600px, convert to WebP (JPEG fallback) and make a 400px thumbnail. */
@@ -144,8 +158,10 @@ export async function processImage(file: File) {
     const scale = Math.min(1, 1600 / Math.max(src.w, src.h));
     src.close?.();
     return { full, thumb, width: Math.round(src.w * scale) || w, height: Math.round(h * scale) };
-  } catch {
-    // Never store the uncompressed original when conversion fails.
-    throw new Error("Nepavyko suspausti nuotraukos. Pabandykite kitą failą.");
+  } catch (err) {
+    // Never store an uncompressed original. The error must be visible to the user,
+    // but never contains image contents or private information.
+    if(err instanceof Error&&/Nepavyko užkoduoti/.test(err.message))throw err;
+    throw new Error("Nepavyko atidaryti ar sumažinti šios nuotraukos telefone.");
   }
 }
