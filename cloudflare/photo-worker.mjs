@@ -6,7 +6,7 @@
  * Never use a service_role token or public bucket.
  */
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
-const MAX_REQUEST=7*1024*1024,MAX_IMAGE=3*1024*1024,MAX_THUMB=512*1024;
+const MAX_REQUEST=7*1024*1024,MAX_IMAGE=3*1024*1024,MAX_THUMB=512*1024,MAX_DIMENSION=2000;
 const TAGS=new Set(["pries","po","problema"]);
 const NO_STORE="private, no-store, max-age=0";
 // One global, immutable marker per pilot version: NOT automatically deleted on errors.
@@ -174,7 +174,7 @@ async function upload(request,env,jwt,org,pilot,userId,role){
  if(pilot&&jobId!==pilot.jobId)fail(403,"PILOT_SCOPE_DENIED");
  const tag=value(fd,"tag",16);if(!TAGS.has(tag))fail(400,"INVALID_TAG");
  const width=Number(value(fd,"width",8)),height=Number(value(fd,"height",8));
- if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>1600||height>1600)fail(400,"INVALID_DIMENSIONS");
+ if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>MAX_DIMENSION||height>MAX_DIMENSION)fail(400,"INVALID_DIMENSIONS");
  stage="FILE_VALIDATION";
  const full=await checkFile(fd.get("full"),MAX_IMAGE),thumb=await checkFile(fd.get("thumb"),MAX_THUMB);
  stage="DB_SCOPE_CHECK";
