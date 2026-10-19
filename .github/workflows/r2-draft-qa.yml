@@ -39,4 +39,4 @@ jobs:
       - name: Test PWA
         run: npm test
       - name: Test private Worker API
-        run: node --test cloudflare/photo-worker.test.mjs
+        run: node --test cloudflare/photo-worker.test.mjs cloudflare/storage-admin.test.mjs
