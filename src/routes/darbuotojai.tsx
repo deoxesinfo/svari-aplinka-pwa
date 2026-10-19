@@ -213,7 +213,7 @@ function PeoplePage(){
           <details className="mt-3 rounded-lg border p-3">
             <summary className="cursor-pointer text-sm font-semibold"><History className="mr-2 inline size-4"/>Darbo laikotarpių istorija ({periods.length})</summary>
             <div className="mt-2 space-y-1 text-sm">
-              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt||"Pradžia nežinoma"} → {item.endedAt||(p.status==="nebedirba"?"Pabaigos data nenurodyta":"Dirba dabar")}</p>)
+              {periods.length?periods.map((item,i)=><p key={i} className="flex items-center gap-2"><CalendarDays className="size-4 text-muted-foreground"/>{item.startedAt||"Pradžia nežinoma"} → {item.endedAt||(p.status==="nebedirba"||i<periods.length-1?"Pabaigos data nenurodyta":"Dirba dabar")}</p>)
                 :<p className="text-muted-foreground">Istorinio įdarbinimo pradžios duomenų nėra – įveskite rankiniu būdu, kad jie nebūtų išgalvoti.</p>}
             </div>
           </details>
