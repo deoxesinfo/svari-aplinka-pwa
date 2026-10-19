@@ -22,3 +22,7 @@
 - Garso signalą valdo iOS/Android Focus, Silent mode ir pranešimų nustatymai.
 - sent_to_service reiškia tik perdavimą telefono Push paslaugai, o ne žmogaus perskaitymą.
 - Jokių papildomų mokamų paslaugų neįjungta; Supabase paslaugos ir cron turi esamas plano kvotas.
+
+## Pastaba dėl pirmo paleidimo
+- VAPID raktų ir cron apsaugos registracija įvyksta tik po autorizuotos pranešimų puslapio užklausos. Kol tai neįvyko, Cron grąžina neaktyvią būseną ir Push nesiunčia.
+- Tikras iPhone Push gavimo testas laikomas neatliktu iki naudotojo leidimo ir vieno bandomojo pranešimo patikrinimo.
