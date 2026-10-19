@@ -1,5 +1,5 @@
 /**
- * Švari Aplinka private photos API — DRAFT, NOT DEPLOYED.
+ * Švari Aplinka private photos API — guarded rollout.
  * R2 binding: R2_BUCKET
  * Text vars: SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, ALLOWED_ORIGIN, ENABLE_UPLOADS
  * One-photo pilot (DRAFT, OFF): PILOT_ENABLED, PILOT_ORG_ID, PILOT_USER_ID, PILOT_JOB_ID
@@ -116,7 +116,7 @@ async function upload(request,env,jwt,org,pilot){
  // Phase 1 requires a job: DB has transactional 15-photo guard only for job photos.
  // Address-only photos need a separately approved server-side quota/lock.
  if(!jobId)fail(409,"JOB_REQUIRED_FOR_PILOT");
- if(jobId!==pilot.jobId)fail(403,"PILOT_SCOPE_DENIED");
+ if(pilot&&jobId!==pilot.jobId)fail(403,"PILOT_SCOPE_DENIED");
  const tag=value(fd,"tag",16);if(!TAGS.has(tag))fail(400,"INVALID_TAG");
  const width=Number(value(fd,"width",8)),height=Number(value(fd,"height",8));
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>1600||height>1600)fail(400,"INVALID_DIMENSIONS");
@@ -136,7 +136,7 @@ async function upload(request,env,jwt,org,pilot){
  if(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired)fail(409,"SERVER_GPS_REQUIRED");
  // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
  stage="R2_RESERVATION";
- await claimOneAttempt(env);
+ if(pilot)await claimOneAttempt(env);
  stage="R2_BLOBS";
  const photoId=crypto.randomUUID(),key="sa/"+org+"/"+photoId;
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
@@ -208,14 +208,24 @@ export default {async fetch(req,env){
      "access-control-max-age":"600"}}),origin,env);
   }
   const path=new URL(req.url).pathname;
-  if(req.method==="GET"&&path==="/health")return cors(response({status:"ok"}),origin,env);
+  if(req.method==="GET"&&path==="/health"){
+   try{
+    await env.R2_BUCKET.head("__sa_healthcheck__/missing-object");
+    return cors(response({status:"ok",storage:"ready"}),origin,env);
+   }catch(e){
+    console.error("R2_HEALTH_UNAVAILABLE",{errorType:e instanceof Error?e.name:"unknown"});
+    return cors(response({status:"degraded",storage:"unavailable"},503),origin,env);
+   }
+  }
   const org=orgFrom(req);
   if(req.method==="POST"&&path==="/v1/photos"){
    if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
-   const pilot=pilotConfiguration(env); // fail closed if enabled without all pilot guards
-   if(org!==pilot.organizationId)fail(403,"PILOT_SCOPE_DENIED");
+   // Pilot guard applies only when explicitly enabled. Full admin uploads
+   // continue under JWT, organization RLS, GPS exclusion and 15-photo DB trigger.
+   const pilot=env.PILOT_ENABLED==="true"?pilotConfiguration(env):null;
+   if(pilot&&org!==pilot.organizationId)fail(403,"PILOT_SCOPE_DENIED");
    const {jwt,userId}=await authenticated(env,req,org,true);
-   if(userId!==pilot.userId)fail(403,"PILOT_SCOPE_DENIED");
+   if(pilot&&userId!==pilot.userId)fail(403,"PILOT_SCOPE_DENIED");
    return cors(await upload(req,env,jwt,org,pilot),origin,env);
   }
   const m=/^\/v1\/photos\/([0-9a-f-]{36})\/(full|thumb)$/.exec(path);
