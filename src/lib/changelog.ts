@@ -8,6 +8,14 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.10",category:"taisymas",
+    title:"R2 fotografavimo serverio klaidos taisymas",
+    details:[
+      "Cloudflare žurnaluose nustatyta 500 INTERNAL_ERROR priežastis: Supabase subužklausa su redirect:error sukelia TypeError dar prieš išsaugant nuotrauką.",
+      "Worker Supabase užklausoms naudoja redirect:manual, kaip patvirtinta gyvu ES Cloudflare Worker testu; tikrus 3xx peradresavimus atmeta ir neperduoda JWT kitam domenui.",
+      "Pašalinta laikina vieša egress diagnostikos užklausa. Darbų, naudotojų ir nuotraukų duomenys nekeičiami.",
+      "Pirmasis tikras iPhone nuotraukos išsaugojimas turi būti patvirtintas atskirai po diegimo."
+    ],commits:[]},
   {date:"2026-10-19",version:"V2.2.9",category:"taisymas",
     title:"iPhone fotografavimo ir R2 įkėlimo klaidų taisymas",
     details:[

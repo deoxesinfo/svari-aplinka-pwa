@@ -28,7 +28,12 @@ async function call(env,jwt,path,options={}){
  headers.set("authorization","Bearer "+jwt);
  headers.set("apikey",env.SUPABASE_PUBLISHABLE_KEY);
  headers.set("accept","application/json");
- return fetch(env.SUPABASE_URL+path,{...options,headers,redirect:"error"});
+ // Cloudflare Workers throws TypeError for redirect:"error" on this Supabase
+ // outbound request even when the endpoint itself responds HTTP 200.
+ // "manual" avoids automatic credential forwarding across domains.
+ const res=await fetch(env.SUPABASE_URL+path,{...options,headers,redirect:"manual"});
+ if(res.status>=300&&res.status<400)fail(502,"DATABASE_REDIRECT_DENIED");
+ return res;
 }
 async function rows(env,jwt,path){
  const res=await call(env,jwt,path);
