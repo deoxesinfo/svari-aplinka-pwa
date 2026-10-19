@@ -5,14 +5,26 @@ const ORG="d80c364b-df9c-4de4-a746-9e68f2382b20";
 const ADDRESS="9d156bd9-6968-4e64-aa70-b5b72e5a3a79";
 const JOB="502171c4-c9e3-494d-a5db-6a847edc4e41";
 const USER="db9628fb-61e9-4fbd-a7b3-23f9c4909157";
+const CLAIM="__sa_pilot_guard__/one-photo-v1";
+test.beforeEach(()=>{files.delete(CLAIM)});
 const db=[],files=new Map();
 let role="admin",auth=true,gps=false,jobGps=false,nPhotos=0,saveOk=true;
 let transportFault="none";
 const bucket={
- async put(k,b){files.set(k,b);return{}},async get(k){const b=files.get(k);return b?{body:b.stream()}:null},
+ async put(k,b,opts){
+   if(k===CLAIM){
+     // Model conditional R2 PUT with If-None-Match:* as an atomic create.
+     assert.equal(opts?.onlyIf?.get("If-None-Match"),"*");
+     if(files.has(k))return null;
+     files.set(k,b);return{etag:"claim"};
+   }
+   files.set(k,b);return{};
+ },
+ async get(k){const b=files.get(k);return b?{body:b.stream()}:null},
  async delete(k){files.delete(k)}
 };
-const env={R2_BUCKET:bucket,SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.co",SUPABASE_PUBLISHABLE_KEY:"public-test",ALLOWED_ORIGIN:"https://deoxesinfo.github.io",ENABLE_UPLOADS:"true"};
+const env={R2_BUCKET:bucket,SUPABASE_URL:"https://mbinhbascpeupnxrvidk.supabase.co",SUPABASE_PUBLISHABLE_KEY:"public-test",ALLOWED_ORIGIN:"https://deoxesinfo.github.io",ENABLE_UPLOADS:"true",
+ PILOT_ENABLED:"true",PILOT_ORG_ID:ORG,PILOT_USER_ID:USER,PILOT_JOB_ID:JOB};
 const original=globalThis.fetch;
 globalThis.fetch=async (url,init={})=>{
  const u=new URL(url),p=u.pathname;
@@ -54,6 +66,28 @@ test("upload switch defaults closed unless explicitly enabled",async()=>{
  assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,503);
  env.ENABLE_UPLOADS="true";
 });
+test("missing pilot configuration fails closed before any new image writes",async()=>{
+ env.PILOT_ENABLED="false";
+ const before=files.size;
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,503);assert.equal((await r.json()).error,"PILOT_NOT_CONFIGURED");
+ assert.equal(files.size,before);env.PILOT_ENABLED="true";
+});
+test("wrong pilot organization is rejected",async()=>{
+ const old=env.PILOT_ORG_ID;env.PILOT_ORG_ID="91f66427-4e3b-4f20-9100-122e26666e56";
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,403);assert.equal(files.has(CLAIM),false);env.PILOT_ORG_ID=old;
+});
+test("wrong pilot admin user is rejected",async()=>{
+ const old=env.PILOT_USER_ID;env.PILOT_USER_ID="91f66427-4e3b-4f20-9100-122e26666e56";
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,403);assert.equal(files.has(CLAIM),false);env.PILOT_USER_ID=old;
+});
+test("wrong pilot job rejected before reserving slot",async()=>{
+ const old=env.PILOT_JOB_ID;env.PILOT_JOB_ID="91f66427-4e3b-4f20-9100-122e26666e56";
+ const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(r.status,403);assert.equal(files.has(CLAIM),false);env.PILOT_JOB_ID=old;
+});
 test("missing bearer denied",async()=>assert.equal((await worker.fetch(request("/v1/photos","POST",{authorization:""},form()),env)).status,401));
 test("origin outside allowlist denied",async()=>assert.equal((await worker.fetch(request("/v1/photos","POST",{origin:"https://evil.example"},form()),env)).status,403));
 test("expired session denied",async()=>{auth=false;assert.equal((await worker.fetch(request("/v1/photos","POST",{},form()),env)).status,401);auth=true});
@@ -86,8 +120,27 @@ test("oversized declared request refused",async()=>{
 });
 test("successful upload writes two R2 objects plus metadata",async()=>{
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
- assert.equal(r.status,201,await r.clone().text());const data=await r.json();assert.ok(data.id);assert.equal(db.length,1);assert.equal(files.size,2);
+ assert.equal(r.status,201,await r.clone().text());const data=await r.json();assert.ok(data.id);assert.equal(db.length,1);assert.equal(files.size,3);assert.ok(files.has(CLAIM));
  assert.equal(db[0].object_key,"sa/"+ORG+"/"+data.id);
+});
+test("one-shot guard prevents repeat upload even after success",async()=>{
+ const first=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(first.status,201,await first.clone().text());
+ const dataRows=db.length,objectCount=files.size;
+ const repeat=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(repeat.status,409);
+ assert.equal((await repeat.json()).error,"PILOT_ALREADY_USED");
+ assert.equal(db.length,dataRows);assert.equal(files.size,objectCount);
+});
+test("two simultaneous uploads: at most one reaches R2 image writes and DB",async()=>{
+ const beforeDb=db.length,beforeObjects=files.size;
+ const [a,b]=await Promise.all([
+  worker.fetch(request("/v1/photos","POST",{},form()),env),
+  worker.fetch(request("/v1/photos","POST",{},form()),env)
+ ]);
+ assert.deepEqual([a.status,b.status].sort(),[201,409]);
+ assert.equal(db.length,beforeDb+1);
+ assert.equal(files.size,beforeObjects+3);
 });
 test("private GET image requires session and returns no-store",async()=>{
  const key=db.at(-1).id;
@@ -96,19 +149,22 @@ test("private GET image requires session and returns no-store",async()=>{
 });
 test("failed DB write rolls back R2 objects",async()=>{
  saveOk=false;const prior=files.size;const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
- assert.equal(r.status,403);assert.equal(files.size,prior);saveOk=true;
+ assert.equal(r.status,403);assert.equal(files.size,prior+1);assert.ok(files.has(CLAIM));
+ // The claim persists on failed database write: no automatic retry is permitted.
+ const retry=await worker.fetch(request("/v1/photos","POST",{},form()),env);
+ assert.equal(retry.status,409);saveOk=true;
 });
 test("database reply lost after successful commit keeps blobs and reports success",async()=>{
  transportFault="after";const before=files.size,previous=db.length;
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
  assert.equal(r.status,201,await r.clone().text());
- assert.equal(db.length,previous+1);assert.equal(files.size,before+2);
+ assert.equal(db.length,previous+1);assert.equal(files.size,before+3);
  transportFault="none";
 });
 test("database disconnected before commit safely removes new blobs",async()=>{
  transportFault="before";const before=files.size;
  const r=await worker.fetch(request("/v1/photos","POST",{},form()),env);
- assert.equal(r.status,503);assert.equal(files.size,before);
+ assert.equal(r.status,503);assert.equal(files.size,before+1);
  transportFault="none";
 });
 test("delete remains disabled",async()=>assert.equal((await worker.fetch(request("/v1/photos/"+db.at(-1).id,"DELETE"),env)).status,403));
