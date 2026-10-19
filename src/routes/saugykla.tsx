@@ -61,6 +61,9 @@ function StoragePage() {
   const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
   const [verifiedSelection, setVerifiedSelection] = useState("");
   const [estimateError, setEstimateError] = useState("");
+  const metadataOriginalBytes = rows.reduce((total,photo)=>total+(photo.size||0),0);
+  const metadataTotalBytes = rows.reduce((total,photo)=>total+(photo.size||0)+(photo.thumbSize||0),0);
+  const r2Exact = usage?.r2 !== null && usage?.r2 !== undefined;
 
   async function reload() {
     if (!org || !admin) return;
@@ -140,14 +143,14 @@ function StoragePage() {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <Stat label="Supabase DB (visas projektas)" value={bytesLabel(usage?.supabase?.database_bytes)} />
       <Stat label="Supabase dokumentai" value={bytesLabel(usage?.supabase?.document_bytes)} />
-      <Stat label="Cloudflare R2 (objektai)" value={bytesLabel(usage?.r2?.r2Bytes)} />
+      <Stat label={r2Exact?"Cloudflare R2 (objektai)":"R2 originalai (pagal metaduomenis)"} value={bytesLabel(r2Exact?usage?.r2?.r2Bytes:metadataOriginalBytes)} />
       <Stat label="R2 objektų skaičius" value={usage?.r2 ? renderNum(usage.r2.r2Objects) : "—"}/>
     </div>
     <div className="grid gap-3 lg:grid-cols-3">
       <CapacityMeter label="Supabase duomenų bazė" used={usage?.supabase?.database_bytes} max={500*MIB}/>
       <CapacityMeter label="Supabase dokumentai" used={usage?.supabase?.document_bytes} max={GIB}/>
-      <CapacityMeter label="Cloudflare R2 nuotraukos" used={usage?.r2?.r2Bytes} max={10*GIB}
-        note="Rodomas šio projekto užimamas dydis. Cloudflare 10 GB-mėn. nemokama apimtis skaičiuojama visai paskyrai."/>
+      <CapacityMeter label={r2Exact?"Cloudflare R2 nuotraukos":"R2 originalai (apytiksliai)"} used={r2Exact?usage?.r2?.r2Bytes:metadataOriginalBytes} max={10*GIB}
+        note={r2Exact?"R2 tiksliai išmatuotas šios organizacijos objektų dydis; 10 GB-mėn. limitas skaičiuojamas visai Cloudflare paskyrai.":"Tik Supabase įrašų originalų dydžių suma (apie "+bytesLabel(metadataTotalBytes)+", jei metaduomenyse nurodyti miniatiūrų dydžiai). Tikras R2 dydis ir miniatiūros tikrinami po Worker API diegimo."}/>
     </div>
     <div className="card-surface space-y-2 p-4 text-sm">
       <div className="flex items-center gap-2 font-semibold"><Database className="size-4"/> Saugyklų limitai</div>
@@ -164,7 +167,9 @@ function StoragePage() {
       </p>}
       <p className="text-muted-foreground">Perkėlus į šiukšlinę vieta dar neatlaisvinama.
         Ji atlaisvinama tik rankiniu būdu galutinai pašalinus failus iš R2.</p>
-      {usage?.errors.map((e,i)=><p key={i} className="text-amber-700">Statistika nepasiekiama: {e}</p>)}
+      {usage?.errors.map((e,i)=><p key={i} className="text-amber-700">
+        {e.includes("UNKNOWN_ROUTE")?"R2 statistikos API dar neįdiegtas į Cloudflare Worker (404). Iki diegimo rodoma tik metaduomenų dydžių suma, o trynimo valdymas užrakintas.":"Statistika nepasiekiama: "+e}
+      </p>)}
       {error && <p role="alert" className="text-destructive">{error}</p>}
     </div>
     <section className="card-surface space-y-4 p-4">
@@ -174,7 +179,7 @@ function StoragePage() {
         <Button variant={tab === "trash" ? "default" : "outline"} onClick={() => {setTab("trash");setSelected([]);}}>
           <Trash2 className="size-4"/> Šiukšlinė ({rows.filter(p => !!p.trashedAt).length})</Button>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="text-xs">Adresas
           <select className={inputCls} value={address} onChange={e => {setAddress(e.target.value);setSelected([]);}}>
             <option value="">Visi adresai</option>
@@ -195,10 +200,10 @@ function StoragePage() {
             <option value="all">Visos nuotraukos</option>
             {periods.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
           </select></label>
-        <label className="text-xs">Nuo datos
-          <input type="date" className={inputCls} value={fromDate} onChange={e=>{setFromDate(e.target.value);setSelected([]);}}/></label>
-        <label className="text-xs">Iki datos
-          <input type="date" className={inputCls} value={toDate} onChange={e=>{setToDate(e.target.value);setSelected([]);}}/></label>
+        <label className="block min-w-0 max-w-full text-xs">Nuo datos
+          <input type="date" className={inputCls+" block min-w-0 max-w-full box-border"} style={{minWidth:0,maxWidth:"100%"}} value={fromDate} onChange={e=>{setFromDate(e.target.value);setSelected([]);}}/></label>
+        <label className="block min-w-0 max-w-full text-xs">Iki datos
+          <input type="date" className={inputCls+" block min-w-0 max-w-full box-border"} style={{minWidth:0,maxWidth:"100%"}} value={toDate} onChange={e=>{setToDate(e.target.value);setSelected([]);}}/></label>
       </div>
       {tab === "active" && <p className="text-sm text-muted-foreground">
         Iš viso pagal pasirinktą amžių: {olderCandidates.length}. Po filtrų: {filtered.length}.
