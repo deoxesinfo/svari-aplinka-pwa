@@ -44,7 +44,16 @@ describe("Universalus darbo kortelės atidarymas", () => {
     const innerCard=desktop!.parentElement!.parentElement!;
     expect(innerCard.querySelector('button[aria-label^="Atidaryti darbą"]')).toBeTruthy();
     expect(innerCard.contains(mobile!)).toBe(false);
-    expect(desktop!.parentElement).toHaveClass("absolute", "bottom-4", "right-4");
+    expect(desktop!.parentElement).toHaveClass("absolute", "right-12", "top-1/2", "-translate-y-1/2", "lg:block");
+    expect(desktop!.parentElement).not.toHaveClass("bottom-4");
+    const openJob=screen.getByRole("button", { name: /Atidaryti darbą.*Pavyzdžio g. 12/ });
+    expect(openJob).toHaveClass("lg:pr-56", "relative");
+    expect(openJob).not.toHaveClass("lg:pb-16");
+    const chevron=openJob.querySelector("svg.lg\\:absolute");
+    expect(chevron).toBeTruthy();
+    expect(chevron).toHaveClass("lg:top-1/2", "lg:right-3");
+    expect(mobile!.parentElement).toHaveClass("lg:hidden", "justify-end");
+    expect(mobile!.parentElement).toHaveClass("-mt-1", "mb-2");
   });
 
   it("perbraukus kortelę į kairę atveria veiksmus, bet neatidaro darbo", () => {

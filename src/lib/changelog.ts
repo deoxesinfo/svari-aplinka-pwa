@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-19",version:"V2.2.7",category:"taisymas",
+    title:"Kompaktiškos desktop darbų kortelės be tuščios vietos navigacijai",
+    details:[
+      "Tik kompiuteriuose (lg ir plačiau): „Važiuoti“ ir darbo atidarymo rodyklė sudėti dešinėje vienoje horizontalioje linijoje, to paties balto darbo konteinerio viduje.",
+      "Pašalintas ankstesnis 64 px papildomas apatinis tarpas; dabar aukštį lemia tik adresas, žymos, darbuotojas ir kiti esami duomenys. Dešinioji kortelės dalis palikta mygtukui, kad informacija neužliptų ant navigacijos.",
+      "Bendras JobRow komponentas vienodai veikia Apžvalgoje, Darbuose, Kalendoriuje bei darbų istorijoje; palikti Swipe, darbo atidarymo, trijų taškų ir Google Maps veiksmai.",
+      "Mobiliosios versijos klasės ir „Važiuoti“ vieta po kortele nekeistos. Tikros naršyklės vizualinį vaizdą patikrinti po publikavimo.",
+    ],commits:[]},
+
   {date:"2026-10-19",version:"V2.2.6",category:"taisymas",
     title:"Google Maps navigacijos mygtukas darbų kortelės viduje kompiuteryje",
     details:[
