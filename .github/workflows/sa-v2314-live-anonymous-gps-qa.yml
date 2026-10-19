@@ -1,0 +1,41 @@
+name: SA V2.3.14 live R2 GPS anonymous guard probes (NO WRITES)
+on:
+  push:
+    branches: [diagnostics/sa-v2314-live-gps-anon-probes]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Verify deployed version and unauthenticated guards only
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base='https://svari-aplinka-photos.svariaplinka-lt.workers.dev';
+          const org='00000000-0000-4000-8000-000000000002';
+          const id='00000000-0000-4000-8000-000000000001';
+          async function check(path,method,body,validStatuses,label){
+            const result=await fetch(base+path,{
+              method,
+              headers:{'x-organization-id':org,...(body?{'content-type':'application/json'}:{})},
+              ...(body?{body:JSON.stringify(body)}:{}),
+              signal:AbortSignal.timeout(12000),
+              redirect:'error',
+            });
+            assert.ok(validStatuses.includes(result.status),label+' unexpected '+result.status);
+            console.log('PASS',label,'status',result.status);
+            return result;
+          }
+          const health=await check('/health','GET',null,[200],'R2 health');
+          const state=await health.json();
+          assert.equal(state.apiVersion,'2.3.14');
+          assert.equal(state.storageStatsEnabled,true);
+          await check('/v1/storage/usage','GET',null,[401],'R2 storage stats private');
+          await check('/v1/photos/'+id+'/thumb','GET',null,[401],'R2 photo GET private');
+          await check('/v1/gps/verify','POST',{jobId:id,addressId:id,latitude:0,longitude:0,accuracy:5},[401,503],'GPS endpoint private');
+          await check('/v1/photos','POST',null,[401,503],'photo upload cannot run anonymously');
+          await check('/v1/storage/trash','POST',{ids:[id],period:'30d'},[401,503],'storage writes cannot run anonymously');
+          console.log('NO real GPS, JWT, uploads, storage actions, or data modifications.');
+          NODE
