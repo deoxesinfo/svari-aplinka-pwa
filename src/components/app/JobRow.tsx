@@ -84,7 +84,7 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           if(actionsOpen){setActionsOpen(false);return}
           setDetailsOpen(true);
         }} aria-label={"Atidaryti darbą: "+(address?.street??"Adresas ištrintas")}
-          className={cn("card-surface group flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12",
+          className={cn("card-surface group flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:border-primary/35 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12 lg:pb-16",
             overdue&&"border-l-4 border-l-warning",done&&"bg-muted/30")}>
           <span aria-hidden="true" className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border-2",
             done?"border-primary bg-primary text-primary-foreground":"border-input text-transparent")}>
@@ -118,12 +118,15 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           </div>
           <ChevronRight aria-hidden="true" className="mt-2 size-5 shrink-0 text-muted-foreground"/>
         </button>
+        {address&&<div className="absolute bottom-4 right-4 z-10 hidden lg:block">
+          <MapsLink street={address.street} city={address.city} compact/>
+        </div>}
         <button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
           className="absolute right-1 top-1 grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-muted/70"
           onClick={()=>setActionsOpen(v=>!v)}><MoreHorizontal className="size-5"/></button>
       </div>
     </div>
-    {address&&<div className="-mt-1 mb-2 flex justify-end"><MapsLink street={address.street} city={address.city} compact/></div>}
+    {address&&<div className="-mt-1 mb-2 flex justify-end lg:hidden"><MapsLink street={address.street} city={address.city} compact/></div>}
     {detailsOpen&&<JobDetailDialog jobId={job.id} open={detailsOpen} onOpenChange={setDetailsOpen}/>}
     {editing&&<JobFormDialog job={job} open={editing} onOpenChange={setEditing}/>}
     <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
