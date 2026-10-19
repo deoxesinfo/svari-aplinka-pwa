@@ -171,7 +171,8 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
     if (incoming.length > remaining) toast.warning(`Vienam darbui leidžiama iki 15 nuotraukų. Liko vietų: ${remaining === Infinity ? "neribota" : remaining}.`);
-    const list = incoming.slice(0, remaining);
+    // Pilot client allows one selection only; Worker/R2 immutable claim is the authoritative limit.
+    const list = incoming.slice(0, isCloudMode() ? Math.min(1,remaining) : remaining);
     if (!list.length) return;
     setBusy(list.length);
     let ok = 0;
