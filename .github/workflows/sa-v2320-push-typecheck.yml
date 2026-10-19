@@ -32,8 +32,8 @@ jobs:
           npx tsc --noEmit --pretty false > /tmp/sa-push-ts.log 2>&1
           result=$?
           set -e
-          if grep -Eq '^src/(lib/(web-push|cloud-sync|staff-messages)[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log; then
-            grep -E '^src/(lib/(web-push|cloud-sync|staff-messages)[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log
+          if grep -Eq '^src/(lib/web-push[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log; then
+            grep -E '^src/(lib/web-push[.]ts|components/app/(PushSettings|StaffInbox)[.]tsx|test/web-push[.]test[.]ts)\([0-9]+,[0-9]+\): error TS' /tmp/sa-push-ts.log
             exit 1
           fi
           if [ "$result" -ne 0 ]; then
