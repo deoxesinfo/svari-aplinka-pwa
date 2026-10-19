@@ -8,10 +8,12 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
-  {date:"2026-10-19",version:"V2.2.8 DRAFT",category:"infrastruktūra",
-    title:"Cloudflare R2 saugus nuotraukų API (nepublikuotas 2 etapas)",
+  {date:"2026-10-19",version:"V2.2.8",category:"infrastruktūra",
+    title:"Privati R2 darbų nuotraukų saugykla ir fotografavimas PWA",
     details:[
-      "Tik atskiroje GitHub DRAFT šakoje: saugus Worker API su Supabase JWT ir RLS, privačiu R2 binding, failų dydžio/parašo patikra, serveriniais failų keliais ir klaidų atkūrimu.",
+      "Saugus Worker API su Supabase JWT ir RLS, privačiu ES R2 binding, failų dydžio/parašo patikra, serveriniais failų keliais ir klaidų atkūrimu.",
+      "Administratoriaus debesijos režime: fotografavimas ir įkėlimas darbo kortelėje, galerija su privačiu R2 peržiūros API, nuotraukų žymos, 15 nuotraukų / darbui, iki 5 failų vienu pasirinkimu.",
+      "GPS apsaugoti darbai, adreso nuotraukos be darbo ir darbuotojo paskyros dar nepalaikomi – iki atskiros serverinės GPS/autorizacijos plėtros. Nuotraukų trynimas R2 išjungtas.",
       "Supabase DB STEP 1 jau įdiegtas – daugiausia 15 nuotraukų vienam darbui; DELETE politika nepakeista.",
       "PWA įkėlimo / peržiūros kodas DRAFT šakoje paruoštas; pagal nutylėjimą CLOUD_R2_PHOTOS_READY=false. Tik specialus VITE_SA_R2_PILOT=admin-one-photo build su konkrečiu VITE_SA_R2_PILOT_JOB_ID atveria vieno darbo UI; PWA Deploy nebuvo.",
       "GPS saugomų objektų, darbuotojų įkėlimo ir nuotraukų trynimo aktyvavimas atidėtas iki serverinių prieigos taisyklių ir realių įrenginių testų.",
