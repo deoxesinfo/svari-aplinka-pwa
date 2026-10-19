@@ -14,7 +14,7 @@ create table if not exists public.sa_push_subscriptions (
 );
 create index if not exists sa_push_sub_user on public.sa_push_subscriptions(organization_id,user_id);
 create or replace function private.sa_push_max_devices()
-returns trigger language plpgsql security definer set search_path='' as $
+returns trigger language plpgsql security definer set search_path='' as $guard$
 begin
   if (select count(*) from public.sa_push_subscriptions s
       where s.organization_id=new.organization_id and s.user_id=new.user_id)>=5
@@ -23,7 +23,7 @@ begin
   then raise exception 'TOO_MANY_PUSH_DEVICES' using errcode='23514'; end if;
   return new;
 end;
-$;
+$guard$;
 drop trigger if exists sa_push_limit_devices on public.sa_push_subscriptions;
 create trigger sa_push_limit_devices before insert on public.sa_push_subscriptions
 for each row execute function private.sa_push_max_devices();
