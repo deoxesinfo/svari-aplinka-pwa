@@ -7,8 +7,8 @@ import { PhotoGrid } from "@/components/app/Photos";
 import { Confirm, EmptyState, PageHeader, Stat, inputCls } from "@/components/app/ui-bits";
 import { getCloudRole } from "@/lib/cloud-sync";
 import { getCloudOrganizationId, isCloudMode, refreshCloudWorkspace, useAppState } from "@/lib/store";
-import { bytesLabel, getStorageUsage, listStoragePhotos, olderThan, storageAction,
-  type RetentionPeriod, type StoragePhoto, type StorageUsage } from "@/lib/storage-admin";
+import { bytesLabel, estimateStorageSelection, getStorageUsage, listStoragePhotos, olderThan, storageAction,
+  type RetentionPeriod, type StorageEstimate, type StoragePhoto, type StorageUsage } from "@/lib/storage-admin";
 import type { PhotoMeta } from "@/lib/types";
 
 export const Route = createFileRoute("/saugykla")({ component: StoragePage });
@@ -40,6 +40,8 @@ function StoragePage() {
   const [confirm, setConfirm] = useState<"trash" | "restore" | "purge" | null>(null);
   const [purgePhrase, setPurgePhrase] = useState("");
   const [visibleCount, setVisibleCount] = useState(50);
+  const [estimate, setEstimate] = useState<StorageEstimate | null>(null);
+  const [estimateError, setEstimateError] = useState("");
 
   async function reload() {
     if (!org || !admin) return;
@@ -74,7 +76,21 @@ function StoragePage() {
   ).sort((a,b) => b.createdAt.localeCompare(a.createdAt)), [rows, tab, address, job, worker, period, fromDate, toDate, workerName]);
 
   const chosen = filtered.filter(p => selected.includes(p.id));
-  const bytes = chosen.reduce((sum,p) => sum + p.size + (p.thumbSize || 0), 0);
+  const approximateBytes = chosen.reduce((sum,p) => sum + p.size + (p.thumbSize || 0), 0);
+  const estimateKey = chosen.map(p => p.id).sort().join(",");
+  const exactBytes = estimate?.bytes;
+  const estimateReady = !!estimate && estimate.photos === chosen.length && estimate.missing === 0;
+  useEffect(() => {
+    setEstimate(null); setEstimateError("");
+    if (!org || !admin || !estimateKey) return;
+    let active = true;
+    const timeout = window.setTimeout(() => {
+      void estimateStorageSelection(org, estimateKey.split(","))
+        .then(result => { if(active) setEstimate(result); })
+        .catch(e => { if(active) setEstimateError(e instanceof Error ? e.message : "R2 patikra nepavyko"); });
+    }, 250);
+    return () => { active = false; window.clearTimeout(timeout); };
+  }, [org, admin, estimateKey]);
   const olderCandidates = rows.filter(p => !p.trashedAt && (period === "all" || olderThan(p.createdAt,period)));
   const selectedAll = filtered.length > 0 && filtered.slice(0, 50).every(p => selected.includes(p.id));
   const preview: PhotoMeta[] = filtered.slice(0, visibleCount).filter(p => !p.trashedAt).map(p => ({
@@ -82,7 +98,7 @@ function StoragePage() {
     size:p.size, width:0, height:0, type:"image/webp"
   }));
   async function perform(action: "trash" | "restore" | "purge") {
-    if (!org || !admin || !chosen.length) return;
+    if (!org || !admin || !chosen.length || !estimateReady) return;
     setBusy(true); setConfirm(null);
     try {
       await storageAction(org,action,chosen.map(p => p.id),action === "trash" && period !== "all" ? period : undefined);
@@ -168,14 +184,21 @@ function StoragePage() {
           <input type="checkbox" checked={selectedAll} disabled={!filtered.length||busy}
             onChange={e=>setSelected(e.target.checked ? filtered.slice(0,50).map(p=>p.id):[])}/>
           Pažymėti iki 50 matomų nuotraukų</label>
-        <span className="text-muted-foreground">Pasirinkta: {chosen.length} · {bytesLabel(bytes)} (apytiksliai)</span>
+        <span className="text-muted-foreground">Pasirinkta: {chosen.length} ·
+          {" "}{estimateReady ? bytesLabel(exactBytes) + " (patikrinta R2)" : bytesLabel(approximateBytes) + " (apytiksliai)"}
+        </span>
+        {!!chosen.length && !estimateReady &&
+          <span className="text-xs text-amber-700">
+            {estimate?.missing ? "Trūksta R2 failų: " + estimate.missing :
+              estimateError ? "R2 patikros klaida: " + estimateError : "Tikrinamas tikslus dydis…"}
+          </span>}
         {tab==="active"?
-          <Button disabled={!chosen.length||busy||period==="all"} variant="destructive" onClick={()=>setConfirm("trash")}>
+          <Button disabled={!chosen.length||busy||period==="all"||!estimateReady} variant="destructive" onClick={()=>setConfirm("trash")}>
             <Trash2 className="size-4"/> Perkelti į šiukšlinę</Button>
           :<>
-            <Button disabled={!chosen.length||busy} variant="outline" onClick={()=>setConfirm("restore")}>
+            <Button disabled={!chosen.length||busy||!estimateReady} variant="outline" onClick={()=>setConfirm("restore")}>
               <ArchiveRestore className="size-4"/> Atkurti</Button>
-            <Button disabled={!chosen.length||busy} variant="destructive" onClick={()=>{setPurgePhrase("");setConfirm("purge");}}>
+            <Button disabled={!chosen.length||busy||!estimateReady} variant="destructive" onClick={()=>{setPurgePhrase("");setConfirm("purge");}}>
               <Trash2 className="size-4"/> Pašalinti galutinai</Button>
           </>}
       </div>
@@ -205,7 +228,7 @@ function StoragePage() {
     <Confirm open={confirm==="trash"} onOpenChange={o=>!o&&setConfirm(null)}
       title={"Perkelti " + chosen.length + " nuotraukas į šiukšlinę?"}
       text={"Jas bus galima atkurti. Supabase ir R2 failai kol kas fiziškai nešalinami. " +
-        "Apytikslis pasirinktų failų dydis: " + bytesLabel(bytes)}
+        "Patikrintas pasirinktų R2 failų dydis: " + bytesLabel(exactBytes)}
       confirmLabel="Perkelti" onConfirm={()=>void perform("trash")}/>
     <Confirm open={confirm==="restore"} onOpenChange={o=>!o&&setConfirm(null)}
       title={"Atkurti " + chosen.length + " nuotraukas?"}
