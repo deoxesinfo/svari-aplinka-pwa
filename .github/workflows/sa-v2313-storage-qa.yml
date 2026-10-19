@@ -1,0 +1,28 @@
+name: SA V2.3.13 storage preview QA (NO DEPLOY)
+on:
+  push:
+    branches:
+      - feature/sa-v2-3-13-storage-admin-draft
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  storage-verify-only:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Validate private R2 worker JavaScript
+        run: node --check cloudflare/photo-worker.mjs
+      - name: Test storage and existing Worker security
+        run: node --test cloudflare/photo-worker.test.mjs cloudflare/storage-admin.test.mjs
+      - name: Test PWA
+        run: npm test
+      - name: Build preview (no deploy)
+        env:
+          VITE_SA_R2_PHOTOS: enabled
+        run: npm run build
