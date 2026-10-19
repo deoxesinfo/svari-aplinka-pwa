@@ -107,6 +107,8 @@ async function checkFile(blob,limit){
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
 async function upload(request,env,jwt,org,pilot){
+ let stage="FORM_PARSE";
+ try{
  const fd=await limitedForm(request);
  const addressId=uuid(value(fd,"addressId"));
  const jr=fd.get("jobId");
@@ -118,7 +120,9 @@ async function upload(request,env,jwt,org,pilot){
  const tag=value(fd,"tag",16);if(!TAGS.has(tag))fail(400,"INVALID_TAG");
  const width=Number(value(fd,"width",8)),height=Number(value(fd,"height",8));
  if(!Number.isInteger(width)||!Number.isInteger(height)||width<1||height<1||width>1600||height>1600)fail(400,"INVALID_DIMENSIONS");
+ stage="FILE_VALIDATION";
  const full=await checkFile(fd.get("full"),MAX_IMAGE),thumb=await checkFile(fd.get("thumb"),MAX_THUMB);
+ stage="DB_SCOPE_CHECK";
  const adr=await one(env,jwt,"/rest/v1/sa_addresses?select=id,data&organization_id=eq."+org+"&id=eq."+addressId+"&limit=1");
  if(!adr||adr.data?.deletedAt||adr.data?.archivedAt)fail(404,"ADDRESS_UNAVAILABLE");
  let job=null;
@@ -131,7 +135,9 @@ async function upload(request,env,jwt,org,pilot){
  // Never trust GPS confirmation from browser/localStorage/JWT claims.
  if(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired)fail(409,"SERVER_GPS_REQUIRED");
  // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
+ stage="R2_RESERVATION";
  await claimOneAttempt(env);
+ stage="R2_BLOBS";
  const photoId=crypto.randomUUID(),key="sa/"+org+"/"+photoId;
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
   data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag}};
@@ -144,6 +150,7 @@ async function upload(request,env,jwt,org,pilot){
   await Promise.allSettled([env.R2_BUCKET.delete(fk),env.R2_BUCKET.delete(tk)]);
   throw e;
  }
+ stage="DB_METADATA";
  const dbInsert=()=>call(env,jwt,"/rest/v1/sa_photo_metadata",{
   method:"POST",headers:{"content-type":"application/json","prefer":"return=minimal"},body:JSON.stringify(meta)
  });
@@ -169,6 +176,13 @@ async function upload(request,env,jwt,org,pilot){
   }
  }
  return response({id:photoId,addressId,jobId,createdAt:new Date().toISOString(),tag,width,height,size:full.size,type:full.type},201);
+ }catch(e){
+   if(e instanceof Problem)throw e;
+   // Record only stage and JS error class. Never log JWT, customer data, form, URLs or file bodies.
+   console.error("R2_UPLOAD_UNEXPECTED",{stage,errorType:e instanceof Error?e.name:"unknown"});
+   // Prevent unclassified 500: stage-specific recovery code makes future diagnosis self-serve.
+   fail(502,"UPLOAD_"+stage+"_FAILED");
+ }
 }
 async function readImage(env,jwt,org,photoId,kind){
  const row=await one(env,jwt,"/rest/v1/sa_photo_metadata?select=id,object_key,data&organization_id=eq."+org+"&id=eq."+photoId+"&limit=1");
