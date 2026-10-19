@@ -307,13 +307,15 @@ export function updateJob(id: string, input: JobInput) {
   }));
 }
 
-export function setJobStatus(id: string, status: JobStatus):boolean {
+export function setJobStatus(id: string, status: JobStatus, serverGpsVerified=false):boolean {
   const job=state.jobs.find(j=>j.id===id);
   const target=state.addresses.find(a=>a.id===job?.addressId);
   if(!job)return false;
   if(status==="atlikta"&&(job.gpsRequired||target?.gpsProtectionEnabled)
-    &&!validGpsForCompletion(job.gpsVerification,target||{})&&!job.gpsOverride){
-      toast.error("Reikalinga galiojanti GPS patikra arba administratoriaus išimtis");return false;
+    &&!(backend==="cloud"&&serverGpsVerified)
+    &&!job.gpsOverride
+    &&!(backend==="demo"&&validGpsForCompletion(job.gpsVerification,target||{}))){
+      toast.error("GPS reikia patikrinti dabar, užbaigiant darbą");return false;
   }
   set((s) => ({
     jobs: s.jobs.map((j) =>
