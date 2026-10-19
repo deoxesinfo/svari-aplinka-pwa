@@ -1,0 +1,47 @@
+name: R2 Live API read-only security probes (NO DEPLOY)
+on:
+  push:
+    branches:
+      - feature/r2-photos-draft-no-deploy
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check-deployed-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Probe public Worker without credentials or real photo uploads
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          const base = 'https://svari-aplinka-photos.svariaplinka-lt.workers.dev';
+          const uuid = '00000000-0000-4000-8000-000000000001';
+          const org = '00000000-0000-4000-8000-000000000002'; // synthetic, not a customer/organization
+          async function check(label,path,options,expected,code) {
+            const controller = new AbortController();
+            const timeout = setTimeout(()=>controller.abort(),8000);
+            let res,body;
+            try {
+              res = await fetch(base+path,{...options,signal:controller.signal,redirect:'error'});
+              body = await res.text();
+            } finally { clearTimeout(timeout); }
+            assert.equal(res.status,expected,label+' HTTP '+res.status+' expected '+expected+', body '+body);
+            if(code){
+              const data=JSON.parse(body);
+              assert.equal(data.error||data.status,code,label+' body mismatch');
+            }
+            console.log('PASS',label,'status',res.status);
+            return res;
+          }
+          await check('health','/health',{},200,'ok');
+          await check('no JWT cannot view private photo','/v1/photos/'+uuid+'/thumb',{headers:{'x-organization-id':org}},401,'AUTH_REQUIRED');
+          // Empty unauthenticated POST cannot upload a photo or write data even if the runtime setting is wrong.
+          await check('uploads disabled','/v1/photos',{method:'POST',headers:{'x-organization-id':org}},503,'UPLOADS_DISABLED');
+          await check('delete disabled','/v1/photos/'+uuid,{method:'DELETE',headers:{'x-organization-id':org}},403,'DELETE_DISABLED');
+          const preflight=await check('allowlisted CORS preflight','/v1/photos',{method:'OPTIONS',headers:{Origin:'https://deoxesinfo.github.io','Access-Control-Request-Method':'POST'}},204);
+          assert.equal(preflight.headers.get('access-control-allow-origin'),'https://deoxesinfo.github.io');
+          await check('reject hostile origin','/v1/photos',{method:'OPTIONS',headers:{Origin:'https://unsafe.example','Access-Control-Request-Method':'POST'}},403,'ORIGIN_DENIED');
+          console.log('6/6 external Cloudflare API probes passed; no tokens, files or production data used.');
+          NODE
