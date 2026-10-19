@@ -2,7 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings, Users, ChartNoAxesCombined,
-  PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History, UserCircle, ScrollText,
+  PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History, UserCircle, ScrollText, HardDrive,
 } from "lucide-react";
 import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { getCloudRole } from "@/lib/cloud-sync";
@@ -17,6 +17,7 @@ export const NAV = [
   { to: "/darbuotojai", label: "Darbuotojai", icon: Users },
   { to: "/analitika", label: "Analitika", icon: ChartNoAxesCombined },
   { to: "/nuotraukos", label: "Nuotraukos", icon: Images },
+  { to: "/saugykla", label: "Saugykla", icon: HardDrive },
   { to: "/patikrinimai", label: "Patikrinimai", icon: ShieldCheck },
   { to: "/pakeitimai", label: "Pakeitimai", icon: History },
   { to: "/istorija", label: "Istorija", icon: ScrollText },

@@ -35,6 +35,7 @@ async function fetchPhotoMetadata(org:string):Promise<PhotoMeta[]>{
     if(error)throw new Error("Nepavyko nuskaityti nuotraukų");
     for(const p of data||[]){
       const d=(p.data||{}) as Record<string,unknown>;
+      if(d.trashedAt||d.purgingAt)continue; // retain DB row; hide only from active galleries
       all.push({
         id:p.id,addressId:p.address_id,jobId:p.job_id||undefined,createdAt:p.created_at,
         width:Number(d.width)||0,height:Number(d.height)||0,size:Number(d.size)||0,
