@@ -2,6 +2,8 @@ import { useEffect,useRef,useState } from "react";
 import { Bell, Check, CircleAlert } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/lib/supabase-client";
+import {getCloudOrganizationId} from "@/lib/store";
+import {listStaffInbox} from "@/lib/staff-messages";
 
 type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;read_at:string|null;created_at:string};
 export function NotificationBell(){
@@ -10,6 +12,7 @@ export function NotificationBell(){
  const rootRef=useRef<HTMLDivElement>(null);
  const path=useRouterState({select:s=>s.location.pathname});
  const [error,setError]=useState("");
+ const [manualUnread,setManualUnread]=useState(0);
  const fetchNotices=async()=>{
   const {data:auth}=await supabase.auth.getUser();
   if(!auth.user)return;
@@ -18,6 +21,11 @@ export function NotificationBell(){
    .eq("recipient_id",auth.user.id).order("created_at",{ascending:false}).limit(30);
   if(queryError){setError("Nepavyko atnaujinti pranešimų");return}
   setError("");setNotices((data||[]) as Notice[]);
+  const org=getCloudOrganizationId();
+  if(org){
+   try{const inbox=await listStaffInbox(org);setManualUnread(inbox.filter(x=>!x.receipt.read_at).length)}
+   catch{setManualUnread(0)}
+  }
  };
  useEffect(()=>{
   void fetchNotices();
@@ -53,7 +61,7 @@ export function NotificationBell(){
   if(err){setError("Nepavyko pažymėti pranešimo");return}
   setNotices(items=>items.map(item=>item.id===notice.id?{...item,read_at:now}:item));
  };
- const unread=notices.filter(n=>!n.read_at).length;
+ const unread=notices.filter(n=>!n.read_at).length+manualUnread;
  return <div ref={rootRef} className="relative">
   <button type="button" onClick={()=>{setExpanded(o=>!o);void fetchNotices()}}
     aria-expanded={expanded} aria-label={"Pranešimai, neperskaitytų: "+unread}
@@ -63,6 +71,9 @@ export function NotificationBell(){
   </button>
   {expanded&&<div role="region" aria-label="Nauji pranešimai" className="absolute right-0 top-full z-50 mt-2 max-h-[65vh] w-[min(88vw,370px)] overflow-auto rounded-xl border bg-card p-3 shadow-xl">
     <div className="mb-3 flex items-center justify-between gap-2"><strong className="text-sm">Pranešimų istorija</strong><button className="text-xs text-primary underline" onClick={()=>setExpanded(false)}>Uždaryti</button></div>
+    <Link to="/pranesimai" onClick={()=>setExpanded(false)} className="mb-3 block rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-semibold text-primary">
+      Asmeniniai pranešimai {manualUnread>0?"("+manualUnread+" nauji)":""} →
+    </Link>
     {error&&<p className="mb-2 flex gap-1 text-xs text-destructive"><CircleAlert className="size-3"/>{error}</p>}
     {notices.length?notices.map(notice=><article key={notice.id} className={"border-b p-2 text-sm "+(!notice.read_at?"bg-primary/5":"")}>
       <p className="font-semibold">{notice.title}</p>
