@@ -14,3 +14,4 @@ ENABLE_STORAGE_PURGE = "false"
 [[r2_buckets]]
 binding = "R2_BUCKET"
 bucket_name = "svari-aplinka-foto"
+jurisdiction = "eu"
