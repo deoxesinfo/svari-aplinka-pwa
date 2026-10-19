@@ -87,7 +87,7 @@ async function limitedForm(req){
    if(length>MAX_REQUEST){await reader.cancel();fail(413,"BODY_TOO_LARGE")}parts.push(value)}
  }finally{try{reader.releaseLock()}catch{}}
  const form=await new Response(new Blob(parts),{headers:{"content-type":type}}).formData().catch(()=>{throw new Problem(400,"MALFORMED_MULTIPART");});
- const keys=new Set(["addressId","jobId","tag","width","height","full","thumb","gpsProof"]);
+ const keys=new Set(["addressId","jobId","tag","width","height","full","thumb","gpsLatitude","gpsLongitude","gpsAccuracy","gpsOverrideReason"]);
  for(const [name] of form)if(!keys.has(name)||form.getAll(name).length!==1)fail(400,"INVALID_FORM_FIELDS");
  return form;
 }
@@ -112,11 +112,13 @@ async function checkFile(blob,limit){
 function fileExt(type){return type==="image/jpeg"?"jpg":"webp"}
 function objectPaths(key,data){return [key+"/full."+fileExt(data.type),key+"/thumb."+fileExt(data.thumbType)]}
 
-// No time limit: proof is scoped to the verified user and the specific work item.
+// No GPS session countdown or indefinitely reusable GPS tokens: the browser
+// supplies fresh geolocation at each photo upload and at job completion.
+// Server computes distance against the administrator-confirmed object pin.
 function gpsDistance(lat1,lon1,lat2,lon2){
  const rad=n=>n*Math.PI/180;
  const a=Math.sin(rad(lat2-lat1)/2)**2+
-   Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(rad(lon2-lon1)/2)**2;
+  Math.cos(rad(lat1))*Math.cos(rad(lat2))*Math.sin(rad(lon2-lon1)/2)**2;
  return 6371000*2*Math.atan2(Math.sqrt(a),Math.sqrt(Math.max(0,1-a)));
 }
 async function assignedJob(env,jwt,org,jobId,addressId,userId,role){
@@ -125,52 +127,40 @@ async function assignedJob(env,jwt,org,jobId,addressId,userId,role){
  if(role!=="admin"&&job.assigned_user_id!==userId)fail(403,"JOB_NOT_ASSIGNED");
  return job;
 }
-async function gpsProof(env,token,org,userId,jobId){
- if(!UUID.test(token||""))fail(409,"GPS_SESSION_REQUIRED");
- let file;
- try{file=await env.R2_BUCKET.get("__sa_gps_proofs__/"+token)}catch{fail(503,"GPS_PROOF_STORAGE_UNAVAILABLE")}
- if(!file)fail(409,"GPS_PROOF_EXPIRED");
- let p;try{p=JSON.parse(await file.text())}catch{fail(409,"GPS_PROOF_INVALID")}
- if(p.org!==org||p.userId!==userId||p.jobId!==jobId)fail(409,"GPS_PROOF_INVALID");
- if(!["gps_live","admin_override"].includes(p.mode))fail(409,"GPS_PROOF_INVALID");
- return p;
-}
-async function gpsSession(req,env,jwt,org,userId,role,override=false){
- const raw=await req.text();
- if(raw.length>1400)fail(413,"GPS_REQUEST_TOO_LARGE");
- let input;try{input=JSON.parse(raw)}catch{fail(400,"GPS_REQUEST_INVALID")}
- if(!input||typeof input!=="object")fail(400,"GPS_REQUEST_INVALID");
- const jobId=uuid(input.jobId),addressId=uuid(input.addressId);
- const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
- const adr=await one(env,jwt,"/rest/v1/sa_addresses?select=id,data&organization_id=eq."+org+"&id=eq."+addressId+"&limit=1");
- if(!adr||adr.data?.archivedAt||adr.data?.deletedAt)fail(404,"ADDRESS_UNAVAILABLE");
+async function verifiedPosition(env,jwt,org,addressId,job,lat,lon,accuracy,role,reason){
+ const adr=await one(env,jwt,"/rest/v1/sa_addresses?select=id,data&organization_id=eq."+org+"&id=eq."+uuid(addressId)+"&limit=1");
+ if(!adr||adr.data?.deletedAt||adr.data?.archivedAt)fail(404,"ADDRESS_UNAVAILABLE");
  if(!adr.data?.gpsLocationConfirmed||!Number.isFinite(Number(adr.data?.latitude))||
     !Number.isFinite(Number(adr.data?.longitude)))fail(409,"GPS_OBJECT_PIN_REQUIRED");
- const radius=[30,50,100].includes(Number(job.data?.gpsRadiusMeters))?Number(job.data.gpsRadiusMeters):50;
- let proof;
- if(override){
+ const radius=[30,50,100].includes(Number(job.data?.gpsRadiusMeters))
+  ?Number(job.data.gpsRadiusMeters):50;
+ if(reason){
   if(role!=="admin")fail(403,"ADMIN_ONLY");
-  const reason=typeof input.reason==="string"?input.reason.trim():"";
-  if(reason.length<15||reason.length>240)fail(400,"GPS_OVERRIDE_REASON_REQUIRED");
-  proof={mode:"admin_override",radius,reason};
- }else{
-  const lat=input.latitude,lon=input.longitude,accuracy=input.accuracy;
-  if(typeof lat!=="number"||typeof lon!=="number"||typeof accuracy!=="number"||
-     !Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||
-     Math.abs(lat)>90||Math.abs(lon)>180||accuracy<=0)fail(400,"GPS_POSITION_INVALID");
-  const distance=Math.round(gpsDistance(lat,lon,Number(adr.data.latitude),Number(adr.data.longitude)));
-  if(accuracy>Math.min(50,radius))fail(409,"GPS_ACCURACY_LOW");
-  if(distance>radius)fail(409,"GPS_OUTSIDE_RADIUS");
-  proof={mode:"gps_live",radius,distanceMeters:distance,accuracyMeters:Math.round(accuracy)};
+  if(typeof reason!=="string"||reason.trim().length<15||reason.trim().length>240)
+   fail(400,"GPS_OVERRIDE_REASON_REQUIRED");
+  return {mode:"admin_override",radius,reason:reason.trim()};
  }
- const issuedAt=new Date().toISOString(),key=crypto.randomUUID();
- await env.R2_BUCKET.put("__sa_gps_proofs__/"+key,JSON.stringify({
-  ...proof,org,userId,jobId,addressId,issuedAt
- }),{httpMetadata:{contentType:"application/json"}});
- return response({token:key,mode:proof.mode,issuedAt,
-  radius:proof.radius,distanceMeters:proof.distanceMeters??null,accuracyMeters:proof.accuracyMeters??null},201);
+ if(typeof lat!=="number"||typeof lon!=="number"||typeof accuracy!=="number"||
+    !Number.isFinite(lat)||!Number.isFinite(lon)||!Number.isFinite(accuracy)||
+    Math.abs(lat)>90||Math.abs(lon)>180||accuracy<=0)fail(400,"GPS_POSITION_INVALID");
+ const distance=Math.round(gpsDistance(lat,lon,Number(adr.data.latitude),Number(adr.data.longitude)));
+ if(accuracy>Math.min(50,radius))fail(409,"GPS_ACCURACY_LOW");
+ if(distance>radius)fail(409,"GPS_OUTSIDE_RADIUS");
+ return {mode:"gps_live",radius,distanceMeters:distance,accuracyMeters:Math.round(accuracy)};
 }
-
+function readPosition(payload){
+ return [payload?.latitude,payload?.longitude,payload?.accuracy];
+}
+async function verifyLocation(req,env,jwt,org,userId,role){
+ const raw=await req.text();if(raw.length>1200)fail(413,"GPS_REQUEST_TOO_LARGE");
+ let p;try{p=JSON.parse(raw)}catch{fail(400,"GPS_REQUEST_INVALID")}
+ if(!p||typeof p!=="object")fail(400,"GPS_REQUEST_INVALID");
+ const jobId=uuid(p.jobId),addressId=uuid(p.addressId);
+ const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+ const pos=await verifiedPosition(env,jwt,org,addressId,job,...readPosition(p),role,null);
+ return response({ok:true,radius:pos.radius,
+   distanceMeters:pos.distanceMeters,accuracyMeters:pos.accuracyMeters},200);
+}
 async function upload(request,env,jwt,org,pilot,userId,role){
  let stage="FORM_PARSE";
  try{
@@ -199,7 +189,11 @@ async function upload(request,env,jwt,org,pilot,userId,role){
  // Server-only session scoped to authenticated user and target job.
  // Geolocation supplied by browser can still be spoofed by the device user.
  const gpsProtected=Boolean(adr.data?.gpsProtectionEnabled||job?.data?.gpsRequired||role==="worker");
- const gpsData=gpsProtected?await gpsProof(env,typeof fd.get("gpsProof")==="string"?fd.get("gpsProof"):"",org,userId,jobId):null;
+ const reason=typeof fd.get("gpsOverrideReason")==="string"?fd.get("gpsOverrideReason"):"";
+ const gpsData=gpsProtected?await verifiedPosition(env,jwt,org,addressId,job,
+  fd.has("gpsLatitude")?Number(fd.get("gpsLatitude")):undefined,
+  fd.has("gpsLongitude")?Number(fd.get("gpsLongitude")):undefined,
+  fd.has("gpsAccuracy")?Number(fd.get("gpsAccuracy")):undefined,role,reason):null;
 
  // Claim AFTER identity, file and job validation, BEFORE ANY photo R2/DB writes.
  stage="R2_RESERVATION";
@@ -214,7 +208,7 @@ async function upload(request,env,jwt,org,pilot,userId,role){
  }
  const meta={id:photoId,organization_id:org,address_id:addressId,job_id:jobId,object_key:key,
   data:{width,height,size:full.size,type:full.type,thumbType:thumb.type,tag,sha256,
-    ...(gpsData?{proofMode:gpsData.mode,gpsVerifiedAt:gpsData.issuedAt,
+    ...(gpsData?{proofMode:gpsData.mode,gpsVerifiedAt:new Date().toISOString(),
        gpsDistanceMeters:gpsData.distanceMeters??null,gpsAccuracyMeters:gpsData.accuracyMeters??null,
        gpsRadiusMeters:gpsData.radius,...(gpsData.reason?{gpsOverrideReason:gpsData.reason}:{})}:{})
   }};
@@ -310,10 +304,10 @@ export default {async fetch(req,env){
    if(pilot&&userId!==pilot.userId)fail(403,"PILOT_SCOPE_DENIED");
    return cors(await upload(req,env,jwt,org,pilot,userId,role),origin,env);
   }
-  if(req.method==="POST"&&(path==="/v1/gps/verify"||path==="/v1/gps/override")){
+  if(req.method==="POST"&&path==="/v1/gps/verify"){
    if(env.ENABLE_UPLOADS!=="true")fail(503,"UPLOADS_DISABLED");
    const {jwt,userId,role}=await authenticated(env,req,org,false);
-   return cors(await gpsSession(req,env,jwt,org,userId,role,path.endsWith("override")),origin,env);
+   return cors(await verifyLocation(req,env,jwt,org,userId,role),origin,env);
   }
   const complete=/^\/v1\/jobs\/([0-9a-f-]{36})\/complete$/.exec(path);
   if(req.method==="POST"&&complete){
@@ -325,8 +319,8 @@ export default {async fetch(req,env){
    if(!payload||typeof payload!=="object")fail(400,"INVALID_COMPLETION");
    const addressId=uuid(payload.addressId);
    await assignedJob(env,jwt,org,jobId,addressId,userId,role);
-   const proof=await gpsProof(env,payload.gpsProof,org,userId,jobId);
-   if(proof.mode!=="gps_live")fail(403,"LIVE_GPS_REQUIRED");
+   const job=await assignedJob(env,jwt,org,jobId,addressId,userId,role);
+   await verifiedPosition(env,jwt,org,addressId,job,...readPosition(payload),role,null);
    const note=typeof payload.note==="string"?payload.note.trim():"";
    if(note.length>1200)fail(413,"NOTE_TOO_LONG");
    const res=await call(env,jwt,"/rest/v1/rpc/sa_complete_assigned_job",{
