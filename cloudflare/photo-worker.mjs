@@ -56,10 +56,6 @@ function pilotConfiguration(env){
     !UUID.test(env.PILOT_JOB_ID||""))fail(503,"PILOT_NOT_CONFIGURED");
  return {organizationId:env.PILOT_ORG_ID,userId:env.PILOT_USER_ID,jobId:env.PILOT_JOB_ID};
 }
-function restrictPilot(org,userId,jobId,pilot){
- if(org!==pilot.organizationId || userId!==pilot.userId || jobId!==pilot.jobId)
-  fail(403,"PILOT_SCOPE_DENIED");
-}
 async function claimOneAttempt(env){
  // R2 honors If-None-Match:* conditional write atomically.
  // Never rely on an R2 HEAD/GET followed by unconditional PUT (race condition).
