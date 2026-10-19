@@ -5,13 +5,26 @@ create table if not exists public.sa_push_subscriptions (
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null,
   user_id uuid not null,
-  endpoint text not null unique check(length(endpoint) between 25 and 2048),
+  endpoint text not null unique check(length(endpoint) between 25 and 2048
+    and endpoint ~* '^https://(fcm\\.googleapis\\.com|updates\\.push\\.services\\.mozilla\\.com|web\\.push\\.apple\\.com|[a-z0-9-]+\\.push\\.apple\\.com)/'),
   p256dh text not null check(length(p256dh) between 25 and 256),
   auth text not null check(length(auth) between 10 and 256),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
 create index if not exists sa_push_sub_user on public.sa_push_subscriptions(organization_id,user_id);
+create or replace function private.sa_push_max_devices()
+returns trigger language plpgsql security definer set search_path='' as $
+begin
+  if (select count(*) from public.sa_push_subscriptions s
+      where s.organization_id=new.organization_id and s.user_id=new.user_id)>=5
+  then raise exception 'TOO_MANY_PUSH_DEVICES' using errcode='23514'; end if;
+  return new;
+end;
+$;
+drop trigger if exists sa_push_limit_devices on public.sa_push_subscriptions;
+create trigger sa_push_limit_devices before insert on public.sa_push_subscriptions
+for each row execute function private.sa_push_max_devices();
 alter table public.sa_push_subscriptions enable row level security;
 revoke all on public.sa_push_subscriptions from public,anon,authenticated;
 grant select,insert,update,delete on public.sa_push_subscriptions to authenticated;
