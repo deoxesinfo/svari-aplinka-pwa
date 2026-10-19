@@ -1,0 +1,22 @@
+name: V2.2.7 PR Build and Test (no deploy)
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/v2.2.7-compact-desktop-job-cards]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Vitest
+        run: npm test
