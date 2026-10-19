@@ -4,6 +4,15 @@ import webpush from "npm:web-push@3.6.7";
 
 type RecordPush={id:string;organization_id:string;recipient_id:string;title:string;body:string;path:string};
 type Subscription={id:string;endpoint:string;p256dh:string;auth:string};
+function safePushEndpoint(endpoint:string):boolean{
+ try{
+  const url=new URL(endpoint);
+  const host=url.hostname.toLowerCase();
+  return url.protocol==="https:" && !url.username && !url.password && !url.port &&
+   (host==="fcm.googleapis.com"||host==="updates.push.services.mozilla.com"||
+     host==="web.push.apple.com"||/^[a-z0-9-]+[.]push[.]apple[.]com$/.test(host));
+ }catch{return false}
+}
 const respond=(body:unknown,status=200)=>new Response(JSON.stringify(body),{
  status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store",
    "access-control-allow-origin":"*","access-control-allow-headers":"authorization, apikey, content-type, x-client-info",
@@ -62,6 +71,7 @@ Deno.serve(async(req:Request)=>{
   if(!devices.length){await db.rpc("sa_push_finish",{p_id:job.id,p_state:"no_device"});none++;continue}
   let successful=0;
   for(const device of devices){
+   if(!safePushEndpoint(device.endpoint))continue; // prevent SSRF even if the DB is bypassed
    try{
     await webpush.sendNotification({
      endpoint:device.endpoint,keys:{p256dh:device.p256dh,auth:device.auth}
