@@ -73,12 +73,7 @@ function JobDetail() {
     </Link>
 
     <PageHeader title={address?.street || "Darbas"}
-      subtitle={JOB_TYPE_LABEL[job.type] + " · " + fmtLong(job.date)}
-      actions={<>
-        <Button variant="outline" onClick={() => setEdit(true)}><Pencil /> Redaguoti</Button>
-        <Button variant="outline" onClick={() => setRemove(true)}><Trash2 /> Ištrinti</Button>
-      </>}
-    />
+      subtitle={JOB_TYPE_LABEL[job.type] + " · " + fmtLong(job.date)} />
 
     <div className="mb-4 flex flex-wrap items-center gap-2">
       {address?.isPriority && <Pill tone="warning"><Star className="size-3"/> Prioritetinis objektas</Pill>}
@@ -177,6 +172,15 @@ function JobDetail() {
       </section>
     </div>
 
+    <section className="card-surface mt-4 space-y-3 p-4 sm:p-5" aria-label="Darbo valdymas">
+      <h2 className="text-lg font-semibold">Darbo valdymas</h2>
+      <p className="text-sm text-muted-foreground">Redaguojate tik šį darbą: {JOB_TYPE_LABEL[job.type]} · {address?.street || "Nežinomas adresas"}. Adresas ir kiti darbai nekeičiami.</p>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Button className="min-h-11 w-full" onClick={()=>setEdit(true)}><Pencil/> Redaguoti šį darbą</Button>
+        <Button variant="destructive" className="min-h-11 w-full" onClick={()=>setRemove(true)}><Trash2/> Pašalinti šį darbą</Button>
+      </div>
+      <p className="text-xs text-muted-foreground">Pašalinimas yra grąžinamas: šį darbą galima atkurti „Darbai“ sąraše.</p>
+    </section>
     <div className="sticky bottom-20 z-10 mt-5 flex flex-col gap-2 rounded-xl border bg-background/95 p-3 shadow-lg backdrop-blur sm:flex-row sm:items-center sm:justify-between lg:bottom-3">
       <p className="text-xs text-muted-foreground">
         Kol R2 neprijungta, nuotraukos nekeliamos. „Išsaugoti“ neužbaigia darbo; GPS patikros reikalaujamiems darbams reikės galiojančio matavimo arba išimties.
@@ -200,8 +204,10 @@ function JobDetail() {
       title="Užbaigti darbą?" text="Bus išsaugotos visos pridėtos nuotraukos ir pastaba (jei parašyta). Darbas bus perkeltas į atliktų darbų sąrašo apačią."
       confirmLabel="Užbaigti darbą" onConfirm={finish} />
     <Confirm open={remove} onOpenChange={setRemove}
-      title="Ištrinti darbą?" text="Tik administratoriui. Darbas bus paslėptas, jo istorija liks išsaugota."
-      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pažymėtas ištrintu");navigate({to:"/darbai"})}}).catch(()=>toast.error("Tik administratorius gali ištrinti darbą")); }} />
+      title="Pašalinti tik šį darbą?"
+      text={`Pašalinsite tik darbą „${JOB_TYPE_LABEL[job.type]}“ adresu ${address?.street||"Nežinomas adresas"}, ${address?.city||""}. Adresas, kiti darbai ir nuotraukos nebus trinami. Atkurti galėsite „Darbai“ sąraše.`}
+      confirmLabel="Taip, pašalinti šį darbą"
+      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas paslėptas, galima atkurti");navigate({to:"/darbai"})}}).catch(()=>toast.error("Tik administratorius gali pašalinti darbą")); }} />
     <Confirm open={fixConfirm} onOpenChange={setFixConfirm}
       title="Sukurti taisymo darbą?" text="Bus pridėtas atskiras skubus darbas šiandienai."
       confirmLabel="Sukurti" onConfirm={() => { setInspection(job.id, "taisyti"); toast.success("Sukurtas taisymo darbas"); }} />

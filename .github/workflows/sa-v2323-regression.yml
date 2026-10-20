@@ -1,0 +1,39 @@
+name: ŠA V2.3.23 – job actions and messaging regressions
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/app/JobDetailDialog.tsx'
+      - 'src/components/app/StaffInbox.tsx'
+      - 'src/routes/darbai.tsx'
+      - 'src/routes/darbai.$jobId.tsx'
+      - 'src/lib/store.ts'
+      - 'src/test/sa-v2323-bulk-inbox.test.tsx'
+      - 'src/test/sa-v2322-trash-loading.test.tsx'
+      - '.github/workflows/sa-v2323-regression.yml'
+permissions: {contents: read}
+jobs:
+  sa-v2323:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build app and generate routes
+        run: npm run build
+      - name: Strict changed-file TypeScript diagnostics
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/sa-v2323-tsc.log 2>&1
+          result=$?
+          set -e
+          if grep -Eq '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log; then
+            grep -E '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log
+            exit 1
+          fi
+          if [ "$result" -ne 0 ]; then echo "::warning::Legacy unrelated TypeScript diagnostics: $(grep -c 'error TS' /tmp/sa-v2323-tsc.log || true)"; fi
+      - name: All new and existing messaging regression tests
+        run: npm test -- src/test/sa-v2323-bulk-inbox.test.tsx src/test/sa-v2322-trash-loading.test.tsx src/test/job-card.test.tsx

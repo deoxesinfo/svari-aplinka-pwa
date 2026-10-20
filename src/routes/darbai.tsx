@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { Plus, ClipboardList } from "lucide-react";
+import { Plus, ClipboardList, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAppState,isCloudMode } from "@/lib/store";
+import { useAppState,isCloudMode,restoreDeletedJob } from "@/lib/store";
+import {currentAdminOrg} from "@/lib/work-assignments";
+import {toast} from "sonner";
 import { getCloudRole } from "@/lib/cloud-sync";
 import { sortJobs } from "@/lib/scheduling";
 import { addDays, startOfWeek, todayISO } from "@/lib/dates";
@@ -15,7 +17,7 @@ export const Route = createFileRoute("/darbai")({
   head: () => ({ meta: [{ title: "Darbai · Švari Aplinka" }, { name: "description", content: "Šiandienos, atlikti ir visi valymo darbai." }] }),
   component: Jobs,
 });
-type View = "today" | "done" | "all" | "archive";
+type View = "today" | "done" | "all" | "archive" | "removed";
 type DateRange = "today" | "yesterday" | "week" | "custom" | "all";
 export function finishedInRange(completedAt: string | undefined, range: DateRange, today: string, from: string, to: string): boolean {
   if (!completedAt) return range === "all";
@@ -48,9 +50,10 @@ function Jobs() {
     {id:"all",title:"Visi darbai",count:active.length},
   ];
   const filtered = jobs.filter(j => {
-    if (j.deletedAt) return false;
+    if (view === "removed"){if(!j.deletedAt)return false;}
+    else if(j.deletedAt)return false;
     if (view === "archive") { if(!j.archivedAt) return false; }
-    else if (j.archivedAt) return false;
+    else if (view!=="removed"&&j.archivedAt) return false;
     if (view === "today" && !(j.status === "laukia" && j.date <= today)) return false;
     if (view === "done" && !(j.status === "atlikta" && finishedInRange(j.completedAt,doneRange,today,from,to))) return false;
     const a = addresses.find(x => x.id === j.addressId);
@@ -59,6 +62,7 @@ function Jobs() {
   });
   const list = view === "archive"
     ? filtered.sort((a,b)=>(b.archivedAt||"").localeCompare(a.archivedAt||""))
+    : view==="removed"?filtered.sort((a,b)=>(b.deletedAt||"").localeCompare(a.deletedAt||""))
     : sortJobs(filtered,today);
   return <div>
     <PageHeader title="Darbai" subtitle={`Šiandien liko: ${pending.length} · Atlikta: ${done.length}`}
@@ -90,13 +94,28 @@ function Jobs() {
       </select>
     </div>
     <div className="space-y-2">
-      {list.length ? list.map(j=><JobRow key={j.id} job={j} showDate/>)
+      {list.length ? list.map(j=>view==="removed"?<div key={j.id} className="card-surface space-y-2 p-4">
+          <p className="font-semibold">{addresses.find(a=>a.id===j.addressId)?.street||"Nežinomas adresas"}</p>
+          <p className="text-sm text-muted-foreground">{JOB_TYPE_LABEL[j.type]} · {j.date} · {j.worker||"Nepriskirta"}</p>
+          <p className="text-xs text-muted-foreground">Pašalintas darbas. Adresas ir kiti darbai nebuvo ištrinti.</p>
+          <Button variant="outline" className="min-h-11" onClick={()=>{
+            void currentAdminOrg().then(()=>{
+              if(restoreDeletedJob(j.id))toast.success("Tas pats darbas atkurtas su visa istorija");
+              else toast.error("Darbo atkurti nepavyko");
+            }).catch(()=>toast.error("Atkurti gali tik administratorius"));
+          }}><RotateCcw className="size-4"/> Atkurti šį darbą</Button>
+        </div>:<JobRow key={j.id} job={j} showDate/>)
        : <EmptyState icon={<ClipboardList className="size-8"/>}
            title={view==="today"?"Šiandien neatliktų darbų nėra":view==="done"?"Atliktų darbų pagal filtrą nėra":"Darbų nerasta"}/>}
     </div>
-    <button type="button" className="mt-5 text-sm text-muted-foreground underline" onClick={()=>setView(view==="archive"?"all":"archive")}>
-      {view==="archive"?"Grįžti į visus darbus":`Archyvas (${jobs.filter(j=>j.archivedAt&&!j.deletedAt).length})`}
-    </button>
+    <div className="mt-5 flex flex-wrap gap-4 text-sm">
+      <button type="button" className="text-muted-foreground underline" onClick={()=>setView(view==="archive"?"all":"archive")}>
+        {view==="archive"?"Grįžti į visus darbus":`Archyvas (${jobs.filter(j=>j.archivedAt&&!j.deletedAt).length})`}
+      </button>
+      {!employee&&<button type="button" className="text-muted-foreground underline" onClick={()=>setView(view==="removed"?"all":"removed")}>
+        {view==="removed"?"Grįžti į aktyvius darbus":`Pašalinti darbai (${jobs.filter(j=>!!j.deletedAt).length})`}
+      </button>}
+    </div>
     {!employee&&<JobFormDialog open={open} onOpenChange={setOpen}/>}
   </div>;
 }

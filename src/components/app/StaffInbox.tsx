@@ -11,6 +11,8 @@ export function StaffInbox(){
  const [items,setItems]=useState<InboxMessage[]>([]);
  const [view,setView]=useState<"gauti"|"trash">("gauti");
  const [marked,setMarked]=useState<string[]>([]);
+ const [selectedReceived,setSelectedReceived]=useState<string[]>([]);
+ const [confirmBulkHide,setConfirmBulkHide]=useState(false);
  const [purgeConfirm,setPurgeConfirm]=useState(false);
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
@@ -70,7 +72,22 @@ export function StaffInbox(){
   finally{setBusy("")}
  };
  const changeView=(next:"gauti"|"trash")=>{
-  setView(next);setMarked([]);setSwiped(null);setUndo(null);setError("");
+  setView(next);setMarked([]);setSelectedReceived([]);setSwiped(null);setUndo(null);setError("");
+ };
+ const moveSelectedToTrash=async()=>{
+  if(!org||busy||!selectedReceived.length)return;
+  setBusy("move-bulk");setError("");
+  const ids=[...selectedReceived];let moved=0;
+  try{
+   for(const id of ids){await hideStaffMessage(org,id);moved++;}
+   setConfirmBulkHide(false);setSelectedReceived([]);setSwiped(null);
+   await refreshed();
+  }catch(e){
+   setConfirmBulkHide(false);setSelectedReceived([]);
+   setError((e instanceof Error?e.message:"Perkelti nepavyko")+
+    (moved?" ("+moved+" iš "+ids.length+" perkelta)":""));
+   await refreshed();
+  }finally{setBusy("")}
  };
  const permanentlyRemove=async()=>{
   if(!org||busy||!marked.length)return;
@@ -113,6 +130,18 @@ export function StaffInbox(){
    <span>Pranešimas „{undo.title}“ paslėptas tik tavo sąraše.</span>
    <Button variant="outline" size="sm" disabled={!!busy} onClick={()=>void restore()}><Undo2 className="size-4"/> Atkurti</Button>
   </div>}
+  {view==="gauti"&&items.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
+   <label className="flex items-center gap-2 text-sm">
+    <input type="checkbox" aria-label="Pažymėti visus gautus pranešimus"
+     checked={items.length>0&&items.every(({receipt})=>selectedReceived.includes(receipt.id))}
+     onChange={e=>setSelectedReceived(e.target.checked?items.map(x=>x.receipt.id):[])}/>
+    Pažymėti visus ({items.length})
+   </label>
+   <Button type="button" size="sm" variant="outline"
+    disabled={!!busy||!selectedReceived.length} onClick={()=>setConfirmBulkHide(true)}>
+    <Trash2 className="size-4"/> Į šiukšlinę ({selectedReceived.length})
+   </Button>
+  </div>}
   {view==="trash"&&items.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
    <label className="flex items-center gap-2 text-sm">
     <input type="checkbox" checked={marked.length===items.length}
@@ -137,8 +166,12 @@ export function StaffInbox(){
       style={{transform:view==="gauti"&&swiped===receipt.id?"translateX(-112px)":"translateX(0)"}}>
      <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
-       {view==="trash"&&<input type="checkbox" aria-label={"Pažymėti "+message.title}
-        checked={marked.includes(receipt.id)} onChange={e=>setMarked(prev=>e.target.checked?[...prev,receipt.id]:prev.filter(x=>x!==receipt.id))}/>}
+       <input type="checkbox" aria-label={"Pažymėti "+message.title}
+        checked={view==="trash"?marked.includes(receipt.id):selectedReceived.includes(receipt.id)}
+        onChange={e=>{
+         if(view==="trash")setMarked(prev=>e.target.checked?[...prev,receipt.id]:prev.filter(x=>x!==receipt.id));
+         else setSelectedReceived(prev=>e.target.checked?[...prev,receipt.id]:prev.filter(x=>x!==receipt.id));
+        }}/>
        <h3 className="font-semibold">{message.title}</h3>
       </div>
       <span className={"rounded-full px-2 py-1 text-xs "+(receipt.read_at?"bg-muted":"bg-primary/10 text-primary")}>
@@ -157,10 +190,6 @@ export function StaffInbox(){
         catch(e){setError(e instanceof Error?e.message:"Nepavyko atkurti")}
         finally{setBusy("")}
        })()}><Undo2 className="size-4"/> Atkurti</Button>
-      <Button size="sm" variant="destructive" disabled={!!busy}
-       onClick={()=>{setMarked([receipt.id]);setPurgeConfirm(true)}}>
-       <Trash2 className="size-4"/> Ištrinti visam laikui
-      </Button>
      </div>:<div className="mt-3 flex flex-wrap gap-2">
       {!receipt.read_at&&<Button type="button" size="sm" variant="outline" disabled={!!busy}
        onClick={()=>void ack({message,receipt})}><Check className="size-4"/> Perskaičiau</Button>}
@@ -192,6 +221,10 @@ export function StaffInbox(){
   <Confirm open={!!toHide} onOpenChange={open=>{if(!open)setToHide(null)}} title="Perkelti pranešimą į šiukšlinę?"
    text="Pranešimas liks jūsų šiukšlinėje ir jį galėsite atkurti. Kitų gavėjų žinutės nekeičiamos."
    confirmLabel="Į šiukšlinę" onConfirm={()=>void hide()}/>
+  <Confirm open={confirmBulkHide} onOpenChange={setConfirmBulkHide}
+   title={"Perkelti "+selectedReceived.length+" pranešimus į šiukšlinę?"}
+   text="Pasirinktos žinutės bus paslėptos tik jūsų gautų pranešimų sąraše. Šiukšlinėje jas galima atkurti. Kiti gavėjai nepaveikiami."
+   confirmLabel="Perkelti pažymėtus į šiukšlinę" onConfirm={()=>void moveSelectedToTrash()}/>
   <Confirm open={purgeConfirm} onOpenChange={setPurgeConfirm} title={"Galutinai ištrinti "+marked.length+" pranešimų?"}
    text="Šių asmeninių pranešimų kopijų atkurti nebegalėsite. Supabase pašalins jūsų gavėjo įrašus ir atsakymų tekstus. Siuntėjo originalai, kitų gavėjų pranešimai ir minimalus administratoriaus įvykių auditas liks."
    confirmLabel="Taip, ištrinti visam laikui" onConfirm={()=>void permanentlyRemove()}/>
