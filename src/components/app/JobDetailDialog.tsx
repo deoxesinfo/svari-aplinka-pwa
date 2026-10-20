@@ -179,10 +179,6 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
               <AlertCircle /> Reikia taisyti
             </Button>
           </div>}
-          {!employee&&<div className="flex flex-wrap gap-2 border-b pb-3">
-            <Button size="sm" variant="ghost" onClick={() => setEditOpen(true)}><Pencil /> Redaguoti darbą</Button>
-            <Button size="sm" variant="ghost" onClick={() => setDeleteOpen(true)}><Trash2 /> Ištrinti</Button>
-          </div>}
           {[...job.history].reverse().map((h, i) =>
             <div className="border-l-2 border-primary/20 pl-3 text-sm" key={i}>
               <p className="text-xs text-muted-foreground">{fmtDateTime(h.at)}</p>{h.text}
@@ -190,6 +186,20 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
           )}
         </section>
       </div>
+
+      {!employee&&<section className="card-surface space-y-3 border border-input p-4 sm:p-5" aria-label="Darbo valdymas">
+        <h3 className="text-base font-bold">Darbo valdymas</h3>
+        <p className="text-sm text-muted-foreground">Šie veiksmai skirti tik šiam darbui: {JOB_TYPE_LABEL[job.type]} · {address?.street || "Nežinomas adresas"}, {address?.city || ""}. Adresas ir kiti jo darbai nebus pašalinti.</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Button className="min-h-11 w-full" onClick={() => setEditOpen(true)}>
+            <Pencil className="size-4"/> Redaguoti šį darbą
+          </Button>
+          <Button variant="destructive" className="min-h-11 w-full" onClick={() => setDeleteOpen(true)}>
+            <Trash2 className="size-4"/> Pašalinti šį darbą
+          </Button>
+        </div>
+        <p className="text-xs text-muted-foreground">Pašalinimas nėra galutinis: darbas ir jo istorija išsaugomi, jį galėsite atkurti per „Darbai“.</p>
+      </section>
     </div>
 
     <footer className="z-10 flex shrink-0 flex-col gap-2 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:p-4">
@@ -215,8 +225,9 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
     <Confirm open={fixOpen} onOpenChange={setFixOpen} title="Atidaryti tą patį darbą taisymui?"
       text="Naujas darbas nebus kuriamas. Šis darbas bus grąžintas į nebaigtus ir pažymėtas „Skubu“ bei „Reikia taisyti“. Ankstesnės nuotraukos, komentarai ir istorija liks." confirmLabel="Grąžinti taisymui"
       onConfirm={() => { if(setInspection(job.id, "taisyti", draft.trim())){setDraft("");toast.success("Tas pats darbas grąžintas taisymui");}else toast.info("Darbas jau pažymėtas taisymui"); }} />
-    <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Ištrinti darbą?"
-      text="Tik administratoriui. Darbas bus paslėptas, jo istorija liks išsaugota."
-      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pažymėtas ištrintu");onClose()}}).catch(()=>toast.error("Tik administratorius gali ištrinti darbą")); }} />
+    <Confirm open={deleteOpen} onOpenChange={setDeleteOpen} title="Pašalinti tik šį darbą?"
+      text={`Pašalinsite tik darbą „${JOB_TYPE_LABEL[job.type]}“ adresu ${address?.street || "Nežinomas adresas"}, ${address?.city || ""}. Adresas, kiti darbai, nuotraukos ir istorija išliks. Darbas bus paslėptas, jį galėsite atkurti per „Darbai“.`}
+      confirmLabel="Taip, pašalinti šį darbą"
+      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas pašalintas iš sąrašo, jį galima atkurti");onClose()}}).catch(()=>toast.error("Tik administratorius gali pašalinti darbą")); }} />
   </>;
 }
