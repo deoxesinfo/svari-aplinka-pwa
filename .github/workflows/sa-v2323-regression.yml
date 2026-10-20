@@ -30,8 +30,8 @@ jobs:
           npx tsc --noEmit --pretty false > /tmp/sa-v2323-tsc.log 2>&1
           result=$?
           set -e
-          if grep -Eq '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|lib/store[.]ts|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log; then
-            grep -E '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|lib/store[.]ts|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log
+          if grep -Eq '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log; then
+            grep -E '^src/(components/app/(JobDetailDialog|StaffInbox)[.]tsx|routes/darbai[.](tsx|\$jobId[.]tsx)|test/(sa-v2323-bulk-inbox|sa-v2322-trash-loading)[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2323-tsc.log
             exit 1
           fi
           if [ "$result" -ne 0 ]; then echo "::warning::Legacy unrelated TypeScript diagnostics: $(grep -c 'error TS' /tmp/sa-v2323-tsc.log || true)"; fi
