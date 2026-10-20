@@ -199,7 +199,7 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">Pašalinimas nėra galutinis: darbas ir jo istorija išsaugomi, jį galėsite atkurti per „Darbai“.</p>
-      </section>
+      </section>}
     </div>
 
     <footer className="z-10 flex shrink-0 flex-col gap-2 border-t bg-background p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:p-4">
