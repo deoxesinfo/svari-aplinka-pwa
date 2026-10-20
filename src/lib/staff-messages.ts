@@ -8,6 +8,7 @@ export type StaffMessage={
 export type MessageReceipt={
  id:string;organization_id:string;message_id:string;recipient_id:string;
  read_at:string|null;response:"sutinku"|"nesutinku"|null;responded_at:string|null;
+ reply_text?:string|null;replied_at?:string|null;hidden_at?:string|null;
 };
 export type InboxMessage={message:StaffMessage;receipt:MessageReceipt};
 export type StaffRecipient={userId:string;name:string;role:string};
@@ -61,7 +62,8 @@ export async function listStaffInbox(org:string):Promise<InboxMessage[]>{
  if(authError||!auth.user)throw new Error("Reikia prisijungti");
  const result=await supabase.from("sa_staff_message_receipts").select("*")
   .eq("organization_id",org).eq("recipient_id",auth.user.id).limit(1000);
- const receipts=assert(result.data,result.error,"Nepavyko gauti pranešimų") as MessageReceipt[];
+ const receipts=(assert(result.data,result.error,"Nepavyko gauti pranešimų") as MessageReceipt[])
+  .filter(r=>!r.hidden_at);
  if(!receipts.length)return [];
  const query=await supabase.from("sa_staff_messages").select("*")
   .eq("organization_id",org).in("id",receipts.map(r=>r.message_id));
@@ -77,4 +79,21 @@ export async function acknowledgeStaffMessage(org:string,receipt:string,reply?: 
   p_org:org,p_receipt:receipt,p_response:reply||null,
  });
  if(error||data!==true)throw new Error("Nepavyko patvirtinti. Patikrinkite ryšį arba pranešimo būseną.");
+}
+
+/** One short acknowledgement reply, separate from formal consent / refusal. */
+export async function replyToStaffMessage(org:string,receiptId:string,text:string){
+ const reply=text.trim();
+ if(!reply||reply.length>300)throw new Error("Atsakymas turi būti 1–300 simbolių");
+ const {data,error}=await supabase.rpc("sa_reply_staff_message",{
+  p_org:org,p_receipt:receiptId,p_text:reply,
+ });
+ if(error||data!==true)throw new Error(error?.message||"Nepavyko išsaugoti atsakymo");
+}
+/** Recipient-only soft hiding. Original message and admin read/reply audit stay intact. */
+export async function hideStaffMessage(org:string,receiptId:string,hide=true){
+ const {data,error}=await supabase.rpc("sa_hide_staff_message",{
+  p_org:org,p_receipt:receiptId,p_hide:hide,
+ });
+ if(error||data!==true)throw new Error(error?.message||"Nepavyko pakeisti pranešimo būsenos");
 }
