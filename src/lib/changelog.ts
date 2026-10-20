@@ -8,6 +8,15 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-20",version:"V2.3.24",category:"taisymas",
+   title:"Vienodos puslapių antraštės ir pranešimų lygiavimas telefone bei kompiuteryje",
+   details:[
+    "Apžvalgos, Darbų, Kalendoriaus, Adresų, Nuotraukų ir kitų programėlės puslapių pavadinimai sulygiuoti su „Pranešimai“ mygtuku vienoje viršutinėje eilutėje.",
+    "Antraštės suvienodintos naudojant vieną bendrą PageHeader komponentą; pašalinta atskira pranešimų eilutė virš kitų puslapių.",
+    "„Naujas darbas“ ir kiti puslapio veiksmai rodomi žemiau pavadinimo, ilgų pavadinimų tekstas telpa mobiliajame ekrane.",
+    "Darbų, adresų, pranešimų, prisijungimų, Supabase struktūros, nuotraukų ir Cloudflare R2 funkcijos nekeistos. Vizualinį rezultatą iPhone reikia patvirtinti įrenginyje."
+   ],commits:[]},
+
   {date:"2026-10-20",version:"V2.3.23",category:"taisymas",
    title:"Aiškus darbo redagavimas ir grąžinamas pašalinimas, kompaktiškesnė žinučių šiukšlinė, kelių pranešimų pasirinkimas",
    details:[
