@@ -124,7 +124,8 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         </button>
         {address&&<div className="relative flex items-center justify-end gap-2 border-t border-border/70 px-3 py-2.5 sm:px-4" data-testid="job-card-footer">
           <MapsLink street={address.street} city={address.city}
-            latitude={address.latitude} longitude={address.longitude}
+            {...(address.latitude===undefined?{}:{latitude:address.latitude})}
+            {...(address.longitude===undefined?{}:{longitude:address.longitude})}
             confirmed={hasConfirmedPin(address)} compact/>
         </div>}
         {!employee&&<button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}
