@@ -7,7 +7,8 @@ import { jobsForDay, sortJobs, summarize } from "@/lib/scheduling";
 import { fmtLong, todayISO } from "@/lib/dates";
 import { JobRow } from "@/components/app/JobRow";
 import { JobFormDialog } from "@/components/app/forms";
-import { EmptyState, PageHeader, Stat } from "@/components/app/ui-bits";
+import { EmptyState, Stat } from "@/components/app/ui-bits";
+import { NotificationBell } from "@/components/app/NotificationBell";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -40,7 +41,14 @@ function Dashboard() {
 
   return (
     <div>
-      <PageHeader title="Apžvalga" subtitle={fmtLong(today)} actions={<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>} />
+      <header className="mb-5">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0"><h1 className="text-2xl font-bold sm:text-3xl">Apžvalga</h1>
+            <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{fmtLong(today)}</p></div>
+          <NotificationBell />
+        </div>
+        <Button className="mt-3" onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>
+      </header>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Visi šiandien" value={s.all} />
         <Stat label="Atlikti" value={s.done} tone="success" />

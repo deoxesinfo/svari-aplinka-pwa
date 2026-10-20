@@ -1,0 +1,39 @@
+name: ŠA V2.3.22 – UI, inbox trash and type safety
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/routes/index.tsx'
+      - 'src/routes/analitika.tsx'
+      - 'src/components/app/{AppShell,AccessPortal,AppLoading,StaffInbox}.tsx'
+      - 'src/lib/{staff-messages,changelog}.ts'
+      - 'src/styles.css'
+      - 'src/test/sa-v2322-trash-loading.test.tsx'
+      - 'supabase/migrations/20261020_v2322_message_trash_purge.sql'
+      - '.github/workflows/sa-v2322-safety-tests.yml'
+permissions: {contents: read}
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build route types and app
+        run: npm run build
+      - name: TypeScript diagnostics for changed files
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/sa-v2322-tsc.log 2>&1
+          result=$?
+          set -e
+          if grep -Eq '^src/(components/app/(AppShell|AccessPortal|AppLoading|StaffInbox)[.]tsx|lib/(staff-messages|changelog)[.]ts|routes/(index|analitika)[.]tsx|test/sa-v2322-trash-loading[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2322-tsc.log; then
+            grep -E '^src/(components/app/(AppShell|AccessPortal|AppLoading|StaffInbox)[.]tsx|lib/(staff-messages|changelog)[.]ts|routes/(index|analitika)[.]tsx|test/sa-v2322-trash-loading[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2322-tsc.log
+            exit 1
+          fi
+          if [ "$result" -ne 0 ]; then echo "::warning::Unrelated existing TypeScript errors: $(grep -c 'error TS' /tmp/sa-v2322-tsc.log || true)"; fi
+      - name: Trash and loading regression tests
+        run: npm test -- src/test/sa-v2322-trash-loading.test.tsx src/test/staff-messages.test.ts

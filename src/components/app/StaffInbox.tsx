@@ -1,14 +1,17 @@
 import {useCallback,useEffect,useRef,useState,type TouchEvent} from "react";
-import {Check,Clock3,RefreshCw,Trash2,Undo2,MessageCircle} from "lucide-react";
+import {Check,Clock3,RefreshCw,Trash2,Undo2,MessageCircle,Inbox} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Confirm} from "@/components/app/ui-bits";
 import {getCloudOrganizationId} from "@/lib/store";
 import {PushSettings} from "@/components/app/PushSettings";
-import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
+import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
 
 export function StaffInbox(){
  const org=getCloudOrganizationId();
  const [items,setItems]=useState<InboxMessage[]>([]);
+ const [view,setView]=useState<"gauti"|"trash">("gauti");
+ const [marked,setMarked]=useState<string[]>([]);
+ const [purgeConfirm,setPurgeConfirm]=useState(false);
  const [busy,setBusy]=useState("");
  const [error,setError]=useState("");
  const [replyTexts,setReplyTexts]=useState<Record<string,string>>({});
@@ -19,9 +22,9 @@ export function StaffInbox(){
  const touch=useRef<{id:string;x:number;y:number}|null>(null);
  const load=useCallback(async()=>{
   if(!org)return;
-  try{setItems(await listStaffInbox(org));setError("")}
+  try{setItems(await listStaffInbox(org,view));setError("")}
   catch(e){setError(e instanceof Error?e.message:"Pranešimų nepavyko įkelti")}
- },[org]);
+ },[org,view]);
  useEffect(()=>{
   void load();
   const refresh=()=>{if(document.visibilityState==="visible")void load()};
@@ -66,6 +69,23 @@ export function StaffInbox(){
   catch(e){setError(e instanceof Error?e.message:"Nepavyko atkurti")}
   finally{setBusy("")}
  };
+ const changeView=(next:"gauti"|"trash")=>{
+  setView(next);setMarked([]);setSwiped(null);setUndo(null);setError("");
+ };
+ const permanentlyRemove=async()=>{
+  if(!org||busy||!marked.length)return;
+  const ids=[...marked];setBusy("purging");setError("");
+  let removed=0;
+  try{
+   for(const id of ids){await purgeOwnStaffMessage(org,id);removed++;}
+   setMarked([]);setPurgeConfirm(false);await refreshed();
+  }catch(e){
+   setPurgeConfirm(false);setMarked([]);
+   setError((e instanceof Error?e.message:"Trinti nepavyko")+
+    (removed?" ("+removed+" iš "+ids.length+" pašalinta)":""));
+   await refreshed();
+  }finally{setBusy("")}
+ };
  const onStart=(e:TouchEvent<HTMLDivElement>,id:string)=>{
   const point=e.changedTouches[0];if(point)touch.current={id,x:point.clientX,y:point.clientY};
  };
@@ -78,27 +98,49 @@ export function StaffInbox(){
  return <section className="space-y-3">
   <PushSettings/>
   <div className="flex items-center justify-between gap-2">
-   <h2 className="text-lg font-bold">Gauti pranešimai</h2>
-   <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
+   <h2 className="text-lg font-bold">{view==="trash"?"Pranešimų šiukšlinė":"Gauti pranešimai"}</h2>
+   <div className="flex items-center gap-2">
+    <Button type="button" size="sm" variant="outline"
+     aria-label={view==="trash"?"Grįžti į gautus pranešimus":"Atidaryti pranešimų šiukšlinę"}
+     onClick={()=>changeView(view==="trash"?"gauti":"trash")}>
+     {view==="trash"?<><Inbox className="size-4"/> Gauti</>:<Trash2 className="size-4"/>}
+    </Button>
+    <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
+   </div>
   </div>
   {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
-  {undo&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/50 p-3 text-sm" role="status">
+  {view==="gauti"&&undo&&<div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/50 p-3 text-sm" role="status">
    <span>Pranešimas „{undo.title}“ paslėptas tik tavo sąraše.</span>
    <Button variant="outline" size="sm" disabled={!!busy} onClick={()=>void restore()}><Undo2 className="size-4"/> Atkurti</Button>
   </div>}
-  {items.length===0?<p className="rounded-xl border p-6 text-sm text-muted-foreground">Šiuo metu pranešimų nėra.</p>:
+  {view==="trash"&&items.length>0&&<div className="flex flex-wrap items-center gap-3 rounded-xl border p-3">
+   <label className="flex items-center gap-2 text-sm">
+    <input type="checkbox" checked={marked.length===items.length}
+     onChange={e=>setMarked(e.target.checked?items.map(x=>x.receipt.id):[])}/>
+    Pažymėti visus ({items.length})
+   </label>
+   <Button size="sm" variant="destructive" disabled={!!busy||!marked.length} onClick={()=>setPurgeConfirm(true)}>
+    <Trash2 className="size-4"/> Ištrinti pažymėtus visam laikui ({marked.length})
+   </Button>
+  </div>}
+  {items.length===0?<p className="rounded-xl border p-6 text-sm text-muted-foreground">{view==="trash"?"Šiukšlinė tuščia.":"Šiuo metu pranešimų nėra."}</p>:
    items.map(({message,receipt})=><div key={receipt.id} className="relative overflow-hidden rounded-xl"
-    onTouchStart={e=>onStart(e,receipt.id)} onTouchEnd={e=>onEnd(e,receipt.id)}>
-    <div className="absolute inset-y-0 right-0 flex w-28 items-stretch bg-destructive/10 p-1">
+    onTouchStart={e=>{if(view==="gauti")onStart(e,receipt.id)}}
+    onTouchEnd={e=>{if(view==="gauti")onEnd(e,receipt.id)}}>
+    {view==="gauti"&&<div className="absolute inset-y-0 right-0 flex w-28 items-stretch bg-destructive/10 p-1">
      <button type="button" disabled={!!busy} aria-label={"Paslėpti pranešimą "+message.title}
       tabIndex={swiped===receipt.id?0:-1} onClick={()=>setToHide({message,receipt})}
       className="flex w-full items-center justify-center gap-1 rounded-lg bg-destructive text-sm font-semibold text-destructive-foreground">
-      <Trash2 className="size-4"/> Ištrinti</button>
-    </div>
+      <Trash2 className="size-4"/> Į šiukšlinę</button>
+    </div>}
     <article className="relative rounded-xl border bg-card p-4 transition-transform duration-200 ease-out"
-      style={{transform:swiped===receipt.id?"translateX(-112px)":"translateX(0)"}}>
+      style={{transform:view==="gauti"&&swiped===receipt.id?"translateX(-112px)":"translateX(0)"}}>
      <div className="flex flex-wrap items-center justify-between gap-2">
-      <h3 className="font-semibold">{message.title}</h3>
+      <div className="flex min-w-0 items-center gap-2">
+       {view==="trash"&&<input type="checkbox" aria-label={"Pažymėti "+message.title}
+        checked={marked.includes(receipt.id)} onChange={e=>setMarked(prev=>e.target.checked?[...prev,receipt.id]:prev.filter(x=>x!==receipt.id))}/>}
+       <h3 className="font-semibold">{message.title}</h3>
+      </div>
       <span className={"rounded-full px-2 py-1 text-xs "+(receipt.read_at?"bg-muted":"bg-primary/10 text-primary")}>
        {receipt.response?receipt.response==="sutinku"?"Sutiko":"Nesutiko":receipt.read_at?"Perskaityta":"Nauja"}
       </span>
@@ -107,7 +149,19 @@ export function StaffInbox(){
      <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
       <Clock3 className="size-3"/>{new Date(message.scheduled_for).toLocaleString("lt-LT")}
      </div>
-     <div className="mt-3 flex flex-wrap gap-2">
+     {view==="trash"?<div className="mt-3 flex flex-wrap gap-2">
+      <Button size="sm" variant="outline" disabled={!!busy}
+       onClick={()=>void (async()=>{
+        if(!org)return;setBusy(receipt.id);setError("");
+        try{await hideStaffMessage(org,receipt.id,false);setMarked(old=>old.filter(x=>x!==receipt.id));await refreshed()}
+        catch(e){setError(e instanceof Error?e.message:"Nepavyko atkurti")}
+        finally{setBusy("")}
+       })()}><Undo2 className="size-4"/> Atkurti</Button>
+      <Button size="sm" variant="destructive" disabled={!!busy}
+       onClick={()=>{setMarked([receipt.id]);setPurgeConfirm(true)}}>
+       <Trash2 className="size-4"/> Ištrinti visam laikui
+      </Button>
+     </div>:<div className="mt-3 flex flex-wrap gap-2">
       {!receipt.read_at&&<Button type="button" size="sm" variant="outline" disabled={!!busy}
        onClick={()=>void ack({message,receipt})}><Check className="size-4"/> Perskaičiau</Button>}
       {message.kind==="response"&&!receipt.response&&<>
@@ -118,9 +172,9 @@ export function StaffInbox(){
       {!receipt.reply_text&&<Button type="button" size="sm" variant="outline" disabled={!!busy}
        onClick={()=>setReplyOpen(replyOpen===receipt.id?null:receipt.id)}><MessageCircle className="size-4"/> Atsakyti</Button>}
       <Button type="button" size="sm" variant="ghost" className="sm:hidden"
-       onClick={()=>setToHide({message,receipt})}><Trash2 className="size-4"/> Šalinti</Button>
-     </div>
-     {replyOpen===receipt.id&&!receipt.reply_text&&<div className="mt-3 space-y-2">
+       onClick={()=>setToHide({message,receipt})}><Trash2 className="size-4"/> Į šiukšlinę</Button>
+     </div>}
+     {view==="gauti"&&replyOpen===receipt.id&&!receipt.reply_text&&<div className="mt-3 space-y-2">
       <label className="block text-sm font-medium" htmlFor={"sa-reply-"+receipt.id}>Trumpas atsakymas (iki 300 simbolių)</label>
       <textarea id={"sa-reply-"+receipt.id} value={replyTexts[receipt.id]||""} maxLength={300} rows={2}
        className="w-full rounded-lg border bg-card p-3 text-base" placeholder="Pvz., atlikau, nespėsiu…" onChange={e=>setReplyTexts(p=>({...p,[receipt.id]:e.target.value}))}/>
@@ -135,8 +189,11 @@ export function StaffInbox(){
     </article>
    </div>)
   }
-  <Confirm open={!!toHide} onOpenChange={open=>{if(!open)setToHide(null)}} title="Pašalinti pranešimą iš savo sąrašo?"
-   text="Pranešimas bus paslėptas tik jums. Administratoriaus išsiuntimo, perskaitymo ir atsakymo istorija liks. Galėsite paspausti „Atkurti“."
-   confirmLabel="Paslėpti pranešimą" onConfirm={()=>void hide()}/>
+  <Confirm open={!!toHide} onOpenChange={open=>{if(!open)setToHide(null)}} title="Perkelti pranešimą į šiukšlinę?"
+   text="Pranešimas liks jūsų šiukšlinėje ir jį galėsite atkurti. Kitų gavėjų žinutės nekeičiamos."
+   confirmLabel="Į šiukšlinę" onConfirm={()=>void hide()}/>
+  <Confirm open={purgeConfirm} onOpenChange={setPurgeConfirm} title={"Galutinai ištrinti "+marked.length+" pranešimų?"}
+   text="Šių asmeninių pranešimų kopijų atkurti nebegalėsite. Supabase pašalins jūsų gavėjo įrašus ir atsakymų tekstus. Siuntėjo originalai, kitų gavėjų pranešimai ir minimalus administratoriaus įvykių auditas liks."
+   confirmLabel="Taip, ištrinti visam laikui" onConfirm={()=>void permanentlyRemove()}/>
  </section>;
 }

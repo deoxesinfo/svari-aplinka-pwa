@@ -8,6 +8,18 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-20",version:"V2.3.22",category:"funkcija",
+   title:"Vienoda apžvalgos antraštė, atskirti datų laukai, pranešimų šiukšlinė ir žalios temos užkrovimas",
+   details:[
+    "Apžvalgos pavadinimas ir „Pranešimai“ išdėstyti vienoje horizontalioje eilutėje; naujo darbo mygtukas paliktas žemiau.",
+    "Analitikos datų „Nuo“ / „Iki“ laukai iPhone turi atskirą 12–16 px tarpą ir ribotą išdėstymo plotį, kad susiliesti negalėtų.",
+    "Gautuose pranešimuose šiukšlinė atidaroma maža ikona (neužima naujos šoninio meniu vietos). Braukimas į kairę leidžia pranešimą perkelti į šiukšlinę.",
+    "Šiukšlinėje galima atkurti vieną pranešimą, pažymėti kelis arba po aiškaus papildomo patvirtinimo galutinai ištrinti tik savo gavėjo kopiją. Automatinio trynimo nėra.",
+    "Galutinis trynimas fiziškai pašalina konkretaus gavėjo Supabase žinutės įrašą bei jo atsakymo tekstą; kitų gavėjų kopijos nekeičiamos. Siuntėjo originalas ir minimalus administratoriaus būsenų auditas lieka.",
+    "Paskyros tikrinimas, įmonės duomenų įkėlimas ir bendras programėlės kraunama ekranas naudoja vienodą centruotą žalią sukimosi indikatorių. Užtrukus ilgiau nei 20 s pasirodo „Bandyti dar kartą“.",
+    "Nuotraukos, R2, darbuotojų rolės, esami darbai ir darbo istorija nekeičiami."
+   ],commits:[]},
+
   {date:"2026-10-20",version:"V2.3.21",category:"funkcija",
    title:"Darbuotojų kontaktai, pranešimų atsakymai, darbų kortelės, analitika ir išsamus auditas",
    details:[
