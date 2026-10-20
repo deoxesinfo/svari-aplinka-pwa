@@ -89,7 +89,7 @@ function AnalyticsPage(){
  const stats=useMemo(()=>valid?periodSummary(addresses,filtered,people,period):undefined,[valid,addresses,filtered,people,period]);
  const workers=useMemo(()=>people.filter(p=>p.role==="darbuotojas").map(p=>({
   name:p.name,
-  completed:filtered.filter(j=>j.worker===p.name&&j.completedAt?.slice(0,10)>=period.start&&j.completedAt?.slice(0,10)<=period.end).length,
+  completed:filtered.filter(j=>{const end=j.completedAt?.slice(0,10);return j.worker===p.name && !!end && end>=period.start && end<=period.end}).length,
   planned:filtered.filter(j=>j.worker===p.name&&j.date>=period.start&&j.date<=period.end).length
  })).sort((a,b)=>b.completed-a.completed),[people,filtered,period]);
  const currentObjects=addresses.filter(activeObject);
