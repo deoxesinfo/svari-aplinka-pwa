@@ -24,6 +24,7 @@ export interface Person {
   position?: PersonPosition;
   status: PersonStatus;
   notes: string;
+  phone?: string; // optional staff contact, available only to authorized personnel
   avatarPhotoId?: string; // local DEMO IndexedDB only, never public URL
   createdAt: string; // when profile was entered, NOT the hire date
   startedAt?: string; // current/latest hire date
