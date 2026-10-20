@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
+import {AppLoading} from "@/components/app/AppLoading";
 import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
@@ -114,7 +115,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    <Button disabled={busy} type="submit">Išsaugoti slaptažodį</Button>
  </form>;
  if(mode==="gate"&&!AUTH_ENFORCED)return <>{children}</>;
- if(loading)return <div className="grid min-h-[70vh] place-items-center p-6 text-sm text-muted-foreground">Tikrinama paskyra…</div>;
+ if(loading)return <AppLoading message="Tikrinama paskyra…"/>;
  if(recovery)return <section className="mx-auto max-w-md space-y-4 py-10">
    <h1 className="text-xl font-bold">Slaptažodžio atkūrimas</h1>
    {account?passwordForm("Nustatyti naują slaptažodį"):
@@ -127,7 +128,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
        <p className="mt-2 text-sm">{workspaceError}</p>
        <button onClick={()=>window.location.reload()} className="mt-4 text-primary underline">Bandyti dar kartą</button>
      </div>;
-     if(!workspaceReady)return <div className="grid min-h-screen place-items-center text-muted-foreground">Kraunami įmonės duomenys…</div>;
+     if(!workspaceReady)return <AppLoading message="Kraunami įmonės duomenys…" minHeight="100dvh"/>;
      return <>{children}</>;
    }
    return <section className="mx-auto max-w-xl space-y-4 py-5">
