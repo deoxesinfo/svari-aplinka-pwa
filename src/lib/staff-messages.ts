@@ -8,7 +8,7 @@ export type StaffMessage={
 export type MessageReceipt={
  id:string;organization_id:string;message_id:string;recipient_id:string;
  read_at:string|null;response:"sutinku"|"nesutinku"|null;responded_at:string|null;
- reply_text?:string|null;replied_at?:string|null;hidden_at?:string|null;
+ reply_text?:string|null;replied_at?:string|null;hidden_at?:string|null;purged_at?:string|null;
 };
 export type InboxMessage={message:StaffMessage;receipt:MessageReceipt};
 export type StaffRecipient={userId:string;name:string;role:string};
@@ -55,15 +55,24 @@ export async function listSentStaffMessages(org:string):Promise<{messages:StaffM
  const query=await supabase.from("sa_staff_message_receipts").select("*")
   .eq("organization_id",org).in("message_id",messages.map(m=>m.id)).limit(5000);
  const receipts=assert(query.data,query.error,"Nepavyko gauti gavėjų būsenų") as MessageReceipt[];
- return {messages,receipts};
+ const deleted=await supabase.from("sa_staff_message_purge_audit")
+  .select("*").eq("organization_id",org).in("message_id",messages.map(m=>m.id)).limit(5000);
+ const audits=assert(deleted.data,deleted.error,"Nepavyko gauti pašalintų gavėjų audito") as {
+  id:string;organization_id:string;message_id:string;recipient_id:string;
+  read_at:string|null;response:"sutinku"|"nesutinku"|null;responded_at:string|null;
+  replied_at:string|null;purged_at:string;
+ }[];
+ return {messages,receipts:[...receipts,...audits.map(r=>({
+  ...r,reply_text:null,hidden_at:null,
+ }))]};
 }
-export async function listStaffInbox(org:string):Promise<InboxMessage[]>{
+export async function listStaffInbox(org:string,view:"gauti"|"trash"="gauti"):Promise<InboxMessage[]>{
  const {data:auth,error:authError}=await supabase.auth.getUser();
  if(authError||!auth.user)throw new Error("Reikia prisijungti");
  const result=await supabase.from("sa_staff_message_receipts").select("*")
   .eq("organization_id",org).eq("recipient_id",auth.user.id).limit(1000);
  const receipts=(assert(result.data,result.error,"Nepavyko gauti pranešimų") as MessageReceipt[])
-  .filter(r=>!r.hidden_at);
+  .filter(r=>view==="trash"?!!r.hidden_at:!r.hidden_at);
  if(!receipts.length)return [];
  const query=await supabase.from("sa_staff_messages").select("*")
   .eq("organization_id",org).in("id",receipts.map(r=>r.message_id));
@@ -96,4 +105,12 @@ export async function hideStaffMessage(org:string,receiptId:string,hide=true){
   p_org:org,p_receipt:receiptId,p_hide:hide,
  });
  if(error||data!==true)throw new Error(error?.message||"Nepavyko pakeisti pranešimo būsenos");
+}
+
+/** Explicit irreversible deletion only for your OWN message receipt, already in trash. */
+export async function purgeOwnStaffMessage(org:string,receiptId:string):Promise<void>{
+ const {data,error}=await supabase.rpc("sa_purge_own_staff_message",{
+  p_org:org,p_receipt:receiptId,
+ });
+ if(error||data!==true)throw new Error(error?.message||"Pranešimo galutinai pašalinti nepavyko");
 }
