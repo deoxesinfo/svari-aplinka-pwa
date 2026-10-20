@@ -131,6 +131,7 @@ function MessagesPage(){
         {own.map(r=><p key={r.id} className="text-sm">
          {labels.get(r.recipient_id)||"Gavėjas"}: <strong>{r.response?r.response==="sutinku"?"Sutiko":"Nesutiko":r.read_at?"Perskaitė":delivered?"Neperskaitė":"Laukia siuntimo"}</strong>
          {r.responded_at?" · "+new Date(r.responded_at).toLocaleString("lt-LT"):r.read_at?" · "+new Date(r.read_at).toLocaleString("lt-LT"):""}
+         {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2">Atsakymas: {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
         </p>)}
        </div>
       </article>;
