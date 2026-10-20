@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent } from "react";
-import { Archive, BriefcaseBusiness, CalendarDays, ExternalLink, History, Pencil, Plus, RotateCcw, Search, Trash2, Users } from "lucide-react";
+import { Archive, BriefcaseBusiness, CalendarDays, ExternalLink, History, Pencil, Phone, Plus, RotateCcw, Search, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -24,7 +24,7 @@ const STATUSES: Record<PersonStatus,string>={
 type Tab = "personalas" | "archyvas" | "skelbimai";
 const newPerson=():PersonInput=>({
   name:"",role:"darbuotojas",position:"valytojas",status:"aktyvus",
-  startedAt:todayISO(),endedAt:undefined,notes:""
+  startedAt:todayISO(),endedAt:undefined,notes:"",phone:""
 });
 function PeoplePage(){
   const {people,jobs,addresses,recruitmentLinks}=useAppState();
@@ -54,7 +54,7 @@ function PeoplePage(){
     setEditing(p||null);
     setDraft(p?{
       name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"kita"),
-      status:p.status,notes:p.notes,startedAt:p.startedAt,endedAt:p.endedAt,
+      status:p.status,notes:p.notes,phone:p.phone||"",startedAt:p.startedAt,endedAt:p.endedAt,
     }:newPerson());
     setOpened(true);
   };
@@ -89,7 +89,11 @@ function PeoplePage(){
     if(editing?.status==="nebedirba" && working && editing.endedAt && draft.startedAt && draft.startedAt <= editing.endedAt){
       toast.error("Naujas darbo laikotarpis turi prasidėti po ankstesnio pabaigos");return;
     }
-    const input={...draft,name};
+    const phone=(draft.phone||"").trim();
+    if(phone && (!/^[+()0-9 .-]{6,22}$/.test(phone) || phone.replace(/\D/g,"").length<6)){
+      toast.error("Įveskite tinkamą telefono numerį arba palikite lauką tuščią");return;
+    }
+    const input={...draft,name,phone};
     if(editing)updatePerson(editing.id,input);else addPerson(input);
     toast.success(editing?"Darbuotojo istorija išsaugota":"Asmuo įtrauktas į registrą");
     setOpened(false);
@@ -108,7 +112,7 @@ function PeoplePage(){
     setTab("archyvas");setEditing(p);
     setDraft({
       name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"valytojas"),
-      status:"aktyvus",notes:p.notes,startedAt:todayISO(),endedAt:undefined
+      status:"aktyvus",notes:p.notes,phone:p.phone||"",startedAt:todayISO(),endedAt:undefined
     });
     setOpened(true);
   };
@@ -185,6 +189,7 @@ function PeoplePage(){
                 <Pill tone={p.status==="aktyvus"?"success":p.status==="nebedirba"?"danger":"neutral"}>{STATUSES[p.status]}</Pill>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai · {permanent.length} priskyrimai</p>
+              {p.phone&&<a href={"tel:"+p.phone.replace(/[^+\d]/g,"")} className="inline-flex items-center gap-1 text-sm font-semibold text-primary underline"><Phone className="size-4"/> {p.phone}</a>}
               <p className="text-xs leading-relaxed text-muted-foreground">Dirba nuo: {p.startedAt||"Nežinoma"}{p.endedAt&&p.status==="nebedirba"?" · Baigė: "+p.endedAt:""}</p>
             </div>
             <div className="col-span-2 grid grid-cols-2 gap-2 pt-1 sm:col-span-1 sm:flex sm:items-start sm:justify-end sm:pt-0">
@@ -226,6 +231,7 @@ function PeoplePage(){
           <DialogDescription>Darbuotojo profilis saugomas Supabase. Atskira darbuotojo prisijungimo paskyra ir pranešimai pridedami vėliau.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <Field label="Vardas ir pavardė"><input className={inputCls} value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Tik fiktyvus DEMO vardas"/></Field>
+          <Field label="Telefono numeris (neprivaloma)"><input type="tel" autoComplete="tel" inputMode="tel" maxLength={22} className={inputCls} value={draft.phone||""} onChange={e=>setDraft(d=>({...d,phone:e.target.value}))} placeholder="+370 6XX XXXXX"/></Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Personalo grupė"><select className={inputCls} value={draft.role} onChange={e=>changeRole(e.target.value as PersonRole)}>
               {Object.entries(ROLES).map(([value,label])=><option key={value} value={value}>{label}</option>)}
