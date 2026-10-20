@@ -4,7 +4,7 @@ import { X } from "lucide-react";
 /** Consistent iOS-friendly native date inputs. No custom calendar or locale override. */
 export function PersonnelDateField({label,value,onChange,disabled=false,clearable=false}:{
   label:string;
-  value?:string;
+  value?:string|undefined;
   onChange:(value:string|undefined)=>void;
   disabled?:boolean;
   clearable?:boolean;
