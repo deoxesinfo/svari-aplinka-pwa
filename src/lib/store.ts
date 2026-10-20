@@ -404,6 +404,18 @@ export function restoreJob(id:string):boolean {
   set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,archivedAt:undefined},"Darbas grąžintas iš archyvo"):j)}));
   return true;
 }
+/** Restore a soft-deleted job only when its address is still active and visible.
+ * Keep the same ID, comments, history, photos and schedule; never create a new job.
+ */
+export function restoreDeletedJob(id:string):boolean{
+  const job=state.jobs.find(j=>j.id===id);
+  if(!job?.deletedAt)return false;
+  if(state.addresses.some(a=>a.id===job.addressId&&(a.deletedAt||a.archivedAt))){
+    toast.error("Pirmiausia atkurkite šio darbo adresą");return false;
+  }
+  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,deletedAt:undefined},"Administratoriaus sprendimu darbas atkurtas iš pašalintų"):j)}));
+  return true;
+}
 /** Keep a tombstone instead of hard-deleting: recurring generation must not recreate this job. */
 export function deleteJob(id:string):boolean {
   const job=state.jobs.find(j=>j.id===id);
