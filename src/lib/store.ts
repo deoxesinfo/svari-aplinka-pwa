@@ -413,7 +413,11 @@ export function restoreDeletedJob(id:string):boolean{
   if(state.addresses.some(a=>a.id===job.addressId&&(a.deletedAt||a.archivedAt))){
     toast.error("Pirmiausia atkurkite šio darbo adresą");return false;
   }
-  set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,deletedAt:undefined},"Administratoriaus sprendimu darbas atkurtas iš pašalintų"):j)}));
+  set(s=>({jobs:s.jobs.map(j=>{
+    if(j.id!==id)return j;
+    const {deletedAt:_deletedAt,...rest}=j;
+    return hist(rest,"Administratoriaus sprendimu darbas atkurtas iš pašalintų");
+  })}));
   return true;
 }
 /** Keep a tombstone instead of hard-deleting: recurring generation must not recreate this job. */
