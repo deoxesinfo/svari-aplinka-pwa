@@ -139,3 +139,4 @@ export function StaffInbox(){
    text="Pranešimas bus paslėptas tik jums. Administratoriaus išsiuntimo, perskaitymo ir atsakymo istorija liks. Galėsite paspausti „Atkurti“."
    confirmLabel="Paslėpti pranešimą" onConfirm={()=>void hide()}/>
  </section>;
+}
