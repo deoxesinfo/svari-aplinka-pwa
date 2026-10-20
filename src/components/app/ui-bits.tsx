@@ -5,17 +5,22 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import { NotificationBell } from "@/components/app/NotificationBell";
 import { buttonVariants } from "@/components/ui/button";
 
+/** Visų programėlės puslapių antraštė: pavadinimas ir pranešimai vienoje eilutėje. */
 export function PageHeader({ title, subtitle, actions }: { title: ReactNode; subtitle?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0">
-        <h1 className="text-2xl font-bold sm:text-3xl">{title}</h1>
-        {subtitle && <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{subtitle}</p>}
+    <header className="mb-5" data-testid="sa-page-header">
+      <div className="flex min-w-0 items-start justify-between gap-3" data-testid="sa-page-header-row">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl font-bold sm:text-3xl">{title}</h1>
+          {subtitle && <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{subtitle}</p>}
+        </div>
+        <div className="shrink-0"><NotificationBell /></div>
       </div>
-      {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-    </div>
+      {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
+    </header>
   );
 }
 
