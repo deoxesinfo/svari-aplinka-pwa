@@ -8,6 +8,17 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-20",version:"V2.3.23",category:"taisymas",
+   title:"Aiškus darbo redagavimas ir grąžinamas pašalinimas, kompaktiškesnė žinučių šiukšlinė, kelių pranešimų pasirinkimas",
+   details:[
+    "Darbo patikros ir istorijos skiltyje nebėra dviprasmiškų „Redaguoti“ ir „Ištrinti“ mygtukų. Jie perkelti į atskirą „Darbo valdymas“ bloką: žalias „Redaguoti šį darbą“ ir raudonas „Pašalinti šį darbą“.",
+    "Trinimo patvirtinime aiškiai nurodomas konkretus darbas ir adresas. Išsaugomas adresas, kiti darbai, nuotraukos, komentarai ir darbų istorija.",
+    "Administratoriui prie „Darbai“ pridėtas „Pašalinti darbai“ peržiūros ir atkūrimo pasirinkimas: atstatomas tas pats įrašas, nekuriamas dublikatas.",
+    "Pranešimų šiukšlinėje pašalintas pasikartojantis „Ištrinti visam laikui“ iš kiekvienos kortelės; prie jos liko „Atkurti“. Galutinis trynimas vyksta per viršutinę pažymėtų pranešimų juostą, tik po patvirtinimo.",
+    "Gautų pranešimų sąraše pridėti atskiri žymimieji langeliai, „Pažymėti visus“ ir „Į šiukšlinę (X)“. Pažymėti kelis ir perkelti įmanoma tik po papildomo patvirtinimo. Esamas vienos žinutės SWIPE į kairę išsaugotas.",
+    "Jokių esamų nuotraukų, darbų, adresų ar žinučių automatiškai netrynėme. Rolių, Cloudflare R2 ir Supabase duomenų struktūros nekeitėme."
+   ],commits:[]},
+
   {date:"2026-10-20",version:"V2.3.22",category:"funkcija",
    title:"Vienoda apžvalgos antraštė, atskirti datų laukai, pranešimų šiukšlinė ir žalios temos užkrovimas",
    details:[
