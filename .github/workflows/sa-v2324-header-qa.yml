@@ -1,0 +1,25 @@
+name: ŠA V2.3.24 – consistent page headers
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/components/app/AppShell.tsx'
+      - 'src/components/app/ui-bits.tsx'
+      - 'src/routes/index.tsx'
+      - 'src/test/sa-v2324-page-header.test.tsx'
+      - '.github/workflows/sa-v2324-header-qa.yml'
+permissions: {contents: read}
+jobs:
+  header-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: New and existing unit tests
+        run: npm test
