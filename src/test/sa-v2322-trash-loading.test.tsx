@@ -37,6 +37,7 @@ describe("ŠA V2.3.22 inbox trash safety",()=>{
   fireEvent.click(screen.getByRole("button",{name:"Atidaryti pranešimų šiukšlinę"}));
   await screen.findByText("Žinutė A");
   expect(screen.queryByRole("button",{name:"Ištrinti visam laikui"})).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("checkbox",{name:"Pažymėti Žinutė A"}));
   fireEvent.click(screen.getByRole("button",{name:/Ištrinti pažymėtus visam laikui/}));
   expect(mock.purge).not.toHaveBeenCalled();
   expect(screen.getByRole("dialog",{name:/Galutinai ištrinti 1 pranešimų/})).toBeInTheDocument();
