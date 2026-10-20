@@ -96,7 +96,7 @@ function HistoryPage(){
          {" · "}{job.worker||"Nepriskirta"}</p>}
         {e.actor_user_id&&<p className="text-xs text-muted-foreground">Veiksmą atliko paskyra: {e.actor_user_id.slice(0,8)}…</p>}
         {keys.length>0?<div className="space-y-1">
-          {keys.map(k=><p key={k}><strong>{jobKeys[k]}:</strong> {"old"in changes[k] ? val(changes[k]?.old)+" → ":""}{val(changes[k]?.new)}</p>)}
+          {keys.map(k=>{const entry=changes[k];return entry?<p key={k}><strong>{jobKeys[k]}:</strong> {"old" in entry ? val(entry.old)+" → ":""}{val(entry.new)}</p>:null})}
          </div>:<p className="text-xs text-muted-foreground">Šiam ankstesniam įrašui tiksli pakeistų laukų istorija nebuvo kaupiama. Rodoma tik dabartinė darbo informacija, jei ji išlikusi.</p>}
         {job&&<Link to="/darbai/$jobId" params={{jobId:job.id}} className="inline-block text-sm font-semibold text-primary underline">Atidaryti darbą →</Link>}
        </div>
