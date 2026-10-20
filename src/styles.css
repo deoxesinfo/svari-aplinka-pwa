@@ -171,10 +171,14 @@
 
 
 /* V2.2.5: keep the standard iPhone date picker but align the date text. */
-.sa-personnel-date-input { box-sizing:border-box; min-width:0; width:100%; max-width:100%; -webkit-appearance:auto; }
-.sa-personnel-date-input::-webkit-date-and-time-value { text-align:left; min-width:0; margin:0; }
-.sa-personnel-date-input::-webkit-datetime-edit { padding:0; }
+.sa-personnel-date-input { box-sizing:border-box; min-width:0; width:100%; max-width:100%; -webkit-appearance:auto; display:flex; align-items:center; line-height:normal; }
+.sa-personnel-date-input::-webkit-date-and-time-value { text-align:left; min-width:0; margin:auto 0; display:flex; align-items:center; height:100%; }
+.sa-personnel-date-input::-webkit-datetime-edit { padding:0; display:flex; align-items:center; min-height:100%; }
 .sa-personnel-date-input::-webkit-calendar-picker-indicator { cursor:pointer; }
+/* Mobile charts and dates must retain spacing/width on Safari. */
+.sa-analytics-dates { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:100%; }
+.sa-analytics-dates label {display:flex;flex-direction:column;min-width:0;}
+.sa-analytics-dates input {width:100%;min-width:0;box-sizing:border-box;}
 /* A mobile job dialog may scroll vertically, but must not enlarge the horizontal viewport. */
 .sa-job-dialog {
   box-sizing:border-box; width:calc(100vw - 1.5rem);

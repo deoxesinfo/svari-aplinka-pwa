@@ -170,7 +170,7 @@ export function archivePerson(id: string, endedAt: string): boolean {
   const person = state.people.find(p=>p.id===id);
   if (!person || person.status==="nebedirba" || !endedAt) return false;
   updatePerson(id, {name:person.name,role:person.role,position:person.position,status:"nebedirba",
-    notes:person.notes,startedAt:person.startedAt,endedAt});
+    notes:person.notes,phone:person.phone,startedAt:person.startedAt,endedAt});
   return true;
 }
 // Older consumers cannot hard-delete personnel. Archive instead.

@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { BarChart3, Building2, CalendarDays, ClipboardCheck, ClockAlert, GitCompareArrows, TrendingDown, TrendingUp, Users } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { AnalyticsSvg } from "@/components/app/AnalyticsSvg";
 import { PageHeader } from "@/components/app/ui-bits";
 import { useAppState } from "@/lib/store";
 import { todayISO } from "@/lib/dates";
@@ -10,7 +10,6 @@ import { compareBuckets, periodBuckets, periodSummary, todayMinusDays, validPeri
 import type { Address, Job, Person } from "@/lib/types";
 
 export const Route=createFileRoute("/analitika")({component:AnalyticsPage});
-const tick={fontSize:11,fill:"#64746a"};
 const colors={primary:"#376d50",secondary:"#d9a14c",compare:"#5366c5",muted:"#9fb0a6",danger:"#c96b57"};
 type Metric="work"|"cleaning"|"buildings"|"personnel";
 function Tile({label,value,icon:Icon,description}:{label:string,value:number|string,icon:typeof Building2,description?:string}){
@@ -19,7 +18,7 @@ function Tile({label,value,icon:Icon,description}:{label:string,value:number|str
    {description&&<p className="mt-1 text-xs text-muted-foreground">{description}</p>}</div>;
 }
 function Dates({span,onChange,label}:{span:Period,onChange:(p:Period)=>void,label:string}){
- return <fieldset className="min-w-0"><legend className="mb-1 text-xs font-semibold">{label}</legend><div className="grid grid-cols-2 gap-2">
+ return <fieldset className="min-w-0"><legend className="mb-1 text-xs font-semibold">{label}</legend><div className="sa-analytics-dates">
    <label className="min-w-0 text-xs text-muted-foreground">Nuo
      <input type="date" aria-label={label+" nuo"} className="mt-1 w-full min-w-0 rounded-md border bg-card p-2 text-sm text-foreground" value={span.start} onChange={e=>onChange({...span,start:e.target.value})}/>
    </label>
@@ -38,9 +37,6 @@ function PeriodChart({mode,source,today}:{mode:Metric,source:ChartData,today:str
  const main=useMemo(()=>good?periodBuckets(source.addresses,source.jobs,source.people,span):[],[good,source.addresses,source.jobs,source.people,span]);
  const alt=useMemo(()=>comp&&validOther?periodBuckets(source.addresses,source.jobs,source.people,other):[],[comp,validOther,source.addresses,source.jobs,source.people,other]);
  const chartData=comp?compareBuckets(main,alt):main;
- const pair=(name:string,key:string,color:string)=>mode==="work"
-  ? <Line key={key} type="monotone" dataKey={key} name={name} stroke={color} strokeWidth={2} dot={false} connectNulls/>
-  : <Bar key={key} dataKey={key} name={name} fill={color} radius={[3,3,0,0]}/>;
  const series=mode==="work"
   ? [{name:"Suplanuota",key:"planned",color:colors.muted},{name:"Užbaigta",key:"completed",color:colors.primary}]
   : mode==="cleaning"
@@ -49,10 +45,7 @@ function PeriodChart({mode,source,today}:{mode:Metric,source:ChartData,today:str
   ? [{name:"Nauji",key:"newObjects",color:colors.primary},{name:"Nebeteikiamos paslaugos",key:"lostObjects",color:colors.danger}]
   : [{name:"Pradėjo dirbti",key:"hires",color:colors.primary},{name:"Išėjo",key:"leaves",color:colors.danger}];
  const compareMap:Record<string,string>={planned:"comparePlanned",completed:"compareCompleted",stairwell:"compareStairwell",territory:"compareTerritory",newObjects:"compareNewObjects",lostObjects:"compareLostObjects",hires:"compareHires",leaves:"compareLeaves"};
- const graph=<><CartesianGrid strokeDasharray="3 3" vertical={false}/><XAxis dataKey="label" tick={tick} minTickGap={8}/><YAxis allowDecimals={false} tick={tick}/><Tooltip/><Legend/>
-    {series.map(item=>pair((comp?"I: ":"")+item.name,item.key,item.color))}
-    {comp&&series.map(item=>pair("II: "+item.name,compareMap[item.key],colors.compare))}
-  </>;
+
  const first=good?periodSummary(source.addresses,source.jobs,source.people,span):undefined;
  const second=comp&&validOther?periodSummary(source.addresses,source.jobs,source.people,other):undefined;
  const totalKeys=mode==="work"?[["planned","Suplanuota"],["completed","Užbaigta"]]
@@ -67,12 +60,10 @@ function PeriodChart({mode,source,today}:{mode:Metric,source:ChartData,today:str
     </div>
     <label className="flex items-center gap-2 text-sm font-medium"><input type="checkbox" className="size-4 accent-primary" checked={comp} onChange={e=>setComp(e.target.checked)}/><GitCompareArrows className="size-4"/>Palyginti du laikotarpius</label>
     {(!good||(comp&&!validOther))?<p className="rounded-lg border p-3 text-sm text-destructive">Patikrinkite datas: pradžia turi būti ne vėliau nei pabaiga.</p>:<>
-      <div className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          {mode==="work"?<LineChart data={chartData} margin={{top:8,right:8,left:-22,bottom:0}}>{graph}</LineChart>
-          :<BarChart data={chartData} margin={{top:8,right:8,left:-22,bottom:0}}>{graph}</BarChart>}
-        </ResponsiveContainer>
-      </div>
+      <AnalyticsSvg title={title[mode]} data={chartData} line={mode==="work"} series={[
+        ...series,
+        ...(comp?series.map(item=>({name:"II: "+item.name,key:compareMap[item.key]||"",color:colors.compare})):[])
+      ]}/>
       <div className="grid grid-cols-2 gap-2">
         {totalKeys.map(([key,label])=>{
           const one=first?.[key as keyof PeriodSummary]??0,two=second?.[key as keyof PeriodSummary]??0;
@@ -98,7 +89,7 @@ function AnalyticsPage(){
  const stats=useMemo(()=>valid?periodSummary(addresses,filtered,people,period):undefined,[valid,addresses,filtered,people,period]);
  const workers=useMemo(()=>people.filter(p=>p.role==="darbuotojas").map(p=>({
   name:p.name,
-  completed:filtered.filter(j=>j.worker===p.name&&j.completedAt?.slice(0,10)>=period.start&&j.completedAt?.slice(0,10)<=period.end).length,
+  completed:filtered.filter(j=>{const end=j.completedAt?.slice(0,10);return j.worker===p.name && !!end && end>=period.start && end<=period.end}).length,
   planned:filtered.filter(j=>j.worker===p.name&&j.date>=period.start&&j.date<=period.end).length
  })).sort((a,b)=>b.completed-a.completed),[people,filtered,period]);
  const currentObjects=addresses.filter(activeObject);

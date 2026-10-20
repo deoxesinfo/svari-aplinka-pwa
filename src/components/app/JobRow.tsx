@@ -80,15 +80,16 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
           <Trash2 className="size-5"/>Ištrinti
         </button>
       </div>}
-      <div className="card-surface relative min-w-0 bg-card transition-transform duration-200 ease-out"
+      <div className="card-surface relative min-w-0 overflow-hidden bg-card transition-transform duration-200 ease-out"
         style={{transform:!employee&&actionsOpen?"translateX(-186px)":"translateX(0)"}}>
+        {overdue&&<span data-testid="job-overdue-stripe" aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 z-10 w-1 bg-warning"/>}
         <button type="button" onClick={()=>{
           if(justSwiped.current){justSwiped.current=false;return}
           if(actionsOpen){setActionsOpen(false);return}
           setDetailsOpen(true);
         }} aria-label={"Atidaryti darbą: "+(address?.street??"Adresas ištrintas")}
           className={cn("group relative flex w-full items-start gap-3 p-3 pr-12 text-left transition-all hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary sm:p-4 sm:pr-12",
-            overdue&&"border-l-4 border-l-warning",done&&"bg-muted/30")}>
+            overdue&&"pl-4 sm:pl-5",done&&"bg-muted/30")}>
           <span aria-hidden="true" className={cn("mt-0.5 grid size-8 shrink-0 place-items-center rounded-full border-2",
             done?"border-primary bg-primary text-primary-foreground":"border-input text-transparent")}>
             <Check className="size-4"/>
@@ -123,7 +124,8 @@ export function JobRow({ job, showDate }: { job: Job; showDate?: boolean }) {
         </button>
         {address&&<div className="relative flex items-center justify-end gap-2 border-t border-border/70 px-3 py-2.5 sm:px-4" data-testid="job-card-footer">
           <MapsLink street={address.street} city={address.city}
-            latitude={address.latitude} longitude={address.longitude}
+            {...(address.latitude===undefined?{}:{latitude:address.latitude})}
+            {...(address.longitude===undefined?{}:{longitude:address.longitude})}
             confirmed={hasConfirmedPin(address)} compact/>
         </div>}
         {!employee&&<button type="button" aria-label={actionsOpen?"Uždaryti darbo veiksmus":"Rodyti darbo veiksmus"} aria-expanded={actionsOpen}

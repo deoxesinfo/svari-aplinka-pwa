@@ -21,13 +21,14 @@ export interface Person {
   name: string;
   role: PersonRole;
   /** Actual job title; separate from account permissions. */
-  position?: PersonPosition;
+  position?: PersonPosition | undefined;
   status: PersonStatus;
   notes: string;
+  phone?: string | undefined; // optional staff contact, available only to authorized personnel
   avatarPhotoId?: string; // local DEMO IndexedDB only, never public URL
   createdAt: string; // when profile was entered, NOT the hire date
-  startedAt?: string; // current/latest hire date
-  endedAt?: string; // most recent departure
+  startedAt?: string | undefined; // current/latest hire date
+  endedAt?: string | undefined; // most recent departure
   employmentPeriods?: EmploymentPeriod[]; // preserved after employee returns
 }
 export type RecruitmentLink = { id: string; title: string; url: string; notes: string; createdAt: string };

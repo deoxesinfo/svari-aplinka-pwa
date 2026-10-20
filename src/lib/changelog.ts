@@ -8,6 +8,18 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-20",version:"V2.3.21",category:"funkcija",
+   title:"Darbuotojų kontaktai, pranešimų atsakymai, darbų kortelės, analitika ir išsamus auditas",
+   details:[
+    "Darbuotojo profilyje pridėtas neprivalomas telefono numeris su skambinimo nuoroda; redaguojant, archyvuojant ir grąžinant darbuotoją numeris išsaugomas.",
+    "iPhone darbo pradžios ir pabaigos datos vertikaliai centruojamos, darbo pabaigos X išvalymo funkcija išsaugota.",
+    "Darbuotojas gali vieną kartą atsakyti trumpu tekstu (iki 300 simbolių) į asmeninę žinutę. Administratorius mato atsakymą ir laiką.",
+    "Gautų pranešimų braukimas į kairę atveria pašalinimo veiksmą. Tik po patvirtinimo žinutė paslepiama gavėjui; galima atkurti, o administratoriaus istorija lieka.",
+    "Skubaus vėluojančio darbo oranžinė juosta tęsiasi iki kortelės apačios, apimdama navigacijos mygtuką; rėmelis lieka vientisas.",
+    "Analitikos diagramų atvaizdavimas pakeistas į iPhone stabilų, pagal tikras datas generuojamą SVG; neturint duomenų rodomas aiškus paaiškinimas. Datų laukai atskirti tarpais.",
+    "Supabase darbų įvykių žurnalas nuo šiol fiksuoja saugių laukų ankstesnes ir naujas reikšmes. Administratoriui galima išskleisti įvykį, matyti dabartinį susijusį darbą ir atidaryti jį. Seniems įrašams neišgalvojami duomenys.",
+    "Nuotraukų, darbų, pranešimų istorija ir esamos rolės nekeistos; jokio automatinio trynimo."
+   ],commits:[]},
   {date:"2026-10-19",version:"V2.3.12",category:"taisymas",
    title:"2000 px nuotraukų R2 API suderinamumas",
    details:[

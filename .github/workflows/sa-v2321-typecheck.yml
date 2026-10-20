@@ -1,0 +1,41 @@
+name: ŠA V2.3.21 – charts, personnel, messaging and audit TS
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/routes/analitika.tsx'
+      - 'src/routes/istorija.tsx'
+      - 'src/routes/darbuotojai.tsx'
+      - 'src/routes/pranesimai.tsx'
+      - 'src/components/app/AnalyticsSvg.tsx'
+      - 'src/components/app/StaffInbox.tsx'
+      - 'src/components/app/PersonnelDateField.tsx'
+      - 'src/lib/staff-messages.ts'
+      - 'src/test/sa-v2321-ui.test.tsx'
+      - '.github/workflows/sa-v2321-typecheck.yml'
+permissions: {contents: read}
+jobs:
+  sa-v2321:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build app and generate route types
+        run: npm run build
+      - name: Check V2.3.21 changed TypeScript files
+        shell: bash
+        run: |
+          set +e
+          npx tsc --noEmit --pretty false > /tmp/sa-v2321-tsc.log 2>&1
+          result=$?
+          set -e
+          if grep -Eq '^src/(components/app/(AnalyticsSvg|StaffInbox|JobRow|PersonnelDateField)[.]tsx|lib/staff-messages[.]ts|routes/(analitika|istorija|darbuotojai|pranesimai)[.]tsx|test/sa-v2321-ui[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2321-tsc.log; then
+            grep -E '^src/(components/app/(AnalyticsSvg|StaffInbox|JobRow|PersonnelDateField)[.]tsx|lib/staff-messages[.]ts|routes/(analitika|istorija|darbuotojai|pranesimai)[.]tsx|test/sa-v2321-ui[.]test[.]tsx)\([0-9]+,[0-9]+\): error TS' /tmp/sa-v2321-tsc.log
+            exit 1
+          fi
+          if [ "$result" -ne 0 ]; then echo "::warning::Existing unrelated project TypeScript diagnostics: $(grep -c 'error TS' /tmp/sa-v2321-tsc.log || true)"; fi
+      - name: UI and messaging regression tests
+        run: npm test -- src/test/sa-v2321-ui.test.tsx src/test/staff-messages.test.ts
