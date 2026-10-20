@@ -176,9 +176,16 @@
 .sa-personnel-date-input::-webkit-datetime-edit { padding:0; display:flex; align-items:center; min-height:100%; }
 .sa-personnel-date-input::-webkit-calendar-picker-indicator { cursor:pointer; }
 /* Mobile charts and dates must retain spacing/width on Safari. */
-.sa-analytics-dates { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; width:100%; }
-.sa-analytics-dates label {display:flex;flex-direction:column;min-width:0;}
-.sa-analytics-dates input {width:100%;min-width:0;box-sizing:border-box;}
+/* V2.3.22: iOS form controls have intrinsic min-content widths; constrain both fields. */
+.sa-analytics-dates { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); column-gap:16px; width:100%; max-width:100%; min-width:0; }
+.sa-analytics-dates label {display:flex;flex-direction:column;min-width:0;max-width:100%;overflow:hidden;}
+.sa-analytics-dates input {display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;min-height:44px;font-size:16px; padding:8px;overflow:hidden;}
+.sa-analytics-dates input::-webkit-date-and-time-value {min-width:0;max-width:100%;text-align:left;}
+.sa-analytics-dates input::-webkit-datetime-edit {min-width:0;max-width:100%;}
+@media (max-width:380px) {
+  .sa-analytics-dates {column-gap:12px;}
+  .sa-analytics-dates input {padding-inline:5px;font-size:14px;}
+}
 /* A mobile job dialog may scroll vertically, but must not enlarge the horizontal viewport. */
 .sa-job-dialog {
   box-sizing:border-box; width:calc(100vw - 1.5rem);
