@@ -7,6 +7,7 @@
 ## Chronologija
 | Data | Versija | Esmė | GitHub |
 |---|---|---|---|
+| 2026-10-20 | **Švari Aplinka V2.3.24** – vienodos puslapių antraštės | Visuose pagrindiniuose ir papildomuose programėlės puslapiuose antraštė su „Pranešimai“ vienoje eilutėje pagal „Apžvalgos“ pavyzdį. Bendras `PageHeader`, veiksmai žemiau antraštės, ilgų pavadinimų pritaikymas iPhone. Jokių Supabase, R2 ar darbų duomenų pakeitimų; vizualinis iPhone patikrinimas likęs. | [V2.3.24 šaka](https://github.com/deoxesinfo/svari-aplinka-pwa/tree/feat/sa-v2324-unified-page-header) |
 | 2026-10-19 | **Švari Aplinka V2.3.12** – R2 2000 px klaidos taisymas | PWA siunčia iki 2000 px, Worker dabar palaiko iki 2000 px vietoj 1600. Failo dydžio, GPS, organizacijos ir 15 nuotraukų ribos nesikeičia. Senų nuotraukų metaduomenys išsaugoti. Saugyklos valymo funkcija neatidaroma be naujo patvirtinimo. | GitHub PR V2.3.12 |
 | 2026-10-19 | **Švari Aplinka V2.3.11** – nuotraukų kokybė | Adaptyvus 2000 / 1800 / 1600 px WebP/JPEG, failo dydžio kontrolė, iPhone JPEG atsarginis variantas; Worker fotografijos audito įkėlėjo ID. Mokamų Google Places API nepridėta. | PR V2.3.11 |
 | 2026-10-19 | **Švari Aplinka V2.3.10** – darbai ir GPS be laiko limitų | Nauji Šiandien / Atlikti / Visi darbai skirtukai, atliktų datos filtrai; GPS patikra fotografuojant ir užbaigiant, **be sesijų ir laikmačio**, 30/50/100 m; iOS/Android leidimų patikra, R2 serverio laikas ir tikslus nuotraukų dubliavimas, ribotos darbuotojų teisės. | GitHub PR #7 |
