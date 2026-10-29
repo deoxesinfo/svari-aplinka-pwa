@@ -1,0 +1,25 @@
+name: ŠA V2.3.26 – optional personnel fields
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lib/types.ts'
+      - 'src/routes/darbuotojai.tsx'
+      - 'src/lib/changelog.ts'
+      - 'src/test/sa-v2326-personnel-optional-fields.test.ts'
+      - '.github/workflows/sa-v2326-personnel-qa.yml'
+permissions: {contents: read}
+jobs:
+  personnel-ui-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Full tests
+        run: npm test

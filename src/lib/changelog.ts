@@ -8,6 +8,17 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-29",version:"V2.3.26",category:"taisymas",
+   title:"Nepasirinkta personalo grupė ir pareigos, be nereikalingų etikečių",
+   details:[
+    "Redaguojant ar kuriant personalo profilį, laukuose „Personalo grupė“ ir „Pareigos“ yra naujas pasirinkimas „Nepasirinkta“.",
+    "Pasirinkus „Nepasirinkta“, atitinkama bendrinė etiketė darbuotojo kortelėje nerodoma; tikslus pareigų pavadinimas, jei įrašytas, toliau matomas.",
+    "Tuščios reikšmės išsaugomos per programėlės įprastą Supabase sinchronizavimą, todėl redaguojant profilį pasirinkimai neatsistato automatiškai.",
+    "Personalo grupės etiketės slėpimas nepakeičia vidinio darbo organizavimo vaidmens ar Supabase prisijungimo teisių.",
+    "Esami darbuotojų kodai, darbo pradžios datos, nuotraukos, archyvas, darbai ir darbo laikotarpių istorija nekeičiami."
+   ],commits:[]},
+
+
   {date:"2026-10-29",version:"V2.3.25",category:"funkcija",
    title:"Personalo kortelėse – darbuotojų kodai ir tikslios pareigos",
    details:[
