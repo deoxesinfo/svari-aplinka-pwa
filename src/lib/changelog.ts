@@ -8,6 +8,17 @@ export type ChangeEntry = {
 export type PlannedEntry = { title: string; summary: string; status: "Laukia" | "Vėlesnis etapas"; stage: string };
 
 export const CHANGELOG: ChangeEntry[] = [
+  {date:"2026-10-29",version:"V2.3.25",category:"funkcija",
+   title:"Personalo kortelėse – darbuotojų kodai ir tikslios pareigos",
+   details:[
+    "Pridėtas neprivalomas darbuotojo kodo laukas: kodai išsaugomi kaip tekstas, todėl išlieka nuliai pradžioje.",
+    "Pridėtas tikslių pareigų pavadinimas, kad personalo kortelėse būtų matomos originalios pareigos, o ne vien bendroji kategorija.",
+    "Darbuotojo kodą ir pareigas galima peržiūrėti, redaguoti ir naudoti paieškoje; atliekama kodo unikalumo patikra.",
+    "Darbo pradžios datos ir darbo laikotarpių istorija išsaugomos; esamų archyvuotų profilių ir Supabase schemos nekeista.",
+    "11 darbuotojų duomenų importavimas iš pateiktos lentelės atliekamas atskirai tiesiogiai Supabase; darbuotojų asmens duomenys nėra įrašomi į GitHub."
+   ],commits:[]},
+
+
   {date:"2026-10-20",version:"V2.3.24",category:"taisymas",
    title:"Vienodos puslapių antraštės ir pranešimų lygiavimas telefone bei kompiuteryje",
    details:[
