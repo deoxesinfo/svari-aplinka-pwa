@@ -1,0 +1,24 @@
+name: ŠA V2.3.25 – personnel codes and roles
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'src/lib/types.ts'
+      - 'src/routes/darbuotojai.tsx'
+      - 'src/test/sa-v2325-personnel.test.ts'
+      - '.github/workflows/sa-v2325-personnel-qa.yml'
+permissions: {contents: read}
+jobs:
+  personnel-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+      - name: Build
+        run: npm run build
+      - name: Tests
+        run: npm test
