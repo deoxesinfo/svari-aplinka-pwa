@@ -12,7 +12,7 @@ import { PersonnelDateField } from "@/components/app/PersonnelDateField";
 import { useSchedules } from "@/components/app/AssignedSchedules";
 import { formatDays,travelModes } from "@/lib/work-assignments";
 import { Link } from "@tanstack/react-router";
-import { PERSON_POSITION_LABEL, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
+import { PERSON_POSITION_LABEL, personPositionLabel, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
 
 export const Route = createFileRoute("/darbuotojai")({ component: PeoplePage });
 const ROLES: Record<PersonRole,string>={
@@ -24,7 +24,7 @@ const STATUSES: Record<PersonStatus,string>={
 type Tab = "personalas" | "archyvas" | "skelbimai";
 const newPerson=():PersonInput=>({
   name:"",role:"darbuotojas",position:"valytojas",status:"aktyvus",
-  startedAt:todayISO(),endedAt:undefined,notes:"",phone:""
+  startedAt:todayISO(),endedAt:undefined,notes:"",phone:"",employeeCode:"",positionTitle:""
 });
 function PeoplePage(){
   const {people,jobs,addresses,recruitmentLinks}=useAppState();
@@ -45,7 +45,7 @@ function PeoplePage(){
   const filtered=useMemo(()=>people.filter(p=>{
     const inTab=tab==="archyvas" ? p.status==="nebedirba" : p.status!=="nebedirba";
     return inTab && (filter==="visi"||p.role===filter) &&
-      (p.name+" "+p.notes+" "+(PERSON_POSITION_LABEL[p.position || "kita"])).toLocaleLowerCase("lt").includes(search.toLocaleLowerCase("lt"));
+      (p.name+" "+(p.employeeCode||"")+" "+p.notes+" "+personPositionLabel(p)).toLocaleLowerCase("lt").includes(search.toLocaleLowerCase("lt"));
   }),[people,search,filter,tab]);
   const archived=people.filter(p=>p.status==="nebedirba").length;
   const active=people.filter(p=>p.status==="aktyvus").length;
@@ -54,7 +54,7 @@ function PeoplePage(){
     setEditing(p||null);
     setDraft(p?{
       name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"kita"),
-      status:p.status,notes:p.notes,phone:p.phone||"",startedAt:p.startedAt,endedAt:p.endedAt,
+      status:p.status,notes:p.notes,phone:p.phone||"",employeeCode:p.employeeCode||"",positionTitle:p.positionTitle||"",startedAt:p.startedAt,endedAt:p.endedAt,
     }:newPerson());
     setOpened(true);
   };
@@ -89,11 +89,20 @@ function PeoplePage(){
     if(editing?.status==="nebedirba" && working && editing.endedAt && draft.startedAt && draft.startedAt <= editing.endedAt){
       toast.error("Naujas darbo laikotarpis turi prasidėti po ankstesnio pabaigos");return;
     }
+    const employeeCode=(draft.employeeCode||"").trim();
+    if(employeeCode && !/^[0-9]{1,12}$/.test(employeeCode)){
+      toast.error("Darbuotojo kodas turi būti iki 12 skaitmenų");return;
+    }
+    if(employeeCode && people.some(p=>p.id!==editing?.id && p.employeeCode===employeeCode)){
+      toast.error("Šis darbuotojo kodas jau naudojamas");return;
+    }
+    const positionTitle=(draft.positionTitle||"").trim();
+    if(positionTitle.length>100){toast.error("Pareigų pavadinimas per ilgas");return;}
     const phone=(draft.phone||"").trim();
     if(phone && (!/^[+()0-9 .-]{6,22}$/.test(phone) || phone.replace(/\D/g,"").length<6)){
       toast.error("Įveskite tinkamą telefono numerį arba palikite lauką tuščią");return;
     }
-    const input={...draft,name,phone};
+    const input={...draft,name,phone,employeeCode,positionTitle};
     if(editing)updatePerson(editing.id,input);else addPerson(input);
     toast.success(editing?"Darbuotojo istorija išsaugota":"Asmuo įtrauktas į registrą");
     setOpened(false);
@@ -112,7 +121,7 @@ function PeoplePage(){
     setTab("archyvas");setEditing(p);
     setDraft({
       name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"valytojas"),
-      status:"aktyvus",notes:p.notes,phone:p.phone||"",startedAt:todayISO(),endedAt:undefined
+      status:"aktyvus",notes:p.notes,phone:p.phone||"",employeeCode:p.employeeCode||"",positionTitle:p.positionTitle||"",startedAt:todayISO(),endedAt:undefined
     });
     setOpened(true);
   };
@@ -183,8 +192,9 @@ function PeoplePage(){
             <PersonAvatar key={p.avatarPhotoId||"none"} person={p}/>
             <div className="min-w-0 space-y-1">
               <p className="break-words text-base font-semibold leading-snug">{p.name}</p>
+              {p.employeeCode&&<p className="text-xs text-muted-foreground">Darbuotojo kodas: {p.employeeCode}</p>}
               <div className="flex flex-wrap gap-1.5">
-                <Pill>{PERSON_POSITION_LABEL[p.position||(p.role==="vadybininkas"?"vadybininkas":"kita")]}</Pill>
+                <Pill>{personPositionLabel(p)}</Pill>
                 <Pill>{ROLES[p.role]}</Pill>
                 <Pill tone={p.status==="aktyvus"?"success":p.status==="nebedirba"?"danger":"neutral"}>{STATUSES[p.status]}</Pill>
               </div>
@@ -230,7 +240,8 @@ function PeoplePage(){
         <DialogHeader><DialogTitle>{editing?"Redaguoti personalo profilį":"Naujas personalo profilis"}</DialogTitle>
           <DialogDescription>Darbuotojo profilis saugomas Supabase. Atskira darbuotojo prisijungimo paskyra ir pranešimai pridedami vėliau.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
-          <Field label="Vardas ir pavardė"><input className={inputCls} value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Tik fiktyvus DEMO vardas"/></Field>
+          <Field label="Vardas ir pavardė"><input className={inputCls} value={draft.name} onChange={e=>setDraft(d=>({...d,name:e.target.value}))} placeholder="Vardas Pavardė"/></Field>
+          <Field label="Darbuotojo kodas (neprivaloma)"><input className={inputCls} type="text" inputMode="numeric" maxLength={12} value={draft.employeeCode||""} onChange={e=>setDraft(d=>({...d,employeeCode:e.target.value}))} placeholder="Pvz., 005"/></Field>
           <Field label="Telefono numeris (neprivaloma)"><input type="tel" autoComplete="tel" inputMode="tel" maxLength={22} className={inputCls} value={draft.phone||""} onChange={e=>setDraft(d=>({...d,phone:e.target.value}))} placeholder="+370 6XX XXXXX"/></Field>
           <div className="grid gap-3 sm:grid-cols-2">
             <Field label="Personalo grupė"><select className={inputCls} value={draft.role} onChange={e=>changeRole(e.target.value as PersonRole)}>
@@ -240,6 +251,7 @@ function PeoplePage(){
               {Object.entries(PERSON_POSITION_LABEL).map(([value,label])=><option key={value} value={value}>{label}</option>)}
             </select></Field>
           </div>
+          <Field label="Tikslus pareigų pavadinimas (neprivaloma)"><input className={inputCls} maxLength={100} value={draft.positionTitle||""} onChange={e=>setDraft(d=>({...d,positionTitle:e.target.value}))} placeholder="Pvz., Teritorijos tvarkytojas"/></Field>
           <Field label="Būsena"><select className={inputCls} value={draft.status} onChange={e=>changeStatus(e.target.value as PersonStatus)}>
             {Object.entries(STATUSES).map(([value,label])=><option key={value} value={value}>{label}</option>)}
           </select></Field>
