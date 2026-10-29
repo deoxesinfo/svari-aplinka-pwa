@@ -12,18 +12,16 @@ import { PersonnelDateField } from "@/components/app/PersonnelDateField";
 import { useSchedules } from "@/components/app/AssignedSchedules";
 import { formatDays,travelModes } from "@/lib/work-assignments";
 import { Link } from "@tanstack/react-router";
-import { PERSON_POSITION_LABEL, personPositionLabel, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
+import { PERSON_POSITION_LABEL, PERSON_ROLE_LABEL, personPositionLabel, personGroupLabel, type Person, type PersonRole, type PersonStatus, type PersonPosition } from "@/lib/types";
 
 export const Route = createFileRoute("/darbuotojai")({ component: PeoplePage });
-const ROLES: Record<PersonRole,string>={
-  darbuotojas:"Darbuotojas (-a)", vadybininkas:"Vadybininkas (-ė)", kandidatas:"Kandidatas (-ė)"
-};
+const ROLES = PERSON_ROLE_LABEL;
 const STATUSES: Record<PersonStatus,string>={
   aktyvus:"Aktyvus", atostogos:"Atostogauja", nebedirba:"Nebedirba", kandidatas:"Kandidatas"
 };
 type Tab = "personalas" | "archyvas" | "skelbimai";
 const newPerson=():PersonInput=>({
-  name:"",role:"darbuotojas",position:"valytojas",status:"aktyvus",
+  name:"",role:"darbuotojas",showPersonnelGroup:true,position:"valytojas",status:"aktyvus",
   startedAt:todayISO(),endedAt:undefined,notes:"",phone:"",employeeCode:"",positionTitle:""
 });
 function PeoplePage(){
@@ -53,14 +51,14 @@ function PeoplePage(){
   const openForm=(p?:Person)=>{
     setEditing(p||null);
     setDraft(p?{
-      name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"kita"),
+      name:p.name,role:p.role,showPersonnelGroup:p.showPersonnelGroup!==false,position:p.position??(p.role==="vadybininkas"?"vadybininkas":"kita"),
       status:p.status,notes:p.notes,phone:p.phone||"",employeeCode:p.employeeCode||"",positionTitle:p.positionTitle||"",startedAt:p.startedAt,endedAt:p.endedAt,
     }:newPerson());
     setOpened(true);
   };
   const changeRole=(role:PersonRole)=>{
     setDraft(d=>({
-      ...d,role,
+      ...d,role,showPersonnelGroup:true,
       position:role==="vadybininkas"?"vadybininkas":d.position==="vadybininkas"?"valytojas":d.position,
       status:role==="kandidatas"?"kandidatas":d.status==="kandidatas"?"aktyvus":d.status,
       startedAt:role==="kandidatas"?undefined:d.startedAt||todayISO()
@@ -120,7 +118,7 @@ function PeoplePage(){
   const startRehire=(p:Person)=>{
     setTab("archyvas");setEditing(p);
     setDraft({
-      name:p.name,role:p.role,position:p.position||(p.role==="vadybininkas"?"vadybininkas":"valytojas"),
+      name:p.name,role:p.role,showPersonnelGroup:p.showPersonnelGroup!==false,position:p.position??(p.role==="vadybininkas"?"vadybininkas":"valytojas"),
       status:"aktyvus",notes:p.notes,phone:p.phone||"",employeeCode:p.employeeCode||"",positionTitle:p.positionTitle||"",startedAt:todayISO(),endedAt:undefined
     });
     setOpened(true);
@@ -194,8 +192,8 @@ function PeoplePage(){
               <p className="break-words text-base font-semibold leading-snug">{p.name}</p>
               {p.employeeCode&&<p className="text-xs text-muted-foreground">Darbuotojo kodas: {p.employeeCode}</p>}
               <div className="flex flex-wrap gap-1.5">
-                <Pill>{personPositionLabel(p)}</Pill>
-                <Pill>{ROLES[p.role]}</Pill>
+                {personPositionLabel(p)&&<Pill>{personPositionLabel(p)}</Pill>}
+                {personGroupLabel(p)&&<Pill>{personGroupLabel(p)}</Pill>}
                 <Pill tone={p.status==="aktyvus"?"success":p.status==="nebedirba"?"danger":"neutral"}>{STATUSES[p.status]}</Pill>
               </div>
               <p className="text-xs leading-relaxed text-muted-foreground">{assigned.length} darbai · {buildingCount} objektai · {permanent.length} priskyrimai</p>
@@ -244,10 +242,13 @@ function PeoplePage(){
           <Field label="Darbuotojo kodas (neprivaloma)"><input className={inputCls} type="text" inputMode="numeric" maxLength={12} value={draft.employeeCode||""} onChange={e=>setDraft(d=>({...d,employeeCode:e.target.value}))} placeholder="Pvz., 005"/></Field>
           <Field label="Telefono numeris (neprivaloma)"><input type="tel" autoComplete="tel" inputMode="tel" maxLength={22} className={inputCls} value={draft.phone||""} onChange={e=>setDraft(d=>({...d,phone:e.target.value}))} placeholder="+370 6XX XXXXX"/></Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Personalo grupė"><select className={inputCls} value={draft.role} onChange={e=>changeRole(e.target.value as PersonRole)}>
+            <Field label="Personalo grupė"><select aria-label="Personalo grupė" className={inputCls} value={draft.showPersonnelGroup===false?"":draft.role}
+              onChange={e=>e.target.value===""?setDraft(d=>({...d,showPersonnelGroup:false})):changeRole(e.target.value as PersonRole)}>
+              <option value="">Nepasirinkta</option>
               {Object.entries(ROLES).map(([value,label])=><option key={value} value={value}>{label}</option>)}
             </select></Field>
-            <Field label="Pareigos"><select className={inputCls} value={draft.position||"kita"} onChange={e=>setDraft(d=>({...d,position:e.target.value as PersonPosition}))}>
+            <Field label="Pareigos"><select aria-label="Pareigos" className={inputCls} value={draft.position??""} onChange={e=>setDraft(d=>({...d,position:e.target.value as PersonPosition}))}>
+              <option value="">Nepasirinkta</option>
               {Object.entries(PERSON_POSITION_LABEL).map(([value,label])=><option key={value} value={value}>{label}</option>)}
             </select></Field>
           </div>
