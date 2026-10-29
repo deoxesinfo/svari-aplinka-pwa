@@ -14,6 +14,8 @@ export const PERSON_POSITION_LABEL: Record<PersonPosition, string> = {
   vadybininkas: "Vadybininkas (-ė)",
   kita: "Kitos pareigos",
 };
+export const personPositionLabel = (p: Pick<Person, "position" | "positionTitle" | "role">): string =>
+  p.positionTitle?.trim() || PERSON_POSITION_LABEL[p.position || (p.role === "vadybininkas" ? "vadybininkas" : "kita")];
 import type { LocationResult, GpsRadius } from "./gps";
 export type EmploymentPeriod = { startedAt?: string; endedAt?: string };
 export interface Person {
@@ -22,6 +24,10 @@ export interface Person {
   role: PersonRole;
   /** Actual job title; separate from account permissions. */
   position?: PersonPosition | undefined;
+  /** Original job title, preserving exact wording from personnel records. */
+  positionTitle?: string;
+  /** Company employee number (text so leading zeroes remain intact). */
+  employeeCode?: string;
   status: PersonStatus;
   notes: string;
   phone?: string | undefined; // optional staff contact, available only to authorized personnel
