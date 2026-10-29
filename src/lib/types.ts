@@ -5,23 +5,33 @@ export type PhotoTag = "pries" | "po" | "problema";
 export type Inspection = "patikrinta" | "taisyti" | null;
 export type Priority = "zema" | "vidutine" | "auksta";
 export type PersonRole = "darbuotojas" | "vadybininkas" | "kandidatas";
+export const PERSON_ROLE_LABEL: Record<PersonRole, string> = {
+  darbuotojas: "Darbuotojas (-a)",
+  vadybininkas: "Vadybininkas (-ė)",
+  kandidatas: "Kandidatas (-ė)",
+};
 export type PersonStatus = "aktyvus" | "atostogos" | "nebedirba" | "kandidatas";
 /** Būsima prisijungimo rolė ir profesija saugomos atskirai. */
-export type PersonPosition = "valytojas" | "kiemsargis" | "vadybininkas" | "kita";
-export const PERSON_POSITION_LABEL: Record<PersonPosition, string> = {
+export type PersonPosition = "valytojas" | "kiemsargis" | "vadybininkas" | "kita" | "";
+export const PERSON_POSITION_LABEL: Record<Exclude<PersonPosition, "">, string> = {
   valytojas: "Valytojas (-a)",
   kiemsargis: "Kiemsargis (-ė)",
   vadybininkas: "Vadybininkas (-ė)",
   kita: "Kitos pareigos",
 };
 export const personPositionLabel = (p: Pick<Person, "position" | "positionTitle" | "role">): string =>
-  p.positionTitle?.trim() || PERSON_POSITION_LABEL[p.position || (p.role === "vadybininkas" ? "vadybininkas" : "kita")];
+  p.positionTitle?.trim() || (p.position === "" ? "" : PERSON_POSITION_LABEL[p.position || (p.role === "vadybininkas" ? "vadybininkas" : "kita")]);
+/** Empty personnel group hides only its display label. Operational role and account privileges are unchanged. */
+export const personGroupLabel = (p: Pick<Person, "role" | "showPersonnelGroup">): string =>
+  p.showPersonnelGroup === false ? "" : PERSON_ROLE_LABEL[p.role];
 import type { LocationResult, GpsRadius } from "./gps";
 export type EmploymentPeriod = { startedAt?: string; endedAt?: string };
 export interface Person {
   id: string;
   name: string;
   role: PersonRole;
+  /** Optional personnel group display; false means "Nepasirinkta", without altering operational role. */
+  showPersonnelGroup?: boolean;
   /** Actual job title; separate from account permissions. */
   position?: PersonPosition | undefined;
   /** Original job title, preserving exact wording from personnel records. */
