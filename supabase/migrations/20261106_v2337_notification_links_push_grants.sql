@@ -33,10 +33,13 @@ with candidate as (
    and r.reply_text is not null and r.replied_at is not null
    and abs(extract(epoch from(n.created_at-r.replied_at)))<60
  where n.kind='staff_reply' and n.related_message_id is null
+), unambiguous as (
+ select c.*,row_number() over(partition by c.receipt_id order by c.notice_id) as receipt_rank
+ from candidate c where c.candidate_count=1
 )
 update public.sa_notifications n
 set related_message_id=c.message_id,related_receipt_id=c.receipt_id
-from candidate c where c.notice_id=n.id and c.candidate_count=1;
+from unambiguous c where c.notice_id=n.id and c.receipt_rank=1;
 
 -- Receipt-owned explicit mark-as-read, including message:view accounts.
 -- No cross-organization, recipient, or write privilege escalation.
@@ -132,7 +135,7 @@ begin
    insert into public.sa_push_outbox
     (organization_id,recipient_id,source_type,source_id,title,body,path,scheduled_at)
    values(new.organization_id,new.recipient_id,'staff',new.id,
-     left(msg.title,120),left(msg.body,512),
+     left(msg.title,120),'Gavote asmeninę žinutę. Atidarykite Švari Aplinka.',
      '/#/pranesimai?tab=gauti&message='||new.message_id::text,msg.scheduled_for)
    on conflict(source_type,source_id,recipient_id) do nothing;
  end if;
