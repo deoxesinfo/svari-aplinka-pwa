@@ -38,36 +38,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-      # Guarded recovery of the specific ghost deployment from 2026-11-05.
-      # 204 means cancellation accepted, not necessarily that Pages has cleared the lock.
-      - name: Ensure earlier Pages deployment finished
-        timeout-minutes: 4
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          url="https://api.github.com/repos/$GITHUB_REPOSITORY/pages/deployments/9a03890ada5e1ed4df7cedc1bc23b8067ab4d5ed"
-          for attempt in 1 2 3 4 5 6; do
-            response="$(curl -fsS -H 'Accept: application/vnd.github+json' \
-              -H 'X-GitHub-Api-Version: 2026-03-10' \
-              -H "Authorization: Bearer $GH_TOKEN" "$url")"
-            state="$(printf '%s' "$response" | jq -r '.status // empty')"
-            echo "Prior Pages state (check $attempt): $state"
-            case "$state" in
-              canceled|cancelled|deployment_cancelled|deployment_canceled|failed|failure|deployment_failed|errored|error|succeed|success|inactive)
-                echo "Prior deployment is no longer active."; exit 0;;
-              in_progress|queued|pending|updating_pages|requested)
-                code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
-                  -H 'Accept: application/vnd.github+json' \
-                  -H 'X-GitHub-Api-Version: 2026-03-10' \
-                  -H "Authorization: Bearer $GH_TOKEN" "$url/cancel")"
-                echo "Cancellation requested (HTTP $code)"
-                if [ "$code" != "204" ] && [ "$code" != "404" ]; then exit 1; fi;;
-              *) echo "::error::Unexpected previous deployment state; stopping"; exit 1;;
-            esac
-            sleep 20
-          done
-          echo "::error::The old Pages deployment remains active despite cancellation requests."
-          exit 1
+      # The one-time 2026-11-05 Pages cancellation was completed.
+      # Let the official deploy-pages action manage active deployment state.
       - id: deployment
         uses: actions/deploy-pages@v4
