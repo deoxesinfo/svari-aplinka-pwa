@@ -3,11 +3,12 @@ import { fillAssignments } from "./work-assignments";
 import type { AppState } from "./store";
 import type { Address, Job, Person, PhotoMeta, RecruitmentLink } from "./types";
 import { newestPhotosFirst } from "./photo-sort";
+import { setSAAccess,clearSAAccess,type SARole,type SAPermissionMap } from "./sa-access";
 
-export type LiveCloudRole="admin"|"worker";
-let currentRole:LiveCloudRole="admin";
+export type LiveCloudRole=SARole;
+let currentRole:LiveCloudRole="worker";
 export const getCloudRole=()=>currentRole;
-export const resetCloudRole=()=>{currentRole="admin"};
+export const resetCloudRole=()=>{currentRole="worker";clearSAAccess()};
 type Collection="addresses"|"jobs"|"people"|"recruitmentLinks";
 type Entity=Address|Job|Person|RecruitmentLink;
 const TABLE:Record<Collection,string>={addresses:"sa_addresses",jobs:"sa_jobs",people:"sa_people",recruitmentLinks:"sa_recruitment_links"};
@@ -60,18 +61,26 @@ export async function loadCloudState(org:string):Promise<Pick<AppState,"addresse
   if(error||!data.user)throw new Error("Sesija nepatvirtinta");
   const verified=await supabase.from("sa_memberships").select("role").eq("organization_id",org)
     .eq("user_id",data.user.id).eq("active",true).single();
-  if(verified.error||!["admin","worker"].includes(verified.data?.role||""))
+  if(verified.error||!["admin","manager","worker"].includes(verified.data?.role||""))
     throw new Error("Įmonės paskyrai nesuteiktos šios programėlės teisės");
-  const isAdmin=verified.data?.role==="admin";
+  const role=verified.data!.role as SARole;
+  const permissionQuery=await supabase.from("sa_user_permissions")
+    .select("module,access").eq("organization_id",org).eq("user_id",data.user.id);
+  if(permissionQuery.error)throw new Error("Nepavyko patikrinti paskyros funkcijų teisių");
+  const permissions=Object.fromEntries((permissionQuery.data||[]).map(row=>[row.module,row.access])) as SAPermissionMap;
+  const isAdmin=role==="admin";
+  const mayRead=(module:keyof SAPermissionMap)=>isAdmin||((permissions[module]??"none")!=="none");
   // The rolling horizon and all administrative writes remain admin-only.
   if(isAdmin)await fillAssignments(org);
   const [addresses,jobs,people,recruitmentLinks,photos]=await Promise.all([
-    fetchCollection<Address>(org,"addresses"),fetchCollection<Job>(org,"jobs"),
-    fetchCollection<Person>(org,"people"),
+    mayRead("addresses")?fetchCollection<Address>(org,"addresses"):Promise.resolve([]),
+    mayRead("jobs")?fetchCollection<Job>(org,"jobs"):Promise.resolve([]),
+    mayRead("people")?fetchCollection<Person>(org,"people"):Promise.resolve([]),
     isAdmin?fetchCollection<RecruitmentLink>(org,"recruitmentLinks"):Promise.resolve([]),
-    fetchPhotoMetadata(org)
+    mayRead("photos")?fetchPhotoMetadata(org):Promise.resolve([])
   ]);
-  currentRole=isAdmin?"admin":"worker";
+  currentRole=role;
+  setSAAccess(role,permissions);
   return {addresses,jobs,people,recruitmentLinks,photos,
     workers:people.filter(p=>p.role==="darbuotojas"&&(p.status==="aktyvus"||p.status==="atostogos")).map(p=>p.name)};
 }
