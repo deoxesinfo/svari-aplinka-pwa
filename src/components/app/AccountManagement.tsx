@@ -42,17 +42,12 @@ export function AccountManagement({organizationId}:{organizationId:string}){
       // shows only "non-2xx status code". Preserve the actual safe server message.
       const context=(error as typeof error & {context?:Response}).context;
       if(context && typeof context.clone==="function"){
+        let apiMessage="";
         try {
           const result=await context.clone().json() as {error?:unknown};
-          if(typeof result?.error==="string" && result.error.trim())
-            throw new Error(result.error.trim());
-        } catch (reason) {
-          if(reason instanceof Error && reason.message!=="") {
-            // A JSON parse error must not replace the more useful HTTP status.
-            if(reason instanceof SyntaxError) {/* fall through */}
-            else throw reason;
-          }
-        }
+          if(typeof result?.error==="string")apiMessage=result.error.trim();
+        } catch {/* Use HTTP status if no JSON error was returned. */}
+        if(apiMessage)throw new Error(apiMessage);
         throw new Error("Paskyrų serveris grąžino HTTP "+context.status+". Patikrinkite administratoriaus teises ir el. pašto nustatymus.");
       }
       throw new Error("Paskyrų valdymo ryšio klaida: "+error.message);
