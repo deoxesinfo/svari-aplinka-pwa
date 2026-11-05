@@ -9,6 +9,7 @@ import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { canView,canEdit,moduleForPath,useSAAccess,SA_MODULES } from "@/lib/sa-access";
 import { cn } from "@/lib/utils";
 import {AppLoading} from "@/components/app/AppLoading";
+import {VersionNotice} from "@/components/app/VersionNotice";
 import {supabase} from "@/lib/supabase-client";
 
 export const NAV = [
@@ -170,6 +171,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-sm font-bold">Švari Aplinka</span>
           <span className="text-sm text-muted-foreground">· Darbų valdymas</span>
         </header>
+        <VersionNotice />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8">
           {blocked ? <section className="card-surface mx-auto max-w-xl space-y-3 p-6" role="alert">
             <h1 className="text-xl font-semibold">Šiai funkcijai prieiga nesuteikta</h1>
