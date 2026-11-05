@@ -7,7 +7,7 @@ const mock=vi.hoisted(()=>({
 vi.mock("@/lib/store",()=>({getCloudOrganizationId:()=>"org-test"}));
 vi.mock("@/lib/sa-access",()=>({canEdit:()=>true,useSAAccess:()=>({})}));
 vi.mock("@/lib/staff-messages",()=>({
- listStaffInbox:mock.list,hideStaffMessage:mock.hide,
+ listStaffInbox:mock.list,listStaffParticipants:async()=>[],hideStaffMessage:mock.hide,
  purgeOwnStaffMessage:mock.purge,
  acknowledgeStaffMessage:vi.fn(),replyToStaffMessage:vi.fn(),
 }));
