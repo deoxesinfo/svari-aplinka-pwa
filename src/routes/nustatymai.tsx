@@ -6,11 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Confirm, PageHeader } from "@/components/app/ui-bits";
 import { resetDemo, useAppState, isCloudMode, refreshCloudWorkspace } from "@/lib/store";
 import { downloadCloudBackup } from "@/lib/cloud-backup";
+import { PushSettings } from "@/components/app/PushSettings";
 export const Route=createFileRoute("/nustatymai")({component:SettingsPage});
 function SettingsPage(){
  const app=useAppState();const {jobs,addresses,photos}=app;const [confirm,setConfirm]=useState(false);
  return <div><PageHeader title="Nustatymai" subtitle={isCloudMode()?"Bendri įmonės duomenys – Supabase":"DEMO V1 – vietinė demonstracija"}/>
  <div className="grid gap-4 lg:grid-cols-2">
+  {isCloudMode()&&<PushSettings/>}
   <section className="card-surface p-5"><h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Database className="size-5 text-primary"/> {isCloudMode()?"Supabase saugykla":"Vietinė DEMO saugykla"}</h2><p className="text-sm text-muted-foreground">{isCloudMode()?"Adresai, darbai ir personalas saugomi Supabase. Perėjus į kitą įrenginį jie įkeliami prisijungus; galima atnaujinti rankiniu būdu. Nuotraukos lauks R2.":"Adresai, darbai ir pastabos saugomi tik vietinėje naršyklėje."}</p>{isCloudMode()&&<Button type="button" variant="outline" className="mt-3" onClick={()=>void refreshCloudWorkspace().then(()=>toast.success("Duomenys atnaujinti")).catch(()=>toast.error("Nepavyko atnaujinti"))}>Atnaujinti iš debesijos</Button>}<div className="mt-4 grid grid-cols-3 gap-2 text-center">{[[addresses.length,"Adresai"],[jobs.length,"Darbai"],[photos.length,"Nuotraukos"]].map(([n,label])=><div key={label} className="rounded-lg bg-muted p-3"><div className="text-2xl font-bold">{n}</div><div className="text-xs text-muted-foreground">{label}</div></div>)}</div></section>
   <section className="card-surface p-5"><h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><ShieldAlert className="size-5 text-amber-600"/> Saugumo pastaba</h2><p className="text-sm text-muted-foreground">Prisijungimas ir administratoriaus teisės tvarkomos per Supabase Auth bei RLS. Cloudflare R2 nuotraukoms dar neprijungta; darbuotojų paskyrų, push ir vietos patikros galutinis bandymas dar laukia.</p></section>
   <section className="card-surface p-5"><h2 className="mb-3 flex items-center gap-2 text-lg font-semibold"><Info className="size-5 text-primary"/> Apie demonstraciją</h2><p className="text-sm text-muted-foreground">Vienas administratoriaus lygis. Galite kurti adresus, priskirti darbus, fotografuoti, pridėti pastabas, peržiūrėti istoriją ir kalendorių.</p></section>
