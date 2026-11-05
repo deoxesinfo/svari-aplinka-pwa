@@ -9,13 +9,21 @@ import {getCloudOrganizationId,isCloudMode,useAppState} from "@/lib/store";
 import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaffMessage,
  type StaffRecipient,type StaffMessage,type MessageReceipt,type MessageKind} from "@/lib/staff-messages";
 
-export const Route=createFileRoute("/pranesimai")({component:MessagesPage});
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const Route=createFileRoute("/pranesimai")({
+ validateSearch:(raw:Record<string,unknown>)=>({
+  tab:raw.tab==="issiusti"||raw.tab==="gauti"?raw.tab:undefined,
+  message:typeof raw.message==="string"&&uuid.test(raw.message)?raw.message:undefined,
+ }),
+ component:MessagesPage,
+});
 const KINDS:Record<MessageKind,string>={
  info:"Informuoti",read:"Reikia patvirtinti, kad perskaitė",response:"Reikia atsakymo",
 };
 function MessagesPage(){
  useAppState();
  const org=getCloudOrganizationId();
+ const search=Route.useSearch();
  useSAAccess();
  const canSend=isCloudMode()&&canEdit("messages");
  const [recipients,setRecipients]=useState<StaffRecipient[]>([]);
@@ -31,7 +39,13 @@ function MessagesPage(){
  const [success,setSuccess]=useState("");
  const [messages,setMessages]=useState<StaffMessage[]>([]);
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
- const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">("gauti");
+ const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">(search.tab||"gauti");
+ useEffect(()=>{if(search.tab)setTab(search.tab)},[search.tab,search.message]);
+ // Deep links only select items already visible through existing RLS policies.
+ useEffect(()=>{
+  if(tab!=="issiusti"||!search.message||!messages.some(m=>m.id===search.message))return;
+  document.getElementById("sa-message-"+search.message)?.scrollIntoView?.({block:"center",behavior:"smooth"});
+ },[tab,search.message,messages]);
  const labels=useMemo(()=>new Map([...participants,...recipients].map(p=>[p.userId,p.name])),[participants,recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!canSend)return;
@@ -88,7 +102,7 @@ function MessagesPage(){
      key={key} type="button" role="tab" aria-selected={tab===key} onClick={()=>{setTab(key);if(key==="issiusti")void refresh()}}
      className={"min-h-11 rounded-lg border px-2 text-sm font-semibold "+(tab===key?"border-primary bg-primary text-primary-foreground":"bg-card")}>{label}</button>)}
    </div>
-   {tab==="gauti"&&<StaffInbox/>}
+   {tab==="gauti"&&<StaffInbox targetMessageId={search.tab==="gauti"?search.message:undefined}/>}
    {tab==="kurti"&&<section className="rounded-xl border bg-card p-4 sm:p-6">
     <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Send className="size-5"/> Naujas pranešimas</h2>
     <form className="space-y-4" onSubmit={e=>void send(e)}>
@@ -139,7 +153,7 @@ function MessagesPage(){
       {scheduled?<Clock className="size-4"/>:<Send className="size-4"/>}
       {sending?"Siunčiama…":scheduled?"Suplanuoti":"Išsiųsti"}
      </Button>
-     <p className="text-xs text-muted-foreground">Gavėjas žinutę matys savo PWA skiltyje ir prie varpelio. Telefono užrakinimo ekrano pranešimus įjungsime sutvarkę Push. Suplanuotos žinutės iki nustatyto laiko nerodomos.</p>
+     <p className="text-xs text-muted-foreground">Gavėjas žinutę matys savo PWA skiltyje ir prie varpelio. Telefono Push veikia tik kai įrenginys turi pranešimų leidimą (įjungiamas Nustatymuose). Suplanuotos žinutės iki nustatyto laiko nerodomos.</p>
     </form>
    </section>}
    {tab==="issiusti"&&<section className="space-y-3">
@@ -148,7 +162,8 @@ function MessagesPage(){
      messages.map(m=>{
       const own=receipts.filter(r=>r.message_id===m.id);
       const delivered=new Date(m.scheduled_for).getTime()<=Date.now();
-      return <article key={m.id} className="rounded-xl border bg-card p-4">
+      return <article key={m.id} id={"sa-message-"+m.id}
+       className={"rounded-xl border bg-card p-4 "+(search.message===m.id?"ring-2 ring-primary/50":"")}>
        <div className="flex flex-wrap items-start justify-between gap-2">
         <strong>{m.title}</strong>
         <span className="rounded-full bg-muted px-2 py-1 text-xs">{delivered?"Išsiųsta programėlėje":"Suplanuota"}</span>
@@ -168,6 +183,6 @@ function MessagesPage(){
      })}
    </section>}
   </>}
-  {!canSend&&<StaffInbox/>}
+  {!canSend&&<StaffInbox targetMessageId={search.tab==="gauti"?search.message:undefined}/>}
  </div>;
 }
