@@ -6,6 +6,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "@/components/app/NotificationBell";
+import { canView } from "@/lib/sa-access";
+import { isCloudMode } from "@/lib/store";
 import { buttonVariants } from "@/components/ui/button";
 
 /** Visų programėlės puslapių antraštė: pavadinimas ir pranešimai vienoje eilutėje. */
@@ -17,7 +19,7 @@ export function PageHeader({ title, subtitle, actions }: { title: ReactNode; sub
           <h1 className="break-words text-2xl font-bold sm:text-3xl">{title}</h1>
           {subtitle && <p className="mt-1 text-sm text-muted-foreground first-letter:uppercase">{subtitle}</p>}
         </div>
-        <div className="shrink-0"><NotificationBell /></div>
+        {(!isCloudMode()||canView("messages"))&&<div className="shrink-0"><NotificationBell /></div>}
       </div>
       {actions && <div className="mt-3 flex flex-wrap gap-2">{actions}</div>}
     </header>

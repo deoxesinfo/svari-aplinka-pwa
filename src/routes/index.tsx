@@ -9,6 +9,8 @@ import { JobRow } from "@/components/app/JobRow";
 import { JobFormDialog } from "@/components/app/forms";
 import { EmptyState, PageHeader, Stat } from "@/components/app/ui-bits";
 import { cn } from "@/lib/utils";
+import { canEdit, useSAAccess } from "@/lib/sa-access";
+import { isCloudMode } from "@/lib/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -30,6 +32,8 @@ const TABS = [
 
 function Dashboard() {
   const { jobs } = useAppState();
+  useSAAccess();
+  const mayCreate=!isCloudMode()||canEdit("jobs");
   const today = todayISO();
   const [tab, setTab] = useState<(typeof TABS)[number]["k"]>("all");
   const [open, setOpen] = useState(false);
@@ -41,7 +45,7 @@ function Dashboard() {
   return (
     <div>
       <PageHeader title="Apžvalga" subtitle={fmtLong(today)}
-        actions={<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>} />
+        actions={mayCreate?<Button onClick={() => setOpen(true)}><Plus /> Naujas darbas</Button>:undefined} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Stat label="Visi šiandien" value={s.all} />
         <Stat label="Atlikti" value={s.done} tone="success" />
@@ -64,10 +68,10 @@ function Dashboard() {
       </div>
       <div className="space-y-2">
         {filtered.length ? filtered.map((j) => <JobRow key={j.id} job={j} />) : (
-          <EmptyState icon={<ClipboardList className="size-8" />} title="Šiandien darbų nėra" text="Sukurkite naują darbą arba pasirinkite kitą filtrą." />
+          <EmptyState icon={<ClipboardList className="size-8" />} title="Šiandien darbų nėra" text={mayCreate?"Sukurkite naują darbą arba pasirinkite kitą filtrą.":"Šiandien jums matomų darbų nėra."} />
         )}
       </div>
-      <JobFormDialog open={open} onOpenChange={setOpen} />
+      {mayCreate&&<JobFormDialog open={open} onOpenChange={setOpen} />}
     </div>
   );
 }
