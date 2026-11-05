@@ -26,6 +26,15 @@ export async function listStaffRecipients(org:string):Promise<StaffRecipient[]>{
    userId:row.user_id,name:row.display_name,role:row.account_role
  }));
 }
+/** Name lookup limited by the database to participants in messages visible to this user. */
+export async function listStaffParticipants(org:string):Promise<StaffRecipient[]>{
+ const {data,error}=await supabase.rpc("sa_list_message_participants",{p_org:org});
+ const people=assert(data,error,"Nepavyko gauti susirašinėjimo dalyvių");
+ return (people as {user_id:string;display_name:string;account_role:string}[]).map(row=>({
+  userId:row.user_id,name:row.display_name,role:row.account_role,
+ }));
+}
+
 export async function sendStaffMessage(org:string,params:{
  title:string;body:string;kind:MessageKind;recipients:string[];sendAt?:string;
 }):Promise<string>{
