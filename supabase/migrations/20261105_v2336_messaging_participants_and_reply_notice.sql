@@ -108,7 +108,7 @@ begin
  if v_receipt is null then return false; end if;
  if v_sender is distinct from (select auth.uid()) then
    insert into public.sa_notifications(organization_id,recipient_id,title,body,kind)
-   select p_org,v_sender,'Gautas atsakymas: '||left(v_title,100),left(btrim(p_text),300),'staff_reply'
+   select p_org,v_sender,'Gautas atsakymas: '||left(v_title,100),'Naujas atsakymas prie išsiųsto pranešimo. Atidarykite skiltį „Išsiųsti“.','staff_reply'
    where exists (
      select 1 from public.sa_memberships m
      where m.organization_id=p_org and m.user_id=v_sender and m.active
