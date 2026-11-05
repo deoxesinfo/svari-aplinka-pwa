@@ -41,6 +41,21 @@ export async function enableDevicePush(org:string,key:string):Promise<void>{
  },{onConflict:"endpoint"});
  if(error)throw new Error("Nepavyko išsaugoti įrenginio prenumeratos: "+error.message);
 }
+/** Read-only check: device subscription belongs to the current signed-in account. */
+export async function isDevicePushEnabled(org:string):Promise<boolean>{
+ if(!supportsWebPush()||needsIosHomeScreen())return false;
+ const {data:{user},error:authError}=await supabase.auth.getUser();
+ if(authError||!user)return false;
+ const scope=import.meta.env.BASE_URL||"/svari-aplinka-pwa/";
+ const reg=await navigator.serviceWorker.getRegistration(scope);
+ const sub=await reg?.pushManager.getSubscription();
+ if(!sub)return false;
+ const {data,error}=await supabase.from("sa_push_subscriptions")
+  .select("id").eq("organization_id",org).eq("user_id",user.id)
+  .eq("endpoint",sub.endpoint).limit(1);
+ if(error)throw new Error("Nepavyko patikrinti įrenginio Push būsenos");
+ return !!data?.length;
+}
 export async function disableDevicePush(org:string):Promise<void>{
  const {data:{user}}=await supabase.auth.getUser();
  if(!user)throw new Error("Reikia prisijungti");
