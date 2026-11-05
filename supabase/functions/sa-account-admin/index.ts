@@ -7,6 +7,21 @@ const MODULES = [
 type Module = typeof MODULES[number];
 type Access = "none"|"view"|"edit";
 const MODULE_SET = new Set<string>(MODULES);
+const PRESETS:Record<"manager"|"worker",Partial<Record<Module,Access>>>={
+  manager:{overview:"view",calendar:"view",jobs:"view",addresses:"view",messages:"view",photos:"view"},
+  worker:{overview:"view",calendar:"view",jobs:"view"}
+};
+function normalizeInvitePermissions(role:"manager"|"worker",input:unknown){
+  if(input!==undefined&&(typeof input!=="object"||input===null||Array.isArray(input)))
+    throw Error("Neteisingas teisių sąrašas");
+  const values=(input||PRESETS[role]) as Record<string,unknown>;
+  if(Object.keys(values).some(k=>!MODULE_SET.has(k)))throw Error("Nežinomas leidimų modulis");
+  return MODULES.filter(module=>module!=="account").map(module=>{
+    const level=values[module]??"none";
+    if(!["none","view","edit"].includes(String(level)))throw Error("Neteisingas leidimas: "+module);
+    return {module,access:level as Access};
+  });
+}
 const ALLOWED_ORIGINS = new Set([
   "https://deoxesinfo.github.io",
   "https://app.svariaplinka.lt",
@@ -51,7 +66,7 @@ Deno.serve(async(req)=>{
     if(action==="list"){
       const [m,d,p]=await Promise.all([
         service.from("sa_memberships").select("user_id,role,active,created_at").eq("organization_id",organizationId),
-        service.from("sa_account_directory").select("user_id,email,display_name,invited_at,suspended_at,deleted_at").eq("organization_id",organizationId),
+        service.from("sa_account_directory").select("user_id,email,display_name,invited_at,suspended_at,deleted_at,activation_required,activation_completed_at").eq("organization_id",organizationId),
         service.from("sa_user_permissions").select("user_id,module,access").eq("organization_id",organizationId),
       ]);
       if(m.error||d.error||p.error)throw Error("Nepavyko nuskaityti paskyrų");
@@ -64,6 +79,7 @@ Deno.serve(async(req)=>{
         return {userId:x.user_id,email,displayName:profile?.display_name||"",
           role:x.role,active:x.active,confirmed,createdAt:x.created_at,invitedAt:profile?.invited_at||null,
           suspendedAt:profile?.suspended_at||null,
+          awaitingPassword:Boolean(profile?.activation_required&&!profile?.activation_completed_at),
           permissions:Object.fromEntries((p.data||[]).filter(q=>q.user_id===x.user_id).map(q=>[q.module,q.access]))};
       }));
       return response({ok:true,accounts},200,origin);
@@ -75,22 +91,34 @@ Deno.serve(async(req)=>{
       if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254) return bad("Neteisingas el. paštas",400,origin);
       if(displayName.length>120) return bad("Per ilgas vardas",400,origin);
       if(!["manager","worker"].includes(role))return bad("Ši rolė neleidžiama",400,origin);
+       const permissions=normalizeInvitePermissions(role as "manager"|"worker",payload.permissions);
       const {data:invitation,error:inviteError}=await service.auth.admin.inviteUserByEmail(email,{
         redirectTo:"https://deoxesinfo.github.io/svari-aplinka-pwa/?sa_auth=invite",
         data:{display_name:displayName},
       });
       if(inviteError||!invitation?.user?.id)return bad("Nepavyko išsiųsti kvietimo: "+(inviteError?.message||"Nežinoma klaida"),400,origin);
       const userId=invitation.user.id;
+      // Keep membership inactive until the invitation, activation lock and
+      // explicit per-module rights are all successfully persisted.
       const {error:membershipError}=await service.from("sa_memberships").upsert(
-        {organization_id:organizationId,user_id:userId,role,active:true},
+        {organization_id:organizationId,user_id:userId,role,active:false},
         {onConflict:"organization_id,user_id"});
-      if(membershipError)throw Error("Kvietimas išsiųstas, bet nepavyko susieti su įmone. Paskyra neturi prieigos: "+membershipError.message);
+      if(membershipError)throw Error("Kvietimas išsiųstas, bet nepavyko susieti su įmone. Prieiga neužtikrinta: "+membershipError.message);
       const {error:directoryError}=await service.from("sa_account_directory").upsert({
         organization_id:organizationId,user_id:userId,email,display_name:displayName,invited_by:actor.id,
+        activation_required:true,activation_completed_at:null,
       },{onConflict:"organization_id,user_id"});
-      if(directoryError)throw Error("Paskyra sukurta, bet nepavyko išsaugoti jos duomenų: "+directoryError.message);
-      // Default deny: no rights are created until the admin explicitly assigns them.
-      return response({ok:true,userId,invited:true},200,origin);
+      if(directoryError)throw Error("Kvietimas išsiųstas, bet nepavyko išsaugoti aktyvavimo būsenos. Prieiga lieka išjungta: "+directoryError.message);
+      const saved=permissions.map(({module,access})=>({
+        organization_id:organizationId,user_id:userId,module,access,updated_at:new Date().toISOString()
+      }));
+      const {error:permissionError}=await service.from("sa_user_permissions").upsert(saved,
+        {onConflict:"organization_id,user_id,module"});
+      if(permissionError)throw Error("Kvietimas išsiųstas, bet teisių išsaugoti nepavyko. Prieiga lieka išjungta: "+permissionError.message);
+      const {error:enableError}=await service.from("sa_memberships").update({active:true})
+        .eq("organization_id",organizationId).eq("user_id",userId);
+      if(enableError)throw Error("Kvietimas išsiųstas, bet narystė neaktyvuota: "+enableError.message);
+      return response({ok:true,userId,invited:true,permissionsSaved:true},200,origin);
     }
     if(["permissions","set_active","suspend","restore","delete"].includes(action)){
       const userId=String(payload.userId||"");
