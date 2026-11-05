@@ -425,6 +425,7 @@ export function restoreJob(id:string):boolean {
 export function restoreDeletedJob(id:string):boolean{
   const job=state.jobs.find(j=>j.id===id);
   if(!job?.deletedAt)return false;
+  if(isCloudMode()&&!canDelete("jobs")){toast.error("Neturite darbų atkūrimo teisės");return false;}
   if(state.addresses.some(a=>a.id===job.addressId&&(a.deletedAt||a.archivedAt))){
     toast.error("Pirmiausia atkurkite šio darbo adresą");return false;
   }
