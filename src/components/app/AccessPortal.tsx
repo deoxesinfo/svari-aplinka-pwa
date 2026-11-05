@@ -56,6 +56,14 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      if(memberError){setAccount({email:auth.user.email||"",membership:null,suspended:false});toast.error("Nepavyko patikrinti paskyros teisių");}
      else {
        const member=(members?.[0]||null) as Member|null;
+       if(member?.active&&member.role!=="admin"){
+         const {data:activation,error:activationError}=await supabase.from("sa_account_directory")
+           .select("activation_required,activation_completed_at")
+           .eq("organization_id",member.organization_id).eq("user_id",auth.user.id).maybeSingle();
+         if(!alive)return;
+         // Fail closed if invitation activation cannot be read.
+         setInviteSetup(Boolean(activationError || (activation?.activation_required&&!activation.activation_completed_at) || SA_AUTH_LINK_INVITE));
+       }
        setAccount({email:auth.user.email||"",membership:member?.active?member:null,suspended:Boolean(member&&!member.active)});
      }
      setLoading(false);
@@ -70,14 +78,14 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    return ()=>{alive=false;subscription.unsubscribe()};
  },[]);
  useEffect(()=>{
-   if(mode!=="gate"||!AUTH_ENFORCED||!account?.membership)return;
+   if(mode!=="gate"||!AUTH_ENFORCED||!account?.membership||inviteSetup||recovery)return;
    let active=true;
    setWorkspaceReady(false);setWorkspaceError("");
    void enterCloudWorkspace(account.membership.organization_id)
      .then(()=>{if(active)setWorkspaceReady(true)})
      .catch(err=>{if(active)setWorkspaceError(err instanceof Error?err.message:"Klaida")});
    return()=>{active=false};
- },[mode,account?.membership?.organization_id]);
+ },[mode,account?.membership?.organization_id,inviteSetup,recovery]);
  useEffect(()=>{
    if(mode!=="gate"||!workspaceReady)return;
    const sync=()=>{if(document.visibilityState==="visible")void refreshCloudWorkspace().catch(()=>{});};
@@ -153,9 +161,20 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      const {error}=await supabase.auth.updateUser({password:newPassword});
      if(error)toast.error("Nepavyko pakeisti slaptažodžio: "+error.message);
      else{
-       toast.success("Slaptažodis pakeistas");
+       if(inviteSetup){
+         const {data:finished,error:finishError}=await supabase.rpc("sa_finish_invite_activation");
+         if(finishError||!finished){
+           toast.error("Slaptažodis išsaugotas, tačiau paskyros aktyvavimas nebaigtas. Bandykite dar kartą.");
+           return;
+         }
+       }
+       toast.success(inviteSetup?"Paskyra aktyvuota":"Slaptažodis pakeistas");
        setNewPassword("");setRepeatPassword("");setOldPassword("");
        setRecovery(false);setInviteSetup(false);
+       if(inviteSetup||recovery){
+         window.location.replace(window.location.origin+import.meta.env.BASE_URL+"paskyra");
+         return;
+       }
        window.history.replaceState(null,"",window.location.pathname);
      }
    }finally{setBusy(false)}
@@ -180,11 +199,23 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  </form>;
  if(mode==="gate"&&!AUTH_ENFORCED)return <>{children}</>;
  if(loading)return <AppLoading message="Tikrinama paskyra…"/>;
- if(recovery||inviteSetup)return <section className="mx-auto max-w-md space-y-4 py-10">
-   <h1 className="text-xl font-bold">{inviteSetup?"Paskyros aktyvavimas":"Slaptažodžio atkūrimas"}</h1>
-   {account?passwordForm("Nustatyti naują slaptažodį"):
-     <p className="text-sm text-muted-foreground">Atidarykite patvirtintą slaptažodžio atkūrimo nuorodą iš savo el. pašto.</p>}
- </section>;
+ if(recovery||inviteSetup)return <main className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-10">
+   <section className="w-full max-w-lg space-y-5">
+     <div className="text-center">
+       <ShieldCheck className="mx-auto mb-2 size-10 text-primary"/>
+       <h1 className="text-2xl font-bold">Švari Aplinka</h1>
+       <p className="mt-1 text-sm text-muted-foreground">Darbų valdymo sistema</p>
+     </div>
+     <div className="card-surface space-y-4 p-5">
+       <h2 className="text-xl font-semibold">{inviteSetup?"Aktyvuokite savo paskyrą":"Atkurkite slaptažodį"}</h2>
+       <p className="text-sm text-muted-foreground">{inviteSetup
+         ?"Prieš pradėdami naudotis sistema, susikurkite asmeninį slaptažodį. Seno slaptažodžio nereikia."
+         :"Nustatykite naują slaptažodį, kurį naudosite prisijungdami."}</p>
+       {account?passwordForm(inviteSetup?"Sukurti pirmąjį slaptažodį":"Nustatyti naują slaptažodį"):
+         <p className="text-sm text-muted-foreground">Norėdami tęsti, atidarykite galiojančią nuorodą iš savo el. pašto.</p>}
+     </div>
+   </section>
+ </main>;
  if(account?.suspended)return <section className="mx-auto max-w-md space-y-4 py-10">
    <div className="card-surface space-y-3 border-l-4 border-destructive p-5" role="alert">
      <h1 className="text-xl font-bold">Jūsų paskyra laikinai sustabdyta</h1>
