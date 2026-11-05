@@ -122,7 +122,7 @@ export function NotificationBell(){
       {notice.body&&<p className="mt-1 text-xs text-muted-foreground">{notice.body}</p>}
       <p className="mt-1 text-xs text-muted-foreground">{new Date(notice.created_at).toLocaleString("lt-LT")}</p>
       <div className="mt-2 flex flex-wrap gap-3">
-       {notice.kind==="staff_reply"&&<Link to="/pranesimai" search={{tab:"issiusti",message:notice.related_message_id||undefined}}
+       {notice.kind==="staff_reply"&&<Link to="/pranesimai" search={{tab:"issiusti",...(notice.related_message_id?{message:notice.related_message_id}:{})}}
         onClick={()=>{void markRead(notice);setExpanded(false)}} className="text-xs font-medium text-primary underline">
          {notice.related_message_id?"Atidaryti pokalbį":"Atidaryti išsiųstus pranešimus"}</Link>}
        {notice.related_job_id&&<Link to="/darbai/$jobId" params={{jobId:notice.related_job_id}}
