@@ -1,7 +1,7 @@
 import {describe,expect,it,vi} from "vitest";
 import {render,screen} from "@testing-library/react";
 vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options}))}));
-vi.mock("@/lib/cloud-sync",()=>({getCloudRole:()=>"admin"}));
+vi.mock("@/lib/sa-access",()=>({canEdit:()=>true,useSAAccess:()=>({})}));
 vi.mock("@/lib/store",()=>({useAppState:()=>({}),getCloudOrganizationId:()=>"org",isCloudMode:()=>true}));
 vi.mock("@/lib/staff-messages",()=>({
  listStaffRecipients:async()=>[],listSentStaffMessages:async()=>({messages:[],receipts:[]}),
