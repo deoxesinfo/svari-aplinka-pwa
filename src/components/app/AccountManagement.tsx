@@ -37,7 +37,26 @@ export function AccountManagement({organizationId}:{organizationId:string}){
     const {data,error}=await supabase.functions.invoke<ApiResponse>("sa-account-admin",{
       body:{action,organizationId,...extra}
     });
-    if(error)throw new Error("Paskyrų valdymo ryšio klaida: "+error.message);
+    if(error){
+      // Edge Functions return a structured Lithuanian error, but the SDK normally
+      // shows only "non-2xx status code". Preserve the actual safe server message.
+      const context=(error as typeof error & {context?:Response}).context;
+      if(context && typeof context.clone==="function"){
+        try {
+          const result=await context.clone().json() as {error?:unknown};
+          if(typeof result?.error==="string" && result.error.trim())
+            throw new Error(result.error.trim());
+        } catch (reason) {
+          if(reason instanceof Error && reason.message!=="") {
+            // A JSON parse error must not replace the more useful HTTP status.
+            if(reason instanceof SyntaxError) {/* fall through */}
+            else throw reason;
+          }
+        }
+        throw new Error("Paskyrų serveris grąžino HTTP "+context.status+". Patikrinkite administratoriaus teises ir el. pašto nustatymus.");
+      }
+      throw new Error("Paskyrų valdymo ryšio klaida: "+error.message);
+    }
     if(!data?.ok)throw new Error(data?.error||"Nepavyko atlikti veiksmo");
     return data;
   },[organizationId]);
