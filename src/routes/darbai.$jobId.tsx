@@ -12,7 +12,8 @@ import { PhotoUploader, PhotoGrid } from "@/components/app/Photos";
 import { MapsLink } from "@/components/app/MapsLink";
 import { useAppState, setJobStatus, addComment, setInspection, deleteJob, verifyJobGPS, overrideJobGPS } from "@/lib/store";
 import { validGpsForCompletion } from "@/lib/gps";
-import { currentAdminOrg } from "@/lib/work-assignments";
+import {canDelete,canEdit,useSAAccess} from "@/lib/sa-access";
+import {isCloudMode} from "@/lib/store";
 import { JOB_TYPE_LABEL } from "@/lib/types";
 import { fmtLong, fmtDateTime, todayISO, overdueLabel } from "@/lib/dates";
 
@@ -22,6 +23,9 @@ function JobDetail() {
   const { jobId } = Route.useParams();
   const navigate = useNavigate();
   const { jobs, addresses, photos } = useAppState();
+  useSAAccess();
+  const mayEdit=!isCloudMode()||canEdit("jobs");
+  const mayDelete=!isCloudMode()||canDelete("jobs");
   const [draft, setDraft] = useState("");
   const [edit, setEdit] = useState(false);
   const [remove, setRemove] = useState(false);
@@ -176,8 +180,8 @@ function JobDetail() {
       <h2 className="text-lg font-semibold">Darbo valdymas</h2>
       <p className="text-sm text-muted-foreground">Redaguojate tik šį darbą: {JOB_TYPE_LABEL[job.type]} · {address?.street || "Nežinomas adresas"}. Adresas ir kiti darbai nekeičiami.</p>
       <div className="grid gap-2 sm:grid-cols-2">
-        <Button className="min-h-11 w-full" onClick={()=>setEdit(true)}><Pencil/> Redaguoti šį darbą</Button>
-        <Button variant="destructive" className="min-h-11 w-full" onClick={()=>setRemove(true)}><Trash2/> Pašalinti šį darbą</Button>
+        <Button className="min-h-11 w-full" disabled={!mayEdit} onClick={()=>setEdit(true)}><Pencil/> Redaguoti šį darbą</Button>
+        <Button variant="destructive" className="min-h-11 w-full" disabled={!mayDelete} onClick={()=>setRemove(true)}><Trash2/> Pašalinti šį darbą</Button>
       </div>
       <p className="text-xs text-muted-foreground">Pašalinimas yra grąžinamas: šį darbą galima atkurti „Darbai“ sąraše.</p>
     </section>
@@ -207,7 +211,10 @@ function JobDetail() {
       title="Pašalinti tik šį darbą?"
       text={`Pašalinsite tik darbą „${JOB_TYPE_LABEL[job.type]}“ adresu ${address?.street||"Nežinomas adresas"}, ${address?.city||""}. Adresas, kiti darbai ir nuotraukos nebus trinami. Atkurti galėsite „Darbai“ sąraše.`}
       confirmLabel="Taip, pašalinti šį darbą"
-      onConfirm={() => { void currentAdminOrg().then(()=>{if(deleteJob(job.id)){toast.info("Darbas paslėptas, galima atkurti");navigate({to:"/darbai"})}}).catch(()=>toast.error("Tik administratorius gali pašalinti darbą")); }} />
+      onConfirm={()=>{
+        if(!mayDelete){toast.error("Neturite darbų trynimo teisės");return;}
+        if(deleteJob(job.id)){toast.info("Darbas perkeltas į pašalintus. Jį galima atkurti.");navigate({to:"/darbai"});}
+      }} />
     <Confirm open={fixConfirm} onOpenChange={setFixConfirm}
       title="Sukurti taisymo darbą?" text="Bus pridėtas atskiras skubus darbas šiandienai."
       confirmLabel="Sukurti" onConfirm={() => { setInspection(job.id, "taisyti"); toast.success("Sukurtas taisymo darbas"); }} />
