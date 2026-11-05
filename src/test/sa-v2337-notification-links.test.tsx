@@ -12,11 +12,11 @@ vi.mock("@tanstack/react-router",()=>({
     onClick={onClick} {...props}>{children}</a>
 }));
 vi.mock("@/lib/store",()=>({getCloudOrganizationId:()=>"org"}));
-vi.mock("@/lib/staff-messages",()=>({listStaffInbox:async()=>[]}));
+vi.mock("@/lib/staff-messages",()=>({listStaffInbox:async()=>[],listStaffParticipants:async()=>[{userId:"manager",name:"Pagrindinis",role:"manager"}]}));
 vi.mock("@/lib/supabase-client",()=>{
  const results=[{id:"notice-1",title:"Gautas atsakymas: Labss",
   kind:"staff_reply",body:"Atsakymas prie išsiųstos žinutės",
-  related_job_id:null,related_message_id:"b33d1594-08dd-46f4-a78d-d54a052a3f21",
+  related_job_id:null,related_message_id:"b33d1594-08dd-46f4-a78d-d54a052a3f21",actor_user_id:"manager",
   read_at:null,created_at:"2026-11-06T00:11:45Z"}];
  const query:Record<string,unknown>={};
  query.select=()=>query;query.eq=()=>query;query.order=()=>query;
@@ -37,6 +37,7 @@ describe("ŠA V2.3.37 bell – exact recipient-owned conversation",()=>{
   await waitFor(()=>expect(screen.getByRole("button",{name:"Pranešimai, neperskaitytų: 1"})).toBeInTheDocument());
   fireEvent.click(screen.getByRole("button",{name:"Pranešimai, neperskaitytų: 1"}));
   expect(screen.getByText(/Žinutės: 0 · Atsakymai: 1/)).toBeInTheDocument();
+  expect(screen.getByText(/Nuo: Pagrindinis/)).toBeInTheDocument();
   const link=screen.getByRole("link",{name:"Atidaryti pokalbį"});
   expect(link).toHaveAttribute("href","#/pranesimai?tab=issiusti&message="+FIXED_MESSAGE);
   fireEvent.click(link);
