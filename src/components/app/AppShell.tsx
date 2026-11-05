@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { SA_LAST_ROUTE_KEY } from "@/lib/navigation-persistence";
 import { useEffect, useState, type ReactNode } from "react";
 import {
   LayoutDashboard, CalendarDays, ClipboardList, Building2, Images, ShieldCheck, Settings, Users, ChartNoAxesCombined,
@@ -95,6 +96,12 @@ export function AppShell({ children }: { children: ReactNode }) {
   const readOnly=Boolean(isCloudMode() && module && canView(module) && !canEdit(module));
   const firstAllowed=SA_MODULES.find(m=>canView(m.key));
   useEffect(() => setDrawer(false), [path]);
+  useEffect(()=>{
+    try{
+      const routed=window.location.hash.startsWith("#/")?window.location.hash.slice(1):path;
+      sessionStorage.setItem(SA_LAST_ROUTE_KEY,routed);
+    }catch{/* Non-essential navigation memory */}
+  },[path]);
 
   return (
     <div className="flex min-h-screen w-full">
