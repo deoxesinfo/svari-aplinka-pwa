@@ -172,7 +172,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
        setNewPassword("");setRepeatPassword("");setOldPassword("");
        setRecovery(false);setInviteSetup(false);
        if(inviteSetup||recovery){
-         window.location.replace(window.location.origin+import.meta.env.BASE_URL+"paskyra");
+         window.location.replace(window.location.origin+import.meta.env.BASE_URL);
          return;
        }
        window.history.replaceState(null,"",window.location.pathname);
