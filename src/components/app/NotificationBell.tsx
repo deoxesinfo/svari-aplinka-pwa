@@ -4,9 +4,9 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {toast} from "sonner";
 import { supabase } from "@/lib/supabase-client";
 import {getCloudOrganizationId} from "@/lib/store";
-import {listStaffInbox,type InboxMessage} from "@/lib/staff-messages";
+import {listStaffInbox,listStaffParticipants,type InboxMessage} from "@/lib/staff-messages";
 
-type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;related_message_id:string|null;read_at:string|null;created_at:string};
+type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;related_message_id:string|null;actor_user_id:string|null;read_at:string|null;created_at:string};
 export function NotificationBell(){
  const [notices,setNotices]=useState<Notice[]>([]);
  const [expanded,setExpanded]=useState(false);
@@ -14,6 +14,7 @@ export function NotificationBell(){
  const path=useRouterState({select:s=>s.location.pathname});
  const [error,setError]=useState("");
  const [manualMessages,setManualMessages]=useState<InboxMessage[]>([]);
+ const [participantNames,setParticipantNames]=useState<Map<string,string>>(new Map());
  // Only announce newly received messages during the current open PWA session.
  // The first poll establishes a baseline so old unread messages do not create a toast storm.
  const seenRef=useRef<{identity:string;ids:Set<string>}|null>(null);
@@ -24,12 +25,16 @@ export function NotificationBell(){
   if(!org){setNotices([]);setManualMessages([]);return}
   // A failure to fetch general notifications must not hide staff inbox messages.
   const {data,error:queryError}=await supabase.from("sa_notifications")
-   .select("id,title,body,kind,related_job_id,related_message_id,read_at,created_at")
+   .select("id,title,body,kind,related_job_id,related_message_id,actor_user_id,read_at,created_at")
    .eq("organization_id",org).eq("recipient_id",auth.user.id).order("created_at",{ascending:false}).limit(30);
   if(queryError)setError("Nepavyko atnaujinti sistemos pranešimų");
   else {setError("");setNotices((data||[]) as Notice[]);}
   try{
-   const inbox=await listStaffInbox(org);
+   const [inbox,names]=await Promise.all([
+    listStaffInbox(org),
+    listStaffParticipants(org).catch(()=>[]),
+   ]);
+   setParticipantNames(new Map(names.map(x=>[x.userId,x.name])));
    const identity=org+":"+auth.user.id;
    const ids=new Set(inbox.map(item=>item.receipt.id));
    const previous=seenRef.current;
@@ -113,12 +118,20 @@ export function NotificationBell(){
         <strong className="break-words">{message.title}</strong>
         {!receipt.read_at&&<span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Nauja</span>}
       </div>
+      <p className="mt-1 text-xs text-muted-foreground">Žinutė · Nuo: {participantNames.get(message.sender_id)||"Įmonės paskyra"}</p>
       <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">{message.body}</p>
       <p className="mt-1 text-xs text-muted-foreground">{new Date(message.scheduled_for).toLocaleString("lt-LT")}</p>
     </Link>)}
     {error&&<p className="mb-2 flex gap-1 text-xs text-destructive"><CircleAlert className="size-3"/>{error}</p>}
     {notices.length?notices.map(notice=><article key={notice.id} className={"border-b p-2 text-sm "+(!notice.read_at?"bg-primary/5":"")}>
-      <p className="font-semibold">{notice.title}</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+       <p className="font-semibold">{notice.title}</p>
+       {!notice.read_at&&<span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">Naujas</span>}
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+       {notice.kind==="staff_reply"?"Atsakymas":"Sistemos pranešimas"}
+       {notice.actor_user_id?" · Nuo: "+(participantNames.get(notice.actor_user_id)||"Įmonės paskyra"):""}
+      </p>
       {notice.body&&<p className="mt-1 text-xs text-muted-foreground">{notice.body}</p>}
       <p className="mt-1 text-xs text-muted-foreground">{new Date(notice.created_at).toLocaleString("lt-LT")}</p>
       <div className="mt-2 flex flex-wrap gap-3">
