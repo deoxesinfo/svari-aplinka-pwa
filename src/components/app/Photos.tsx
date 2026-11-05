@@ -17,6 +17,8 @@ import { Confirm } from "./ui-bits";
 import { gpsResult,validGpsForCompletion } from "@/lib/gps";
 import type { LocationResult } from "@/lib/gps";
 import { hasConfirmedPin } from "@/lib/address-gps";
+import {isAvailableJobAddress} from "@/lib/job-address";
+import {canEdit,useSAAccess} from "@/lib/sa-access";
 
 export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => void }) {
   const { url, missing } = usePhotoUrl(photo.id, "thumb",getCloudOrganizationId());
@@ -128,6 +130,7 @@ export function PhotoGrid({ photos, empty = "Nuotraukų dar nėra." }: { photos:
 }
 
 export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?: string }) {
+  useSAAccess();
   const cam = useRef<HTMLInputElement>(null);
   const gal = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(0);
@@ -212,7 +215,10 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
-    if(isCloudMode()&&!pilotAllowed){toast.error("R2 bandymas leidžiamas tik vienam patvirtintam darbui");return;}
+    if(isCloudMode()&&!isAvailableJobAddress(address)){toast.error("Adresas pašalintas arba archyvuotas. Pirma jį atkurkite.");return;}
+    if(isCloudMode()&&(job?.deletedAt||job?.archivedAt)){toast.error("Darbas pašalintas arba archyvuotas. Naujos nuotraukos nepriimamos.");return;}
+    if(isCloudMode()&&!canEdit("photos")){toast.error("Jūsų paskyrai reikia Nuotraukos → Redaguoti teisės.");return;}
+    if(isCloudMode()&&!pilotAllowed){toast.error("Nuotraukų įkėlimas šioje versijoje neišleistas.");return;}
     if(locked){toast.error("Pirmiausia patvirtinkite buvimo vietą");return;}
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
@@ -276,6 +282,14 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (gal.current) gal.current.value = "";
   };
 
+  if(isCloudMode()&&!isAvailableJobAddress(address))return <div role="alert" className="rounded-xl border border-amber-400/60 bg-amber-50/30 p-3 text-sm">
+    <p className="font-semibold">Nuotraukų įkėlimas sustabdytas</p>
+    <p>Šis adresas archyvuotas, pašalintas arba neegzistuoja aktyvių adresų sąraše. API nepriims nuotraukų, kol administratorius neatkurs adreso. Esami duomenys nekeičiami.</p>
+  </div>;
+  if(isCloudMode()&&(job?.deletedAt||job?.archivedAt))return <p role="alert" className="rounded-xl border border-amber-400/60 p-3 text-sm">Šis darbas pašalintas arba archyvuotas. Nuotraukų įkėlimas užblokuotas.</p>;
+  if(isCloudMode()&&!canEdit("photos"))return <div className="rounded-xl border p-3 text-sm text-muted-foreground">
+    Nuotraukas galite peržiūrėti ir padidinti. Norint įkelti naujas, administratorius turi suteikti „Nuotraukos → Redaguoti“ teisę.
+  </div>;
   if(isCloudMode()&&!pilotAllowed)return <div className="space-y-3">
     {gpsPanel}
     <div className="grid grid-cols-2 gap-2">
