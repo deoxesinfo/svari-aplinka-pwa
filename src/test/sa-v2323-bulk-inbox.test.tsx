@@ -40,7 +40,7 @@ describe("ŠA V2.3.23 multi-select inbox",()=>{
   fireEvent.click(screen.getByRole("button",{name:"Į šiukšlinę (2)"}));
   expect(mock.hide).not.toHaveBeenCalled();
   expect(screen.getByRole("dialog",{name:"Ar tikrai norite perkelti 2 pasirinktus pranešimus į šiukšlinę?"})).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button",{name:"Į šiukšlinę",exact:true}));
+  fireEvent.click(screen.getByRole("button",{name:"Į šiukšlinę"}));
   await waitFor(()=>expect(mock.hide).toHaveBeenCalledTimes(2));
   expect(mock.hide).toHaveBeenCalledWith("org-test","r-1");
   expect(mock.hide).toHaveBeenCalledWith("org-test","r-3");
