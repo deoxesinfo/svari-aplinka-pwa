@@ -24,7 +24,7 @@ describe("ŠA V2.3.37 Push path allowlist",()=>{
   };
   expect(send("/#/pranesimai?tab=issiusti&message="+id))
    .toBe("/#/pranesimai?tab=issiusti&message="+id);
-  expect(send("/#/pranesimai?tab=gauti&message="+id))
+  expect(send("/#/pranesimai?tab=issiusti&message="+id+"&receipt=7de45cdd-29a6-4ea5-a141-b453aa4a3fa1")).toBe("/#/pranesimai?tab=issiusti&message="+id+"&receipt=7de45cdd-29a6-4ea5-a141-b453aa4a3fa1");\n  expect(send("/#/pranesimai?tab=gauti&message="+id))
    .toBe("/#/pranesimai?tab=gauti&message="+id);
   expect(send("https://attacker.example/?cookie=secret")).toBe("/#/pranesimai");
   expect(send("/#/pranesimai?tab=issiusti&message="+id+"&admin=true")).toBe("/#/pranesimai");
