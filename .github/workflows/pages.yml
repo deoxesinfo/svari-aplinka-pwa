@@ -26,6 +26,7 @@ jobs:
       - name: Build (authenticated admin R2 photos enabled)
         env:
           VITE_SA_R2_PHOTOS: enabled
+          VITE_SA_BUILD_SHA: ${{ github.sha }}
         run: npm run build
       - name: Test interactive work-card opening
         run: npm test
@@ -35,23 +36,36 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
-      # One-time recovery: the previous Pages deployment timed out but remained marked in-progress.
-      # Cancel only this exact stale build. Do not cancel active or unrelated deployments.
-      - name: Clear stale Pages deployment 9a03890 (one-time)
-        timeout-minutes: 2
+      # Guarded recovery of the specific ghost deployment from 2026-11-05.
+      # 204 means cancellation accepted, not necessarily that Pages has cleared the lock.
+      - name: Ensure earlier Pages deployment finished
+        timeout-minutes: 4
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          status=$(curl -sS -o /tmp/sa-pages-cancel.txt -w '%{http_code}' -X POST \
-            -H "Accept: application/vnd.github+json" \
-            -H "X-GitHub-Api-Version: 2026-03-10" \
-            -H "Authorization: Bearer $GH_TOKEN" \
-            "https://api.github.com/repos/$GITHUB_REPOSITORY/pages/deployments/9a03890ada5e1ed4df7cedc1bc23b8067ab4d5ed/cancel")
-          echo "Stale Pages cancellation HTTP status: $status"
-          if [ "$status" != "204" ] && [ "$status" != "404" ]; then
-            echo "::error::Could not clear stuck Pages deployment"
-            cat /tmp/sa-pages-cancel.txt
-            exit 1
-          fi
+          set -euo pipefail
+          url="https://api.github.com/repos/$GITHUB_REPOSITORY/pages/deployments/9a03890ada5e1ed4df7cedc1bc23b8067ab4d5ed"
+          for attempt in 1 2 3 4 5 6; do
+            response="$(curl -fsS -H 'Accept: application/vnd.github+json' \
+              -H 'X-GitHub-Api-Version: 2026-03-10' \
+              -H "Authorization: Bearer $GH_TOKEN" "$url")"
+            state="$(printf '%s' "$response" | jq -r '.status // empty')"
+            echo "Prior Pages state (check $attempt): $state"
+            case "$state" in
+              canceled|cancelled|failed|failure|errored|error|succeed|success|inactive)
+                echo "Prior deployment is no longer active."; exit 0;;
+              in_progress|queued|pending|updating_pages|requested)
+                code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
+                  -H 'Accept: application/vnd.github+json' \
+                  -H 'X-GitHub-Api-Version: 2026-03-10' \
+                  -H "Authorization: Bearer $GH_TOKEN" "$url/cancel")"
+                echo "Cancellation requested (HTTP $code)"
+                if [ "$code" != "204" ] && [ "$code" != "404" ]; then exit 1; fi;;
+              *) echo "::error::Unexpected previous deployment state; stopping"; exit 1;;
+            esac
+            sleep 20
+          done
+          echo "::error::The old Pages deployment remains active despite cancellation requests."
+          exit 1
       - id: deployment
         uses: actions/deploy-pages@v4
