@@ -188,7 +188,7 @@ export function JobFormDialog({
           {availableAddresses.length===0 && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
             <p>Nėra aktyvių adresų. Darbą galėsite sukurti tik pridėję aktyvų adresą. Pašalinti adresai ir jų darbų istorija lieka išsaugoti.</p>
             <Link className="mt-2 inline-block font-semibold underline" to="/adresai" onClick={()=>onOpenChange(false)}>Eiti į adresus ir pridėti naują</Link>
-          </div>
+          </div>}
           <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Tipas">
               <select className={inputCls} value={v.type} onChange={(e) => up("type", e.target.value as JobInput["type"])}>
