@@ -9,6 +9,7 @@ import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { canView,canEdit,moduleForPath,useSAAccess,SA_MODULES } from "@/lib/sa-access";
 import { cn } from "@/lib/utils";
 import {AppLoading} from "@/components/app/AppLoading";
+import {VersionNotice} from "@/components/app/VersionNotice";
 import {supabase} from "@/lib/supabase-client";
 
 export const NAV = [
@@ -170,17 +171,17 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-sm font-bold">Švari Aplinka</span>
           <span className="text-sm text-muted-foreground">· Darbų valdymas</span>
         </header>
+        <VersionNotice />
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8">
           {blocked ? <section className="card-surface mx-auto max-w-xl space-y-3 p-6" role="alert">
             <h1 className="text-xl font-semibold">Šiai funkcijai prieiga nesuteikta</h1>
             <p className="text-sm text-muted-foreground">Administratorius gali pakeisti tavo paskyros leidimus. Šis puslapis ir jo duomenys nepasiekiami.</p>
             {firstAllowed&&<Link className="text-primary underline" to={firstAllowed.path}>Atidaryti leidžiamą skiltį</Link>}
           </section> : state.loaded ? (
-            readOnly && module!=="messages" && module!=="photos" ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
-              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – redagavimo veiksmai šioje skiltyje išjungti.</p>
-              {children}
-            </fieldset> : readOnly ? <div className="min-w-0">
-              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – {module==="messages"?"naujų pranešimų siuntimas":"nuotraukų redagavimas ir įkėlimas"} neprieinamas.</p>
+            readOnly ? <div className="min-w-0">
+              <p role="status" className="mb-3 text-sm font-medium text-muted-foreground">
+                Tik peržiūra – galima naudotis navigacija, filtrais ir peržiūros langais. Keitimo veiksmai priklauso nuo konkrečiai funkcijai suteiktų teisių.
+              </p>
               {children}
             </div> : children
           ) : <AppLoading message="Kraunami duomenys…" minHeight="50vh"/>}

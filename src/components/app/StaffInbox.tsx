@@ -1,5 +1,5 @@
 import {useCallback,useEffect,useRef,useState,type TouchEvent} from "react";
-import {Check,Clock3,RefreshCw,Trash2,Undo2,MessageCircle,Inbox} from "lucide-react";
+import {Check,Clock3,Trash2,Undo2,MessageCircle,Inbox} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {Confirm} from "@/components/app/ui-bits";
 import {getCloudOrganizationId} from "@/lib/store";
@@ -32,10 +32,19 @@ export function StaffInbox(){
  },[org,view]);
  useEffect(()=>{
   void load();
+  // Keep the inbox fresh without an explicit refresh button. Follow focus,
+  // same-device message events, and a bounded foreground polling fallback.
   const refresh=()=>{if(document.visibilityState==="visible")void load()};
-  const timer=window.setInterval(refresh,45000);
+  const timer=window.setInterval(refresh,15000);
   window.addEventListener("focus",refresh);
-  return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh)};
+  window.addEventListener("sa-message-updated",refresh);
+  document.addEventListener("visibilitychange",refresh);
+  return()=>{
+    window.clearInterval(timer);
+    window.removeEventListener("focus",refresh);
+    window.removeEventListener("sa-message-updated",refresh);
+    document.removeEventListener("visibilitychange",refresh);
+  };
  },[load]);
  const refreshed=async()=>{await load();window.dispatchEvent(new Event("sa-message-updated"))};
  const ack=async(item:InboxMessage,reply?: "sutinku"|"nesutinku")=>{
@@ -118,7 +127,7 @@ export function StaffInbox(){
  if(!canModify)return <section className="space-y-3">
   <div className="flex items-center justify-between gap-2">
    <h2 className="text-lg font-bold">Gauti pranešimai</h2>
-   <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
+   <span className="text-xs text-muted-foreground" role="status">Atnaujinama automatiškai</span>
   </div>
   {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
   {items.length===0?<p className="rounded-xl border p-6 text-sm text-muted-foreground">Šiuo metu pranešimų nėra.</p>
@@ -143,7 +152,6 @@ export function StaffInbox(){
      onClick={()=>changeView(view==="trash"?"gauti":"trash")}>
      {view==="trash"?<><Inbox className="size-4"/> Gauti</>:<Trash2 className="size-4"/>}
     </Button>
-    <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
    </div>
   </div>
   {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -239,13 +247,13 @@ export function StaffInbox(){
     </article>
    </div>)
   }
-  <Confirm open={!!toHide} onOpenChange={open=>{if(!open)setToHide(null)}} title="Perkelti pranešimą į šiukšlinę?"
+  <Confirm open={!!toHide} onOpenChange={open=>{if(!open)setToHide(null)}} title="Ar tikrai norite perkelti pranešimą į šiukšlinę?"
    text="Pranešimas liks jūsų šiukšlinėje ir jį galėsite atkurti. Kitų gavėjų žinutės nekeičiamos."
    confirmLabel="Į šiukšlinę" onConfirm={()=>void hide()}/>
   <Confirm open={confirmBulkHide} onOpenChange={setConfirmBulkHide}
-   title={"Perkelti "+selectedReceived.length+" pranešimus į šiukšlinę?"}
-   text="Pasirinktos žinutės bus paslėptos tik jūsų gautų pranešimų sąraše. Šiukšlinėje jas galima atkurti. Kiti gavėjai nepaveikiami."
-   confirmLabel="Perkelti pažymėtus į šiukšlinę" onConfirm={()=>void moveSelectedToTrash()}/>
+   title={"Ar tikrai norite perkelti "+selectedReceived.length+" pasirinktus pranešimus į šiukšlinę?"}
+   text={"Pažymėta pranešimų: "+selectedReceived.length+". Pasirinktos žinutės bus paslėptos tik jūsų gautų pranešimų sąraše. Šiukšlinėje jas galima atkurti. Kiti gavėjai nepaveikiami."}
+   confirmLabel="Į šiukšlinę" onConfirm={()=>void moveSelectedToTrash()}/>
   <Confirm open={purgeConfirm} onOpenChange={setPurgeConfirm} title={"Galutinai ištrinti "+marked.length+" pranešimų?"}
    text="Šių asmeninių pranešimų kopijų atkurti nebegalėsite. Supabase pašalins jūsų gavėjo įrašus ir atsakymų tekstus. Siuntėjo originalai, kitų gavėjų pranešimai ir minimalus administratoriaus įvykių auditas liks."
    confirmLabel="Taip, ištrinti visam laikui" onConfirm={()=>void permanentlyRemove()}/>

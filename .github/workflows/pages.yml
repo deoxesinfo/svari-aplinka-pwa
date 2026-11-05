@@ -28,6 +28,8 @@ jobs:
           VITE_SA_R2_PHOTOS: enabled
           VITE_SA_BUILD_SHA: ${{ github.sha }}
         run: npm run build
+      - name: Write version marker for safe browser updates
+        run: printf '{"sha":"%s"}\n' "$GITHUB_SHA" > dist/version.json
       - name: Test interactive work-card opening
         run: npm test
       - uses: actions/configure-pages@v5
