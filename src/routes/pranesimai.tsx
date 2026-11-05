@@ -1,6 +1,6 @@
 import {createFileRoute} from "@tanstack/react-router";
 import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
-import {Send,Clock,MessageSquare} from "lucide-react";
+import {Send,Clock,MessageSquare,RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {PageHeader,inputCls,textareaCls} from "@/components/app/ui-bits";
 import {StaffInbox} from "@/components/app/StaffInbox";
@@ -76,13 +76,22 @@ function MessagesPage(){
     <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Send className="size-5"/> Naujas pranešimas</h2>
     <form className="space-y-4" onSubmit={e=>void send(e)}>
      <div>
-      <label className="mb-1 block text-sm font-medium">Gavėjai</label>
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+       <label className="block text-sm font-medium">Gavėjai · {recipients.length} aktyvios paskyros</label>
+       <Button type="button" size="sm" variant="outline" disabled={sending}
+        onClick={()=>void refresh()} title="Atnaujinti aktyvių įmonės paskyrų sąrašą">
+        <RefreshCw className="size-4"/> Atnaujinti gavėjus
+       </Button>
+      </div>
       {recipients.length===0?<p className="text-sm text-amber-700">Dar nėra aktyvių įmonės paskyrų. Gavėjas privalo turėti prisijungimą.</p>:
       <div className="grid max-h-40 grid-cols-1 gap-2 overflow-y-auto rounded-lg border p-3 sm:grid-cols-2">
        {recipients.map(p=><label key={p.userId} className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={selected.includes(p.userId)} onChange={e=>
          setSelected(old=>e.target.checked?[...old,p.userId]:old.filter(id=>id!==p.userId))}/>
-        <span>{p.name}</span>
+        <span className="flex flex-wrap items-baseline gap-2">
+         <span>{p.name}</span>
+         <span className="text-xs text-muted-foreground">({p.role==="admin"?"Administratorius":p.role==="manager"?"Vadybininkas":"Darbuotojas"})</span>
+        </span>
        </label>)}
       </div>}
      </div>
