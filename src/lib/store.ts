@@ -9,6 +9,7 @@ import { loadCloudState,cloudMutations,saveCloudMutations,resetCloudRole } from 
 import { gpsResult,validGpsForCompletion } from "./gps";
 import type { GpsRadius } from "./gps";
 import { hasConfirmedPin } from "./address-gps";
+import { isAvailableJobAddress } from "./job-address";
 import { applyInspection, reopenWhenMadeUrgent } from "./job-followup";
 
 const KEY = "svari-aplinka-demo-v1";
@@ -257,7 +258,7 @@ function hist(job: Job, text: string): Job {
 
 export function addJob(input: JobInput, extra: Partial<Job> = {}): Job {
   const target=state.addresses.find(a=>a.id===input.addressId);
-  if(!target||target.archivedAt||target.deletedAt){toast.error("Darbas nekurimas archyvuotam ar pašalintam adresui");return null as unknown as Job}
+  if(!isAvailableJobAddress(target)){toast.error("Darbas nekuriamas archyvuotam ar pašalintam adresui");return null as unknown as Job}
   if(target?.gpsProtectionEnabled)input={...input,gpsRequired:true};
   if(input.gpsRequired&&!hasConfirmedPin(target)){
     toast.error("Reikalingas patvirtintas GPS žymeklis");return null as unknown as Job;
