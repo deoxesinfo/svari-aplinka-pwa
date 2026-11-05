@@ -141,6 +141,7 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
   const { photos,addresses,jobs } = useAppState();
   const address=addresses.find(a=>a.id===addressId);
   const job=jobs.find(j=>j.id===jobId);
+  const unavailable=Boolean(isCloudMode()&&(!address||address.deletedAt||address.archivedAt||job?.deletedAt||job?.archivedAt));
   const protectedByGps=Boolean(address?.gpsProtectionEnabled||job?.gpsRequired||(isCloudMode()&&getCloudRole()==="worker"));
   const pilotAllowed=!isCloudMode()||(CLOUD_R2_PHOTOS_READY && !!jobId && (import.meta.env.VITE_SA_R2_PHOTOS==="enabled" || jobId===R2_PILOT_JOB_ID));
   const proof=jobId?job?.gpsVerification:localProof;
@@ -212,7 +213,8 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
 
   const handle = async (files: FileList | null) => {
     if (!files?.length) return;
-    if(isCloudMode()&&!pilotAllowed){toast.error("R2 bandymas leidžiamas tik vienam patvirtintam darbui");return;}
+    if(unavailable){toast.error("Adresas arba darbas pašalintas / archyvuotas. Pirmiausia jį atkurkite.");return;}
+    if(isCloudMode()&&!pilotAllowed){toast.error("Nuotraukų įkėlimas šiam darbui neprieinamas");return;}
     if(locked){toast.error("Pirmiausia patvirtinkite buvimo vietą");return;}
     if (busy > 0) return;
     const incoming = Array.from(files).filter((f) => f.type.startsWith("image/") || f.type === "");
@@ -276,6 +278,11 @@ export function PhotoUploader({ addressId, jobId }: { addressId: string; jobId?:
     if (gal.current) gal.current.value = "";
   };
 
+  if(unavailable)return <div role="alert" className="space-y-2 rounded-lg border border-amber-300 bg-amber-50/60 p-4 text-sm text-amber-950">
+    <p className="font-semibold">Nuotraukų įkėlimas neprieinamas</p>
+    <p>Šis adresas arba darbas yra archyvuotas / pašalintas. Jau esančias nuotraukas galima peržiūrėti, tačiau naujas įkelti galima tik atkūrus objektą.</p>
+    <p>Jei adresas buvo pašalintas netyčia, paprašykite administratoriaus jį atkurti iš pašalintų adresų. Esamų nuotraukų ir darbų tai nekeičia.</p>
+  </div>;
   if(isCloudMode()&&!pilotAllowed)return <div className="space-y-3">
     {gpsPanel}
     <div className="grid grid-cols-2 gap-2">
