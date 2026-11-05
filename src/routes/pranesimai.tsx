@@ -12,10 +12,13 @@ import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaf
 
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const Route=createFileRoute("/pranesimai")({
- validateSearch:(raw:Record<string,unknown>)=>({
-  tab:raw.tab==="issiusti"||raw.tab==="gauti"?raw.tab:undefined,
-  message:typeof raw.message==="string"&&uuid.test(raw.message)?raw.message:undefined,
- }),
+ validateSearch:(raw:Record<string,unknown>)=>{
+  const tab=raw["tab"],message=raw["message"];
+  return {
+   ...(tab==="issiusti"||tab==="gauti"?{tab:tab as "issiusti"|"gauti"}:{}),
+   ...(typeof message==="string"&&uuid.test(message)?{message}:{}),
+  };
+ },
  component:MessagesPage,
 });
 const KINDS:Record<MessageKind,string>={
