@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronDown, ChevronUp, MailPlus, RefreshCcw, ShieldCheck, UserRound, Lock, Unlock, Trash2 } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, MailPlus, RefreshCcw, ShieldCheck, UserRound, Lock, Unlock, Trash2, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ type ManagedAccount = {
   active:boolean;confirmed:boolean;createdAt:string;invitedAt:string|null;suspendedAt?:string|null;awaitingPassword?:boolean;
   permissions:SAPermissionMap;
 };
-type ApiResponse = {ok:boolean;error?:string;accounts?:ManagedAccount[]};
+type ApiResponse = {ok:boolean;error?:string;accounts?:ManagedAccount[];manualLink?:string};
 const LEVELS:{value:SAAccess;label:string}[]=[
   {value:"none",label:"Nėra prieigos"},
   {value:"view",label:"Peržiūrėti"},
@@ -36,6 +36,8 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   const [drafts,setDrafts]=useState<Record<string,SAPermissionMap>>({});
   const [deleteTarget,setDeleteTarget]=useState<ManagedAccount|null>(null);
   const [deleteConfirmation,setDeleteConfirmation]=useState("");
+  const [manualInvite,setManualInvite]=useState<{email:string;link:string}|null>(null);
+  const [rateLimited,setRateLimited]=useState(false);
   const invoke=useCallback(async(action:string,extra:Record<string,unknown>={}):Promise<ApiResponse>=>{
     const {data,error}=await supabase.functions.invoke<ApiResponse>("sa-account-admin",{
       body:{action,organizationId,...extra}
@@ -75,10 +77,43 @@ export function AccountManagement({organizationId}:{organizationId:string}){
     setBusy(true);
     try{
       await invoke("invite",{email:email.trim(),displayName:displayName.trim(),role,permissions:invitePermissions});
+      setRateLimited(false);setManualInvite(null);
       toast.success("Kvietimas išsiųstas. Pradinės teisės išsaugotos; naudotojas jas gaus tik susikūręs slaptažodį.");
       setEmail("");setDisplayName("");setInvitePermissions(defaultInvitePermissions(role));await reload();
-    }catch(err){toast.error(err instanceof Error?err.message:"Kvietimas nepavyko")}
+    }catch(err){
+      const msg=err instanceof Error?err.message:"Kvietimas nepavyko";
+      setRateLimited(/limitą|rate limit|too many emails/i.test(msg));
+      toast.error(msg);
+    }
     finally{setBusy(false)}
+  };
+  const generateManualInvite=async()=>{
+    if(!email.trim()){toast.error("Įveskite kviečiamo žmogaus el. paštą");return}
+    setBusy(true);
+    try{
+      const result=await invoke("invite_link",{
+        email:email.trim(),displayName:displayName.trim(),role,permissions:invitePermissions,
+      });
+      if(!result.manualLink)throw new Error("Nepavyko gauti saugios kvietimo nuorodos");
+      setManualInvite({email:email.trim(),link:result.manualLink});
+      setRateLimited(false);
+      toast.success("Aktyvavimo nuoroda paruošta. Išsiųskite ją tik pakviestam žmogui.");
+      await reload();
+    }catch(err){toast.error(err instanceof Error?err.message:"Nuorodos nepavyko sugeneruoti")}
+    finally{setBusy(false)}
+  };
+  const copyInvite=async()=>{
+    if(!manualInvite)return;
+    try{await navigator.clipboard.writeText(manualInvite.link);toast.success("Kvietimo nuoroda nukopijuota");}
+    catch{toast.error("Nepavyko nukopijuoti. Naudokite paruoštą el. laišką.");}
+  };
+  const emailInvite=()=>{
+    if(!manualInvite)return;
+    const subject="Švari Aplinka – kvietimas prisijungti";
+    const body="Sveiki,\\n\\nJums sukurtas kvietimas prisijungti prie „Švari Aplinka“ darbų valdymo sistemos.\\nAtidarykite šią nuorodą ir susikurkite asmeninį slaptažodį:\\n\\n"
+      +manualInvite.link+"\\n\\nJeigu kvietimo nesitikėjote, laišką ignoruokite.\\n\\nŠvari Aplinka";
+    window.location.href="mailto:"+encodeURIComponent(manualInvite.email)
+      +"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
   };
   const save=async(account:ManagedAccount)=>{
     setBusy(true);
@@ -126,7 +161,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
       <form onSubmit={invite} className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm font-medium">El. paštas
           <input type="email" required className="w-full rounded-lg border bg-background p-3" value={email}
-            onChange={e=>setEmail(e.target.value)} autoComplete="off" placeholder="darbuotojas@example.com"/>
+            onChange={e=>{setEmail(e.target.value);setManualInvite(null);setRateLimited(false);}} autoComplete="off" placeholder="darbuotojas@example.com"/>
         </label>
         <label className="space-y-1 text-sm font-medium">Vardas (neprivalomas)
           <input className="w-full rounded-lg border bg-background p-3" value={displayName}
@@ -165,11 +200,32 @@ export function AccountManagement({organizationId}:{organizationId:string}){
             Prieigos bus suteiktos tik po kvietimo patvirtinimo ir slaptažodžio sukūrimo.
           </p>
         </div>
-        <div className="flex items-end sm:col-span-2">
-          <Button className="w-full sm:w-auto" disabled={busy} type="submit"><MailPlus className="size-4"/> Siųsti kvietimą</Button>
+        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
+          <Button disabled={busy} type="submit"><MailPlus className="size-4"/> Siųsti kvietimą</Button>
+          <Button type="button" variant="outline" disabled={busy||!email.trim()}
+            onClick={()=>void generateManualInvite()}>
+            <Copy className="size-4"/> Sugeneruoti kvietimo nuorodą
+          </Button>
         </div>
       </form>
-      <p className="text-xs text-muted-foreground">Kvietimo pristatymas priklauso nuo Supabase Auth el. pašto nustatymų. Savo siuntėjo vardui ir adresui reikalingas patvirtintas SMTP domenas.</p>
+      {rateLimited&&<div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+        Pasiektas Supabase 2 laiškų per valandą limitas. Galite pasirinkti „Sugeneruoti kvietimo nuorodą“ ir išsiųsti ją per savo el. pašto programą.
+      </div>}
+      {manualInvite&&<div className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-4">
+        <p className="text-sm font-semibold">Kvietimo nuoroda paruošta – laiškas dar neišsiųstas</p>
+        <p className="text-xs text-muted-foreground">
+          Nuoroda suteikia galimybę patvirtinti paskyrą ir susikurti slaptažodį. Siųskite ją tik nurodytam gavėjui; viešai neskelbkite. Ji galioja ribotą laiką.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" size="sm" onClick={()=>void copyInvite()}><Copy className="size-4"/> Kopijuoti nuorodą</Button>
+          <Button type="button" size="sm" variant="outline" onClick={emailInvite}>
+            <ExternalLink className="size-4"/> Paruošti el. laišką
+          </Button>
+        </div>
+      </div>}
+      <p className="text-xs text-muted-foreground">
+        Automatiniai kvietimai ir slaptažodžio atkūrimas siunčiami per Supabase Auth. Norint pašalinti 2 laiškų per valandą limitą ir siųsti nuo „Švari Aplinka“ domeno, būtina prijungti atskirą SMTP.
+      </p>
     </section>
 
     <section className="card-surface space-y-3 p-5">
