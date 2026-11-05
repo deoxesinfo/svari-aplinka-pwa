@@ -9,6 +9,7 @@ import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
 import { canView,canEdit,moduleForPath,useSAAccess,SA_MODULES } from "@/lib/sa-access";
 import { cn } from "@/lib/utils";
 import {AppLoading} from "@/components/app/AppLoading";
+import {supabase} from "@/lib/supabase-client";
 
 export const NAV = [
   { to: "/", label: "Apžvalga", icon: LayoutDashboard },
@@ -33,6 +34,17 @@ function useActive() {
 }
 
 function Brand({ compact }: { compact?: boolean }) {
+  const [email,setEmail]=useState("");
+  useEffect(()=>{
+    let alive=true;
+    void supabase.auth.getSession().then(({data})=>{
+      if(alive)setEmail(data.session?.user.email||"");
+    }).catch(()=>{});
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      if(alive)setEmail(session?.user.email||"");
+    });
+    return ()=>{alive=false;subscription.unsubscribe()};
+  },[]);
   return (
     <div className="flex items-center gap-2.5">
       <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
@@ -42,6 +54,7 @@ function Brand({ compact }: { compact?: boolean }) {
         <div className="leading-tight">
           <div className="text-sm font-bold text-sidebar-accent-foreground">Švari Aplinka</div>
           <div className="text-xs text-sidebar-foreground/70">Darbų valdymas</div>
+          {email&&<div className="mt-1 max-w-[186px] truncate text-[11px] text-sidebar-foreground/65" title={"Prisijungta: "+email} aria-label={"Prisijungta: "+email}>{email}</div>}
         </div>
       )}
     </div>
@@ -125,6 +138,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <><PanelLeftClose className="size-4" /> Suskleisti</>}
         </button>
+        {!collapsed&&<p className="mt-1 shrink-0 text-center text-[10px] text-sidebar-foreground/50" title="Publikuotos PWA versijos identifikatorius">
+          Versija {import.meta.env.VITE_SA_BUILD_SHA?.slice(0,7)||"vietinė"}
+        </p>}
       </aside>
 
       {/* Mobile drawer */}
@@ -160,11 +176,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="text-sm text-muted-foreground">Administratorius gali pakeisti tavo paskyros leidimus. Šis puslapis ir jo duomenys nepasiekiami.</p>
             {firstAllowed&&<Link className="text-primary underline" to={firstAllowed.path}>Atidaryti leidžiamą skiltį</Link>}
           </section> : state.loaded ? (
-            readOnly && module!=="messages" ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
+            readOnly && module!=="messages" && module!=="photos" ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
               <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – redagavimo veiksmai šioje skiltyje išjungti.</p>
               {children}
             </fieldset> : readOnly ? <div className="min-w-0">
-              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – naujų pranešimų siuntimas neprieinamas.</p>
+              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – {module==="messages"?"naujų pranešimų siuntimas":"nuotraukų redagavimas ir įkėlimas"} neprieinamas.</p>
               {children}
             </div> : children
           ) : <AppLoading message="Kraunami duomenys…" minHeight="50vh"/>}
