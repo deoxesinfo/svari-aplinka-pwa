@@ -12,10 +12,12 @@ export async function markOwnNotificationRead(org:string,noticeId:string):Promis
 /** A deep link to a message confirms the sender opened that specific reply.
  * No other conversation is changed, and no ownership is inferred from URL alone.
  */
-export async function markOpenedMessageReplies(org:string,messageId:string):Promise<number>{
- const {data,error}=await supabase.from("sa_notifications")
+export async function markOpenedMessageReplies(org:string,messageId:string,receiptId?:string):Promise<number>{
+ let query=supabase.from("sa_notifications")
   .select("id").eq("organization_id",org).eq("related_message_id",messageId)
-  .eq("kind","staff_reply").is("read_at",null).limit(100);
+  .eq("kind","staff_reply").is("read_at",null);
+ if(receiptId)query=query.eq("related_receipt_id",receiptId);
+ const {data,error}=await query.limit(100);
  if(error)throw new Error("Nepavyko patikrinti atsakymų pranešimų: "+error.message);
  let count=0;
  for(const n of data||[]){
