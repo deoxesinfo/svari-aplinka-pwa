@@ -10,7 +10,7 @@ import { defaultInvitePermissions, countInviteModules } from "@/lib/invite-prese
 
 type ManagedAccount = {
   userId:string;email:string;displayName:string;role:"admin"|"manager"|"worker";
-  active:boolean;confirmed:boolean;createdAt:string;invitedAt:string|null;suspendedAt?:string|null;
+  active:boolean;confirmed:boolean;createdAt:string;invitedAt:string|null;suspendedAt?:string|null;awaitingPassword?:boolean;
   permissions:SAPermissionMap;
 };
 type ApiResponse = {ok:boolean;error?:string;accounts?:ManagedAccount[]};
@@ -190,7 +190,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{a.displayName||a.email}</span>
                 {a.displayName&&<span className="block truncate text-xs text-muted-foreground">{a.email}</span>}
-                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {accountStateLabel(a.active,a.confirmed)}</span>
+                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {a.awaitingPassword?"Laukia slaptažodžio sukūrimo":accountStateLabel(a.active,a.confirmed)}</span>
               </span>
             </span>
             {expanded===a.userId?<ChevronUp className="size-5 shrink-0"/>:<ChevronDown className="size-5 shrink-0"/>}
