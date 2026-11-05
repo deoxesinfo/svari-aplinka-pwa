@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { supabase } from "@/lib/supabase-client";
 import { SA_MODULES, type SAAccess, type SAPermissionMap } from "@/lib/sa-access";
 import { accountDeletionConfirmed, accountStateLabel } from "@/lib/account-lifecycle";
+import { defaultInvitePermissions, countInviteModules } from "@/lib/invite-presets";
 
 type ManagedAccount = {
   userId:string;email:string;displayName:string;role:"admin"|"manager"|"worker";
@@ -30,6 +31,8 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   const [email,setEmail]=useState("");
   const [displayName,setDisplayName]=useState("");
   const [role,setRole]=useState<"manager"|"worker">("manager");
+  const [inviteExpanded,setInviteExpanded]=useState(false);
+  const [invitePermissions,setInvitePermissions]=useState<SAPermissionMap>(()=>defaultInvitePermissions("manager"));
   const [drafts,setDrafts]=useState<Record<string,SAPermissionMap>>({});
   const [deleteTarget,setDeleteTarget]=useState<ManagedAccount|null>(null);
   const [deleteConfirmation,setDeleteConfirmation]=useState("");
@@ -71,9 +74,9 @@ export function AccountManagement({organizationId}:{organizationId:string}){
     if(!email.trim())return;
     setBusy(true);
     try{
-      await invoke("invite",{email:email.trim(),displayName:displayName.trim(),role});
-      toast.success("Kvietimas išsiųstas. Naudotojas slaptažodį susikurs gavęs laišką.");
-      setEmail("");setDisplayName("");await reload();
+      await invoke("invite",{email:email.trim(),displayName:displayName.trim(),role,permissions:invitePermissions});
+      toast.success("Kvietimas išsiųstas. Pradinės teisės išsaugotos; naudotojas jas gaus tik susikūręs slaptažodį.");
+      setEmail("");setDisplayName("");setInvitePermissions(defaultInvitePermissions(role));await reload();
     }catch(err){toast.error(err instanceof Error?err.message:"Kvietimas nepavyko")}
     finally{setBusy(false)}
   };
@@ -119,7 +122,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   return <div className="space-y-5">
     <section className="card-surface space-y-4 p-5">
       <h2 className="flex items-center gap-2 text-lg font-semibold"><MailPlus className="size-5"/> Pakviesti naudotoją</h2>
-      <p className="text-sm text-muted-foreground">Registracija nevieša. Žmogus gaus aktyvavimo laišką ir pats nusistatys slaptažodį. Nauja paskyra pradžioje neturi prieigos prie jokių darbo modulių.</p>
+      <p className="text-sm text-muted-foreground">Registracija nevieša. Pakviestas žmogus pirmiausia susikurs slaptažodį. Jūs galite nustatyti jo pradines teises prieš išsiunčiant kvietimą ir vėliau jas bet kada pakeisti.</p>
       <form onSubmit={invite} className="grid gap-3 sm:grid-cols-2">
         <label className="space-y-1 text-sm font-medium">El. paštas
           <input type="email" required className="w-full rounded-lg border bg-background p-3" value={email}
@@ -130,17 +133,43 @@ export function AccountManagement({organizationId}:{organizationId:string}){
             onChange={e=>setDisplayName(e.target.value)} maxLength={120} placeholder="Vardas Pavardė"/>
         </label>
         <label className="space-y-1 text-sm font-medium">Rolė
-          <select value={role} onChange={e=>setRole(e.target.value as "manager"|"worker")}
+          <select value={role} onChange={e=>{const next=e.target.value as "manager"|"worker";setRole(next);setInvitePermissions(defaultInvitePermissions(next));}}
             className="w-full rounded-lg border bg-background p-3">
             <option value="manager">Vadybininkas</option>
             <option value="worker">Darbuotojas</option>
           </select>
         </label>
-        <div className="flex items-end"><Button className="w-full sm:w-auto" disabled={busy} type="submit">
-          <MailPlus className="size-4"/> Siųsti kvietimą
-        </Button></div>
+        <div className="sm:col-span-2 rounded-lg border">
+          <button type="button" className="flex w-full items-center justify-between gap-3 p-3 text-left"
+            aria-expanded={inviteExpanded} onClick={()=>setInviteExpanded(v=>!v)}>
+            <span className="flex items-center gap-2 font-semibold"><ShieldCheck className="size-5 text-primary"/> Pradinės prieigos teisės</span>
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              {countInviteModules(invitePermissions)} funkcijos
+              {inviteExpanded?<ChevronUp className="size-4"/>:<ChevronDown className="size-4"/>}
+            </span>
+          </button>
+          {inviteExpanded&&<div className="space-y-1 border-t p-3">
+            {SA_MODULES.filter(module=>module.key!=="account").map(module=>
+              <div key={module.key} className="grid grid-cols-[minmax(0,1fr)_minmax(136px,190px)] items-center gap-2 border-b py-2 last:border-0">
+                <label htmlFor={"invite-"+module.key} className="text-sm font-medium">{module.name}</label>
+                <select id={"invite-"+module.key} className="min-w-0 rounded-lg border bg-background px-2 py-2 text-sm"
+                  value={invitePermissions[module.key]||"none"} disabled={busy}
+                  onChange={event=>setInvitePermissions(p=>({...p,[module.key]:event.target.value as SAAccess}))}>
+                  {LEVELS.map(level=><option key={level.value} value={level.value}>{level.label}</option>)}
+                </select>
+              </div>
+            )}
+          </div>}
+          <p className="border-t px-3 py-2 text-xs text-muted-foreground">
+            „Nėra prieigos“ paslepia funkciją. Paskyra visada gali valdyti savo slaptažodį.
+            Prieigos bus suteiktos tik po kvietimo patvirtinimo ir slaptažodžio sukūrimo.
+          </p>
+        </div>
+        <div className="flex items-end sm:col-span-2">
+          <Button className="w-full sm:w-auto" disabled={busy} type="submit"><MailPlus className="size-4"/> Siųsti kvietimą</Button>
+        </div>
       </form>
-      <p className="text-xs text-muted-foreground">Kvietimų siuntimui būtinas veikiantis Supabase Auth el. paštas (SMTP) ir teisingas leidžiamas grįžimo adresas.</p>
+      <p className="text-xs text-muted-foreground">Kvietimo pristatymas priklauso nuo Supabase Auth el. pašto nustatymų. Savo siuntėjo vardui ir adresui reikalingas patvirtintas SMTP domenas.</p>
     </section>
 
     <section className="card-surface space-y-3 p-5">
