@@ -98,6 +98,8 @@ Deno.serve(async(req)=>{
       const {data:target}=await service.from("sa_memberships")
         .select("role,active").eq("organization_id",organizationId).eq("user_id",userId).maybeSingle();
       if(!target||target.role==="admin")return bad("Administratoriaus teisių keisti negalima",403,origin);
+      if(action==="set_active"&&typeof payload.active!=="boolean")
+        return bad("Neteisinga paskyros būsena",400,origin);
       const effectiveAction=action==="set_active"?(payload.active===true?"restore":"suspend"):action;
       if(["suspend","restore","delete"].includes(effectiveAction)){
         const {data:profiles,error:profilesError}=await service.from("sa_account_directory")
