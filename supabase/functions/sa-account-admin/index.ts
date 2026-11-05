@@ -84,7 +84,7 @@ Deno.serve(async(req)=>{
       }));
       return response({ok:true,accounts},200,origin);
     }
-    if(action==="invite"){
+    if(action==="invite"||action==="invite_link"){
       const email=String(payload.email||"").trim().toLowerCase();
       const displayName=String(payload.displayName||"").trim();
       const role=String(payload.role||"manager");
@@ -92,11 +92,25 @@ Deno.serve(async(req)=>{
       if(displayName.length>120) return bad("Per ilgas vardas",400,origin);
       if(!["manager","worker"].includes(role))return bad("Ši rolė neleidžiama",400,origin);
        const permissions=normalizeInvitePermissions(role as "manager"|"worker",payload.permissions);
-      const {data:invitation,error:inviteError}=await service.auth.admin.inviteUserByEmail(email,{
-        redirectTo:"https://deoxesinfo.github.io/svari-aplinka-pwa/?sa_auth=invite",
-        data:{display_name:displayName},
-      });
-      if(inviteError||!invitation?.user?.id)return bad("Nepavyko išsiųsti kvietimo: "+(inviteError?.message||"Nežinoma klaida"),400,origin);
+      const isLinkOnly=action==="invite_link";
+      const redirectTo="https://deoxesinfo.github.io/svari-aplinka-pwa/?sa_auth=invite";
+      // Manual link generation does NOT send an email or evade provider security.
+      // Only an authenticated company administrator can obtain this sensitive token.
+      const {data:invitation,error:inviteError}=isLinkOnly
+        ? await service.auth.admin.generateLink({
+            type:"invite",email,options:{redirectTo,data:{display_name:displayName}},
+          })
+        : await service.auth.admin.inviteUserByEmail(email,{
+            redirectTo,data:{display_name:displayName},
+          });
+      if(inviteError||!invitation?.user?.id){
+        const detail=inviteError?.message||"Nežinoma klaida";
+        if(!isLinkOnly&&/rate limit|too many emails|over_email_send_rate_limit/i.test(detail))
+          return bad("Supabase išnaudojo 2 laiškų per valandą limitą. Galite sugeneruoti aktyvavimo nuorodą ir išsiųsti ją per savo el. paštą arba prijungti individualų SMTP.",429,origin);
+        return bad((isLinkOnly?"Nepavyko sukurti nuorodos: ":"Nepavyko išsiųsti kvietimo: ")+detail,400,origin);
+      }
+      const actionLink=isLinkOnly && "properties" in invitation ? invitation.properties?.action_link : undefined;
+      if(isLinkOnly && !actionLink)return bad("Supabase nesugeneravo aktyvavimo nuorodos",502,origin);
       const userId=invitation.user.id;
       // Keep membership inactive until the invitation, activation lock and
       // explicit per-module rights are all successfully persisted.
@@ -118,7 +132,9 @@ Deno.serve(async(req)=>{
       const {error:enableError}=await service.from("sa_memberships").update({active:true})
         .eq("organization_id",organizationId).eq("user_id",userId);
       if(enableError)throw Error("Kvietimas išsiųstas, bet narystė neaktyvuota: "+enableError.message);
-      return response({ok:true,userId,invited:true,permissionsSaved:true},200,origin);
+      return response(isLinkOnly
+        ? {ok:true,userId,invited:false,permissionsSaved:true,manualLink:actionLink}
+        : {ok:true,userId,invited:true,permissionsSaved:true},200,origin);
     }
     if(["permissions","set_active","suspend","restore","delete"].includes(action)){
       const userId=String(payload.userId||"");
