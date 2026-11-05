@@ -4,10 +4,9 @@ import {Button} from "@/components/ui/button";
 import {Confirm} from "@/components/app/ui-bits";
 import {getCloudOrganizationId} from "@/lib/store";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
-import {PushSettings} from "@/components/app/PushSettings";
 import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,listStaffParticipants,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
 
-export function StaffInbox(){
+export function StaffInbox({targetMessageId}:{targetMessageId?:string}={}){
  const org=getCloudOrganizationId();
  useSAAccess();
  const canModify=canEdit("messages");
@@ -26,6 +25,7 @@ export function StaffInbox(){
  const [toHide,setToHide]=useState<InboxMessage|null>(null);
  const [undo,setUndo]=useState<{id:string;title:string}|null>(null);
  const touch=useRef<{id:string;x:number;y:number}|null>(null);
+ const targetVisited=useRef<string|null>(null);
  const load=useCallback(async()=>{
   if(!org)return;
   try{
@@ -55,6 +55,18 @@ export function StaffInbox(){
     document.removeEventListener("visibilitychange",refresh);
   };
  },[load]);
+ // A direct incoming-message link opens only a receipt visible to this account.
+ useEffect(()=>{
+  if(!org||!targetMessageId||view!=="gauti")return;
+  const item=items.find(entry=>entry.message.id===targetMessageId);
+  if(!item)return;
+  document.getElementById("sa-receipt-"+item.receipt.id)?.scrollIntoView?.({block:"center",behavior:"smooth"});
+  if(item.receipt.read_at||targetVisited.current===item.receipt.id)return;
+  targetVisited.current=item.receipt.id;
+  void acknowledgeStaffMessage(org,item.receipt.id)
+    .then(()=>{window.dispatchEvent(new Event("sa-message-updated"));return load()})
+    .catch(e=>setError(e instanceof Error?e.message:"Nepavyko pažymėti pranešimo perskaitytu"));
+ },[org,targetMessageId,view,items,load]);
  const refreshed=async()=>{await load();window.dispatchEvent(new Event("sa-message-updated"))};
  const ack=async(item:InboxMessage,reply?: "sutinku"|"nesutinku")=>{
   if(!org||busy)return;
@@ -140,7 +152,8 @@ export function StaffInbox(){
   </div>
   {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
   {items.length===0?<p className="rounded-xl border p-6 text-sm text-muted-foreground">Šiuo metu pranešimų nėra.</p>
-   :items.filter(({receipt})=>!receipt.hidden_at).map(item=><article key={item.receipt.id} className="rounded-xl border bg-card p-4">
+   :items.filter(({receipt})=>!receipt.hidden_at).map(item=><article key={item.receipt.id} id={"sa-receipt-"+item.receipt.id}
+    className={"rounded-xl border bg-card p-4 "+(targetMessageId===item.message.id?"ring-2 ring-primary/50":"")}>
       <div className="flex flex-wrap justify-between gap-2">
         <h3 className="font-semibold">{item.message.title}</h3>
         <span className="text-xs text-muted-foreground">{item.receipt.read_at?"Perskaityta":"Nauja"}</span>
@@ -166,7 +179,6 @@ export function StaffInbox(){
    </article>)}
  </section>;
  return <section className="space-y-3">
-  <PushSettings/>
   <div className="flex items-center justify-between gap-2">
    <h2 className="text-lg font-bold">{view==="trash"?"Pranešimų šiukšlinė":"Gauti pranešimai"}</h2>
    <div className="flex items-center gap-2">
@@ -214,7 +226,7 @@ export function StaffInbox(){
       className="flex w-full items-center justify-center gap-1 rounded-lg bg-destructive text-sm font-semibold text-destructive-foreground">
       <Trash2 className="size-4"/> Į šiukšlinę</button>
     </div>}
-    <article className="relative rounded-xl border bg-card p-4 transition-transform duration-200 ease-out"
+    <article id={"sa-receipt-"+receipt.id} className={"relative rounded-xl border bg-card p-4 transition-transform duration-200 ease-out "+(targetMessageId===message.id?"ring-2 ring-primary/50":"")}
       style={{transform:view==="gauti"&&swiped===receipt.id?"translateX(-112px)":"translateX(0)"}}>
      <div className="flex flex-wrap items-center justify-between gap-2">
       <div className="flex min-w-0 items-center gap-2">
