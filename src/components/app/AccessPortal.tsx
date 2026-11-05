@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
+import { supabase, AUTH_ENFORCED, SA_AUTH_LINK_INVITE,SA_AUTH_LINK_RECOVERY } from "@/lib/supabase-client";
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
 import {AppLoading} from "@/components/app/AppLoading";
 import {AccountManagement} from "@/components/app/AccountManagement";
@@ -43,10 +43,8 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const [workspaceReady,setWorkspaceReady]=useState(false);
  const [workspaceError,setWorkspaceError]=useState("");
  useEffect(()=>{
-   const params=new URLSearchParams(window.location.search);
-   const isInvite=params.get("sa_auth")==="invite";
-   const withToken=window.location.hash.includes("access_token=")||params.has("code")||params.has("token_hash");
-   if(isInvite&&withToken)setInviteSetup(true);
+   if(SA_AUTH_LINK_INVITE)setInviteSetup(true);
+   if(SA_AUTH_LINK_RECOVERY)setRecovery(true);
    let alive=true;
    const read=async()=>{
      const {data:auth,error:authError}=await supabase.auth.getUser();
