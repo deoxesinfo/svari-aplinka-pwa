@@ -150,6 +150,19 @@ export function StaffInbox(){
       <p className="mt-2 text-xs text-muted-foreground">{new Date(item.message.scheduled_for).toLocaleString("lt-LT")}</p>
       {!item.receipt.read_at&&<Button type="button" size="sm" variant="outline" className="mt-3"
         disabled={!!busy} onClick={()=>void ack(item)}><Check className="size-4"/> Perskaičiau</Button>}
+      {item.message.kind==="response"&&!item.receipt.response&&<div className="mt-3 flex flex-wrap gap-2">
+       <Button type="button" size="sm" disabled={!!busy} onClick={()=>void ack(item,"sutinku")}>Sutinku</Button>
+       <Button type="button" size="sm" variant="outline" disabled={!!busy} onClick={()=>void ack(item,"nesutinku")}>Nesutinku</Button>
+      </div>}
+      {!item.receipt.reply_text&&<Button type="button" size="sm" variant="outline" className="mt-3" disabled={!!busy}
+        onClick={()=>setReplyOpen(replyOpen===item.receipt.id?null:item.receipt.id)}><MessageCircle className="size-4"/> Atsakyti</Button>}
+      {replyOpen===item.receipt.id&&!item.receipt.reply_text&&<div className="mt-3 space-y-2">
+       <label className="block text-sm font-medium" htmlFor={"sa-reply-"+item.receipt.id}>Atsakymas (iki 300 simbolių)</label>
+       <textarea id={"sa-reply-"+item.receipt.id} value={replyTexts[item.receipt.id]||""} maxLength={300} rows={2}
+        className="w-full rounded-lg border bg-card p-3 text-base" onChange={e=>setReplyTexts(p=>({...p,[item.receipt.id]:e.target.value}))}/>
+       <Button type="button" size="sm" disabled={!!busy||!(replyTexts[item.receipt.id]||"").trim()} onClick={()=>void reply(item)}>Siųsti atsakymą</Button>
+      </div>}
+      {item.receipt.reply_text&&<p className="mt-3 rounded-lg bg-muted/40 p-3 text-sm"><strong>Mano atsakymas:</strong> {item.receipt.reply_text}</p>}
    </article>)}
  </section>;
  return <section className="space-y-3">
