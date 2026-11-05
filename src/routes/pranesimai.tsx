@@ -13,10 +13,11 @@ import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaf
 const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export const Route=createFileRoute("/pranesimai")({
  validateSearch:(raw:Record<string,unknown>)=>{
-  const tab=raw["tab"],message=raw["message"];
+  const tab=raw["tab"],message=raw["message"],receipt=raw["receipt"];
   return {
    ...(tab==="issiusti"||tab==="gauti"?{tab:tab as "issiusti"|"gauti"}:{}),
    ...(typeof message==="string"&&uuid.test(message)?{message}:{}),
+   ...(typeof receipt==="string"&&uuid.test(receipt)?{receipt}:{}),
   };
  },
  component:MessagesPage,
@@ -49,13 +50,20 @@ function MessagesPage(){
  // Deep links only select items already visible through existing RLS policies.
  useEffect(()=>{
   if(tab!=="issiusti"||!search.message||!messages.some(m=>m.id===search.message))return;
-  document.getElementById("sa-message-"+search.message)?.scrollIntoView?.({block:"center",behavior:"smooth"});
-  if(org&&markedReplyTarget.current!==search.message){
-   markedReplyTarget.current=search.message;
-   void markOpenedMessageReplies(org,search.message)
+  const target=search.receipt
+    ?receipts.find(r=>r.id===search.receipt&&r.message_id===search.message)
+    :null;
+  if(search.receipt&&!target)return; // Never mark a receipt not belonging to this visible message.
+  const item=(target&&document.getElementById("sa-reply-"+target.id))
+    ||document.getElementById("sa-message-"+search.message);
+  item?.scrollIntoView?.({block:"center",behavior:"smooth"});
+  const key=search.message+":"+(search.receipt||"");
+  if(org&&markedReplyTarget.current!==key){
+   markedReplyTarget.current=key;
+   void markOpenedMessageReplies(org,search.message,search.receipt)
      .catch(e=>setError(e instanceof Error?e.message:"Nepavyko atnaujinti atsakymo būsenos"));
   }
- },[tab,org,search.message,messages]);
+ },[tab,org,search.message,search.receipt,messages,receipts]);
  const labels=useMemo(()=>new Map([...participants,...recipients].map(p=>[p.userId,p.name])),[participants,recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!canSend)return;
@@ -183,7 +191,8 @@ function MessagesPage(){
        <p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.body}</p>
        <p className="mt-2 text-xs text-muted-foreground">Laikas: {new Date(m.scheduled_for).toLocaleString("lt-LT")}</p>
        <div className="mt-3 space-y-1">
-        {own.map(r=><p key={r.id} className="text-sm">
+        {own.map(r=><p key={r.id} id={"sa-reply-"+r.id}
+          className={"text-sm "+(search.receipt===r.id?"rounded-md bg-primary/5 p-2 ring-2 ring-primary/40":"")}>
          {labels.get(r.recipient_id)||"Gavėjas"}: <strong>{r.response?r.response==="sutinku"?"Sutiko":"Nesutiko":r.read_at?"Perskaitė":delivered?"Neperskaitė":"Laukia siuntimo"}</strong>
          {r.responded_at?" · "+new Date(r.responded_at).toLocaleString("lt-LT"):r.read_at?" · "+new Date(r.read_at).toLocaleString("lt-LT"):""}
          {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2"><strong>Gautas atsakymas iš {labels.get(r.recipient_id)||"paskyros "+r.recipient_id.slice(0,8)}:</strong> {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
