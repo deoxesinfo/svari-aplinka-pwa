@@ -7,6 +7,7 @@ import { supabase, AUTH_ENFORCED, SA_AUTH_LINK_INVITE,SA_AUTH_LINK_RECOVERY } fr
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
 import {AppLoading} from "@/components/app/AppLoading";
 import {AccountManagement} from "@/components/app/AccountManagement";
+import { SA_ACCOUNT_TAB_KEY } from "@/lib/navigation-persistence";
 import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
@@ -38,7 +39,14 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const [newPassword,setNewPassword]=useState("");
  const [oldPassword,setOldPassword]=useState("");
  const [repeatPassword,setRepeatPassword]=useState("");
- const [tab,setTab]=useState<"mine"|"manage">("mine");
+ const [tab,setTab]=useState<"mine"|"manage">(()=>{
+   try{return sessionStorage.getItem(SA_ACCOUNT_TAB_KEY)==="manage"?"manage":"mine";}
+   catch{return "mine";}
+ });
+ const changeTab=(next:"mine"|"manage")=>{
+   setTab(next);
+   try{sessionStorage.setItem(SA_ACCOUNT_TAB_KEY,next);}catch{/* Optional memory */}
+ };
  const [inviteSetup,setInviteSetup]=useState(false);
  const [workspaceReady,setWorkspaceReady]=useState(false);
  const [workspaceError,setWorkspaceError]=useState("");
@@ -241,8 +249,8 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    return <section className="mx-auto max-w-5xl space-y-4 py-5">
      <h1 className="flex items-center gap-2 text-xl font-bold"><ShieldCheck className="size-6 text-primary"/> Paskyra</h1>
      {account.membership.role==="admin"&&<div className="flex flex-wrap gap-2 border-b pb-3" role="tablist">
-       <Button role="tab" aria-selected={tab==="mine"} variant={tab==="mine"?"default":"outline"} onClick={()=>setTab("mine")}>Mano paskyra</Button>
-       <Button role="tab" aria-selected={tab==="manage"} variant={tab==="manage"?"default":"outline"} onClick={()=>setTab("manage")}>Paskyrų valdymas</Button>
+       <Button role="tab" aria-selected={tab==="mine"} variant={tab==="mine"?"default":"outline"} onClick={()=>changeTab("mine")}>Mano paskyra</Button>
+       <Button role="tab" aria-selected={tab==="manage"} variant={tab==="manage"?"default":"outline"} onClick={()=>changeTab("manage")}>Paskyrų valdymas</Button>
      </div>}
      {tab==="manage"&&account.membership.role==="admin"?
        <AccountManagement organizationId={account.membership.organization_id}/>:
