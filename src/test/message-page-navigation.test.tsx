@@ -62,17 +62,21 @@ describe("ŠA V2.3.19.1 default route is the inbox",()=>{
  });
 
  it("deep link selects the exact sent message and acknowledges only its reply notice",async()=>{
-  state.search={tab:"issiusti",message:"message-1"};
+  state.search={tab:"issiusti",message:"message-1",receipt:"receipt-1"};
   state.outbox.mockResolvedValue({messages:[{
    id:"message-1",organization_id:"org",sender_id:"manager-1",
    title:"Gautas klausimas",body:"Tekstas",kind:"info",
    scheduled_for:"2026-11-05T21:32:38Z",created_at:"2026-11-05T21:32:38Z"
-  }],receipts:[]});
+  }],receipts:[{
+   id:"receipt-1",organization_id:"org",message_id:"message-1",recipient_id:"admin-1",
+   read_at:null,response:null,responded_at:null,reply_text:"Atsakiau",replied_at:"2026-11-05T21:33:00Z"
+  }]});
   render(<Route.options.component/>);
   expect(await screen.findByText("Gautas klausimas")).toBeInTheDocument();
   expect(screen.getByRole("tab",{name:"Išsiųsti"})).toHaveAttribute("aria-selected","true");
   expect(document.getElementById("sa-message-message-1")).toHaveClass("ring-2");
-  await waitFor(()=>expect(state.read).toHaveBeenCalledWith("org","message-1"));
+  expect(document.getElementById("sa-reply-receipt-1")).toHaveClass("ring-2");
+  await waitFor(()=>expect(state.read).toHaveBeenCalledWith("org","message-1","receipt-1"));
  });
 
 });
