@@ -1,20 +1,11 @@
-import { createRootRoute, Outlet, Link, useRouterState } from "@tanstack/react-router";
+import { createRootRoute, Outlet, Link } from "@tanstack/react-router";
 import { AppShell } from "@/components/app/AppShell";
 import { Toaster } from "sonner";
 import { AccessPortal } from "@/components/app/AccessPortal";
 
 function RootLayout() {
-  const pathname = useRouterState({ select: s => s.location.pathname });
   return <>
-    {pathname === "/paskyra" ? (
-      <main className="flex min-h-screen w-full items-center justify-center bg-muted/20 px-4 py-8">
-        <div className="w-full max-w-xl">
-          <Outlet />
-        </div>
-      </main>
-    ) : (
-      <AccessPortal mode="gate"><AppShell><Outlet /></AppShell></AccessPortal>
-    )}
+    <AccessPortal mode="gate"><AppShell><Outlet /></AppShell></AccessPortal>
     <Toaster richColors position="top-right" />
   </>;
 }
