@@ -9,7 +9,7 @@ import { loadCloudState,cloudMutations,saveCloudMutations,resetCloudRole } from 
 import { gpsResult,validGpsForCompletion } from "./gps";
 import type { GpsRadius } from "./gps";
 import { hasConfirmedPin } from "./address-gps";
-import { MODULE_FOR_TABLE,canEdit } from "./sa-access";
+import { MODULE_FOR_TABLE,canEdit,canDelete } from "./sa-access";
 import { isAvailableJobAddress } from "./job-address";
 import { applyInspection, reopenWhenMadeUrgent } from "./job-followup";
 
@@ -97,7 +97,15 @@ function set(fn: (s: AppState) => Partial<AppState>) {
     try {changes=cloudMutations(before,after,org)}catch(err){
       toast.error(err instanceof Error?err.message:"Netinkami duomenys");return;
     }
-    if(changes.some(change=>!canEdit(MODULE_FOR_TABLE[change.table]||"settings"))){
+    if(changes.some(change=>{
+      const module=MODULE_FOR_TABLE[change.table]||"settings";
+      const beforeRecord=change.table==="sa_jobs"?before.jobs.find(x=>x.id===change.id):
+        change.table==="sa_addresses"?before.addresses.find(x=>x.id===change.id):undefined;
+      const afterRecord=change.table==="sa_jobs"?after.jobs.find(x=>x.id===change.id):
+        change.table==="sa_addresses"?after.addresses.find(x=>x.id===change.id):undefined;
+      const changesDeletion=beforeRecord && afterRecord && beforeRecord.deletedAt!==afterRecord.deletedAt;
+      return change.kind==="remove" || changesDeletion ? !canDelete(module) : !canEdit(module);
+    })){
       toast.error("Šiai funkcijai suteikta tik peržiūros teisė. Pakeitimas neįrašytas.");
       return;
     }
@@ -246,6 +254,7 @@ export function restoreAddress(id:string):boolean{
 export function deleteAddress(id:string):boolean{
   const address=state.addresses.find(a=>a.id===id);
   if(!address||address.deletedAt)return false;
+  if(isCloudMode()&&!canDelete("addresses")){toast.error("Neturite adresų trynimo teisės");return false;}
   const at=nowIso();
   set(s=>({
     addresses:s.addresses.map(a=>a.id===id?{...a,deletedAt:at,status:"sustabdytas"}:a),
@@ -430,6 +439,7 @@ export function restoreDeletedJob(id:string):boolean{
 export function deleteJob(id:string):boolean {
   const job=state.jobs.find(j=>j.id===id);
   if(!job||job.deletedAt)return false;
+  if(isCloudMode()&&!canDelete("jobs")){toast.error("Neturite darbų trynimo teisės");return false;}
   set(s=>({jobs:s.jobs.map(j=>j.id===id?hist({...j,deletedAt:nowIso()},"Administratoriaus sprendimu darbas pašalintas iš aktyvių įrašų"):j)}));
   return true;
 }
