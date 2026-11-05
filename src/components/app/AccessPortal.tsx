@@ -10,7 +10,7 @@ import {AccountManagement} from "@/components/app/AccountManagement";
 import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
-type Account={email:string;membership:Member|null};
+type Account={email:string;membership:Member|null;suspended:boolean};
 const NAMES:Record<Member["role"],string>={admin:"Administratorius",manager:"Vadybininkas",worker:"Darbuotojas"};
 
 function PasswordInput({value,onChange,autoComplete,minLength}:{value:string;onChange:(v:string)=>void;autoComplete:string;minLength?:number}){
@@ -51,10 +51,13 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      if(!alive)return;
      if(authError||!auth.user){setAccount(null);setLoading(false);return}
      const {data:members,error:memberError}=await supabase.from("sa_memberships")
-       .select("organization_id,role,active").eq("user_id",auth.user.id).eq("active",true).limit(1);
+       .select("organization_id,role,active").eq("user_id",auth.user.id).limit(1);
      if(!alive)return;
-     if(memberError){setAccount({email:auth.user.email||"",membership:null});toast.error("Nepavyko patikrinti paskyros teisių");}
-     else setAccount({email:auth.user.email||"",membership:(members?.[0]||null) as Member|null});
+     if(memberError){setAccount({email:auth.user.email||"",membership:null,suspended:false});toast.error("Nepavyko patikrinti paskyros teisių");}
+     else {
+       const member=(members?.[0]||null) as Member|null;
+       setAccount({email:auth.user.email||"",membership:member?.active?member:null,suspended:Boolean(member&&!member.active)});
+     }
      setLoading(false);
    };
    void read();
@@ -82,13 +85,46 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    window.addEventListener("focus",sync);
    return()=>{window.clearInterval(id);window.removeEventListener("focus",sync)};
  },[mode,workspaceReady]);
+ // Re-check membership even for an already-signed-in user. Supabase JWTs may
+ // remain valid until expiry; the database authorization is the final gate.
+ useEffect(()=>{
+   if(mode!=="gate"||!AUTH_ENFORCED||!account?.membership)return;
+   const org=account.membership.organization_id;
+   let alive=true;
+   const verify=async()=>{
+     try{
+       const {data:auth}=await supabase.auth.getUser();
+       if(!alive)return;
+       if(!auth.user){leaveCloudWorkspace();setWorkspaceReady(false);setAccount(null);return}
+       const {data:member,error}=await supabase.from("sa_memberships")
+         .select("active").eq("organization_id",org).eq("user_id",auth.user.id).maybeSingle();
+       if(!alive||error)return; // transient network error must not masquerade as a suspension
+       if(!member?.active){
+         leaveCloudWorkspace();setWorkspaceReady(false);
+         setAccount(previous=>previous?{...previous,membership:null,suspended:true}:null);
+       }
+     }catch{/* RLS prevents access even if a temporary network error occurs. */}
+   };
+   const onFocus=()=>void verify();
+   const interval=window.setInterval(onFocus,25000);
+   window.addEventListener("focus",onFocus);
+   window.addEventListener("pageshow",onFocus);
+   return()=>{alive=false;window.clearInterval(interval);
+     window.removeEventListener("focus",onFocus);window.removeEventListener("pageshow",onFocus)};
+ },[mode,account?.membership?.organization_id]);
+
  const signIn=async(e:FormEvent)=>{
    e.preventDefault();
    if(!email.trim()||!password)return;
    setBusy(true);
    try{
      const {error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
-     if(error)toast.error("Nepavyko prisijungti. Patikrinkite duomenis.");
+     if(error){
+       const detail=String(error.message||"").toLowerCase();
+       if(detail.includes("banned")||detail.includes("suspended")||detail.includes("disabled")){
+         toast.error("Jūsų paskyra laikinai sustabdyta. Susisiekite su Švari Aplinka administratoriumi.");
+       }else toast.error("Nepavyko prisijungti. Patikrinkite duomenis.");
+     }
      else {setPassword("");toast.success("Prisijungta");}
    }finally{setBusy(false)}
  };
@@ -148,6 +184,18 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    <h1 className="text-xl font-bold">{inviteSetup?"Paskyros aktyvavimas":"Slaptažodžio atkūrimas"}</h1>
    {account?passwordForm("Nustatyti naują slaptažodį"):
      <p className="text-sm text-muted-foreground">Atidarykite patvirtintą slaptažodžio atkūrimo nuorodą iš savo el. pašto.</p>}
+ </section>;
+ if(account?.suspended)return <section className="mx-auto max-w-md space-y-4 py-10">
+   <div className="card-surface space-y-3 border-l-4 border-destructive p-5" role="alert">
+     <h1 className="text-xl font-bold">Jūsų paskyra laikinai sustabdyta</h1>
+     <p className="text-sm text-muted-foreground">
+       Administratoriaus sprendimu prieiga prie „Švari Aplinka“ programėlės šiuo metu išjungta.
+       Dėl atblokavimo susisiekite su „Švari Aplinka“ administratoriumi.
+     </p>
+     <Button variant="outline" onClick={()=>void supabase.auth.signOut()}>
+       <LogOut className="size-4"/> Atsijungti
+     </Button>
+   </div>
  </section>;
  if(account?.membership){
    if(mode==="gate"){
