@@ -1,9 +1,10 @@
 import { useEffect,useRef,useState } from "react";
 import { Bell, Check, CircleAlert } from "lucide-react";
 import { Link, useRouterState } from "@tanstack/react-router";
+import {toast} from "sonner";
 import { supabase } from "@/lib/supabase-client";
 import {getCloudOrganizationId} from "@/lib/store";
-import {listStaffInbox} from "@/lib/staff-messages";
+import {listStaffInbox,type InboxMessage} from "@/lib/staff-messages";
 
 type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;read_at:string|null;created_at:string};
 export function NotificationBell(){
@@ -12,25 +13,48 @@ export function NotificationBell(){
  const rootRef=useRef<HTMLDivElement>(null);
  const path=useRouterState({select:s=>s.location.pathname});
  const [error,setError]=useState("");
- const [manualUnread,setManualUnread]=useState(0);
+ const [manualMessages,setManualMessages]=useState<InboxMessage[]>([]);
+ // Only announce newly received messages during the current open PWA session.
+ // The first poll establishes a baseline so old unread messages do not create a toast storm.
+ const seenRef=useRef<{identity:string;ids:Set<string>}|null>(null);
  const fetchNotices=async()=>{
-  const {data:auth}=await supabase.auth.getUser();
-  if(!auth.user)return;
+  const {data:auth,error:authError}=await supabase.auth.getUser();
+  if(authError||!auth.user)return;
+  const org=getCloudOrganizationId();
+  // A failure to fetch general notifications must not hide staff inbox messages.
   const {data,error:queryError}=await supabase.from("sa_notifications")
    .select("id,title,body,kind,related_job_id,read_at,created_at")
    .eq("recipient_id",auth.user.id).order("created_at",{ascending:false}).limit(30);
-  if(queryError){setError("Nepavyko atnaujinti pranešimų");return}
-  setError("");setNotices((data||[]) as Notice[]);
-  const org=getCloudOrganizationId();
-  if(org){
-   try{const inbox=await listStaffInbox(org);setManualUnread(inbox.filter(x=>!x.receipt.read_at).length)}
-   catch{setManualUnread(0)}
+  if(queryError)setError("Nepavyko atnaujinti sistemos pranešimų");
+  else {setError("");setNotices((data||[]) as Notice[]);}
+  if(!org)return;
+  try{
+   const inbox=await listStaffInbox(org);
+   const identity=org+":"+auth.user.id;
+   const ids=new Set(inbox.map(item=>item.receipt.id));
+   const previous=seenRef.current;
+   if(previous?.identity===identity){
+     const fresh=inbox.filter(item=>!item.receipt.read_at&&!previous.ids.has(item.receipt.id));
+     if(fresh.length && document.visibilityState==="visible"){
+       const newest=fresh[0].message;
+       toast.info(fresh.length===1?"Nauja žinutė: "+newest.title:
+         "Gauta naujų žinučių: "+fresh.length,{
+         description:newest.body.slice(0,160),
+         duration:8000
+       });
+     }
+   }
+   seenRef.current={identity,ids};
+   setManualMessages(inbox);
+  }catch(err){
+   setError(err instanceof Error?"Nepavyko gauti asmeninių žinučių: "+err.message:
+     "Nepavyko gauti asmeninių žinučių");
   }
  };
  useEffect(()=>{
   void fetchNotices();
   const refresh=()=>{if(document.visibilityState==="visible")void fetchNotices()};
-  const timer=window.setInterval(refresh,45000);
+  const timer=window.setInterval(refresh,15000);
   window.addEventListener("focus",refresh);
   window.addEventListener("sa-message-updated",refresh);
   return()=>{window.clearInterval(timer);window.removeEventListener("focus",refresh);window.removeEventListener("sa-message-updated",refresh)};
@@ -62,6 +86,7 @@ export function NotificationBell(){
   if(err){setError("Nepavyko pažymėti pranešimo");return}
   setNotices(items=>items.map(item=>item.id===notice.id?{...item,read_at:now}:item));
  };
+ const manualUnread=manualMessages.filter(item=>!item.receipt.read_at).length;
  const unread=notices.filter(n=>!n.read_at).length+manualUnread;
  return <div ref={rootRef} className="relative">
   <button type="button" onClick={()=>{setExpanded(o=>!o);void fetchNotices()}}
@@ -75,6 +100,16 @@ export function NotificationBell(){
     <Link to="/pranesimai" onClick={()=>setExpanded(false)} className="mb-3 block rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm font-semibold text-primary">
       Asmeniniai pranešimai {manualUnread>0?"("+manualUnread+" nauji)":""} →
     </Link>
+    {manualMessages.slice(0,5).map(({message,receipt})=><Link
+      key={receipt.id} to="/pranesimai" onClick={()=>setExpanded(false)}
+      className={"mb-2 block rounded-lg border p-3 text-sm hover:bg-muted "+(!receipt.read_at?"border-primary/30 bg-primary/5":"bg-card")}>
+      <div className="flex items-center justify-between gap-2">
+        <strong className="break-words">{message.title}</strong>
+        {!receipt.read_at&&<span className="shrink-0 rounded-full bg-primary px-2 py-0.5 text-xs text-primary-foreground">Nauja</span>}
+      </div>
+      <p className="mt-1 line-clamp-2 break-words text-xs text-muted-foreground">{message.body}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{new Date(message.scheduled_for).toLocaleString("lt-LT")}</p>
+    </Link>)}
     {error&&<p className="mb-2 flex gap-1 text-xs text-destructive"><CircleAlert className="size-3"/>{error}</p>}
     {notices.length?notices.map(notice=><article key={notice.id} className={"border-b p-2 text-sm "+(!notice.read_at?"bg-primary/5":"")}>
       <p className="font-semibold">{notice.title}</p>
@@ -86,7 +121,7 @@ export function NotificationBell(){
        {!notice.read_at&&<button className="flex items-center gap-1 text-xs text-primary" onClick={()=>void markRead(notice)}><Check className="size-3"/>Pažymėti perskaitytu</button>}
       </div>
      </article>):<p className="text-sm text-muted-foreground">Pranešimų kol kas nėra.</p>}
-    <p className="mt-3 text-xs text-muted-foreground">Pranešimai saugomi Supabase paskyroje. Telefonų Push dar neįjungti.</p>
+    <p className="mt-3 text-xs text-muted-foreground">Žinutės atnaujinamos programėlėje kas 15 sekundžių, kai ji aktyvi. Užrakinto telefono pranešimams vėliau sutvarkysime Push.</p>
   </div>}
  </div>;
 }
