@@ -5,7 +5,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Menu, Sparkles, X, History, UserCircle, ScrollText, HardDrive, MessageSquare,
 } from "lucide-react";
 import { useAppState,isCloudMode,getCloudSaveError } from "@/lib/store";
-import { getCloudRole } from "@/lib/cloud-sync";
+import { canView,canEdit,moduleForPath,useSAAccess,SA_MODULES } from "@/lib/sa-access";
 import { cn } from "@/lib/utils";
 import {AppLoading} from "@/components/app/AppLoading";
 
@@ -49,10 +49,11 @@ function Brand({ compact }: { compact?: boolean }) {
 
 function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
   const isActive = useActive();
-  const employee=isCloudMode()&&getCloudRole()==="worker";
+  useSAAccess();
+  const allowed=new Set(SA_MODULES.filter(m=>canView(m.key)).map(m=>m.path));
   return (
     <nav className="flex flex-col gap-1" aria-label="Pagrindinė navigacija">
-      {NAV.filter(n=>!employee||["/","/kalendorius","/darbai","/nuotraukos","/paskyra"].includes(n.to)).map((n) => (
+      {NAV.filter(n=>!isCloudMode()||allowed.has(n.to)).map((n) => (
         <Link
           key={n.to}
           to={n.to}
@@ -88,6 +89,11 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const isActive = useActive();
   const path = useRouterState({ select: (r) => r.location.pathname });
+  useSAAccess();
+  const module=moduleForPath(path);
+  const blocked=Boolean(isCloudMode() && module && !canView(module));
+  const readOnly=Boolean(isCloudMode() && module && canView(module) && !canEdit(module));
+  const firstAllowed=SA_MODULES.find(m=>canView(m.key));
   useEffect(() => setDrawer(false), [path]);
 
   return (
@@ -95,17 +101,19 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar p-3 transition-[width] lg:flex",
+          "sticky top-0 hidden h-dvh shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar p-3 transition-[width] lg:flex",
           collapsed ? "w-[72px]" : "w-64",
         )}
       >
-        <div className={cn("mb-6 flex items-center px-1 pt-1", collapsed ? "justify-center" : "justify-between")}>
+        <div className={cn("mb-3 shrink-0 flex items-center px-1 pt-1", collapsed ? "justify-center" : "justify-between")}>
           <Brand compact={collapsed} />
         </div>
-        <NavList collapsed={collapsed} />
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-3">
+          <NavList collapsed={collapsed} />
+        </div>
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="mt-auto flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent/60 justify-center"
+          className="mt-2 shrink-0 flex items-center justify-center gap-2 rounded-lg border-t border-sidebar-border px-3 py-3 text-xs text-sidebar-foreground/80 hover:bg-sidebar-accent/60"
           aria-label={collapsed ? "Išskleisti meniu" : "Suskleisti meniu"}
         >
           {collapsed ? <PanelLeftOpen className="size-4" /> : <><PanelLeftClose className="size-4" /> Suskleisti</>}
@@ -116,14 +124,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Meniu">
           <div className="absolute inset-0 bg-foreground/40" onClick={() => setDrawer(false)} />
-          <div className="absolute inset-y-0 left-0 flex w-72 flex-col bg-sidebar p-4 shadow-xl">
+          <div className="absolute inset-y-0 left-0 flex h-dvh w-72 flex-col overflow-hidden bg-sidebar p-4 shadow-xl">
             <div className="mb-6 flex items-center justify-between">
               <Brand />
               <button onClick={() => setDrawer(false)} className="rounded-md p-2 text-sidebar-foreground" aria-label="Uždaryti meniu">
                 <X className="size-5" />
               </button>
             </div>
-            <NavList onNavigate={() => setDrawer(false)} />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6"><NavList onNavigate={() => setDrawer(false)} /></div>
           </div>
         </div>
       )}
@@ -140,14 +148,21 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="text-sm text-muted-foreground">· Darbų valdymas</span>
         </header>
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:pb-10 lg:pt-8">
-          {state.loaded ? children : (
-            <AppLoading message="Kraunami duomenys…" minHeight="50vh"/>
-          )}
+          {blocked ? <section className="card-surface mx-auto max-w-xl space-y-3 p-6" role="alert">
+            <h1 className="text-xl font-semibold">Šiai funkcijai prieiga nesuteikta</h1>
+            <p className="text-sm text-muted-foreground">Administratorius gali pakeisti tavo paskyros leidimus. Šis puslapis ir jo duomenys nepasiekiami.</p>
+            {firstAllowed&&<Link className="text-primary underline" to={firstAllowed.path}>Atidaryti leidžiamą skiltį</Link>}
+          </section> : state.loaded ? (
+            readOnly ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
+              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – redagavimo veiksmai šioje skiltyje išjungti.</p>
+              {children}
+            </fieldset> : children
+          ) : <AppLoading message="Kraunami duomenys…" minHeight="50vh"/>}
         </main>
         {/* Mobile bottom nav */}
         <nav className="pb-safe fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 backdrop-blur lg:hidden" aria-label="Apatinė navigacija">
           <div className="grid grid-cols-5">
-            {NAV.filter(n => (isCloudMode()&&getCloudRole()==="worker"?["/","/kalendorius","/darbai","/nuotraukos"]:["/","/kalendorius","/darbai","/adresai","/nuotraukos"]).includes(n.to)).map((n) => (
+            {NAV.filter(n => ["/","/kalendorius","/darbai","/adresai","/nuotraukos"].includes(n.to) && (!isCloudMode() || canView(moduleForPath(n.to) || "overview"))).map((n) => (
               <Link
                 key={n.to}
                 to={n.to}
