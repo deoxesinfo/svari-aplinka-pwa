@@ -9,7 +9,8 @@ grant select, delete on public.sa_push_subscriptions to service_role;
 -- A notification must point to a concrete conversation/recipient receipt, not just a title.
 alter table public.sa_notifications
   add column if not exists related_message_id uuid,
-  add column if not exists related_receipt_id uuid;
+  add column if not exists related_receipt_id uuid,
+  add column if not exists actor_user_id uuid;
 create index if not exists sa_notifications_related_message
   on public.sa_notifications(organization_id,related_message_id)
   where related_message_id is not null;
@@ -38,7 +39,9 @@ with candidate as (
  from candidate c where c.candidate_count=1
 )
 update public.sa_notifications n
-set related_message_id=c.message_id,related_receipt_id=c.receipt_id
+set related_message_id=c.message_id,related_receipt_id=c.receipt_id,
+    actor_user_id=(select r.recipient_id from public.sa_staff_message_receipts r
+                   where r.id=c.receipt_id and r.organization_id=n.organization_id)
 from unambiguous c where c.notice_id=n.id and c.receipt_rank=1;
 
 -- Receipt-owned explicit mark-as-read, including message:view accounts.
@@ -89,9 +92,9 @@ begin
  if v_receipt is null then return false; end if;
  if v_sender is distinct from (select auth.uid()) then
    insert into public.sa_notifications
-    (organization_id,recipient_id,title,body,kind,related_message_id,related_receipt_id)
+    (organization_id,recipient_id,title,body,kind,related_message_id,related_receipt_id,actor_user_id)
    select p_org,v_sender,'Gautas atsakymas: '||left(v_title,100),
-     'Naujas atsakymas prie išsiųsto pranešimo.','staff_reply',v_message,v_receipt
+     'Naujas atsakymas prie išsiųsto pranešimo.','staff_reply',v_message,v_receipt,(select auth.uid())
    where exists(select 1 from public.sa_memberships m where m.organization_id=p_org
         and m.user_id=v_sender and m.active)
    on conflict do nothing;
