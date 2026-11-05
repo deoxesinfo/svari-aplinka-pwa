@@ -110,8 +110,8 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   const emailInvite=()=>{
     if(!manualInvite)return;
     const subject="Švari Aplinka – kvietimas prisijungti";
-    const body="Sveiki,\\n\\nJums sukurtas kvietimas prisijungti prie „Švari Aplinka“ darbų valdymo sistemos.\\nAtidarykite šią nuorodą ir susikurkite asmeninį slaptažodį:\\n\\n"
-      +manualInvite.link+"\\n\\nJeigu kvietimo nesitikėjote, laišką ignoruokite.\\n\\nŠvari Aplinka";
+    const body="Sveiki,\n\nJums sukurtas kvietimas prisijungti prie „Švari Aplinka“ darbų valdymo sistemos.\nAtidarykite šią nuorodą ir susikurkite asmeninį slaptažodį:\n\n"
+      +manualInvite.link+"\n\nJeigu kvietimo nesitikėjote, laišką ignoruokite.\n\nŠvari Aplinka";
     window.location.href="mailto:"+encodeURIComponent(manualInvite.email)
       +"?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(body);
   };
