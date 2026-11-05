@@ -89,7 +89,13 @@ Deno.serve(async(req:Request)=>{
   org=input.organizationId;
   const {data,error}=await userClient.from("sa_memberships").select("role")
    .eq("organization_id",org).eq("user_id",userId).eq("active",true).single();
-  if(error||data?.role!=="admin")return respond({error:"FORBIDDEN"},403);
+  if(error||!data)return respond({error:"FORBIDDEN"},403);
+  if(data.role!=="admin"){
+    const check=await userClient.from("sa_user_permissions").select("module,access")
+      .eq("organization_id",org).eq("user_id",userId).in("module",["messages","jobs"]);
+    if(check.error||!check.data?.some(p=>["edit","delete"].includes(p.access)))
+      return respond({error:"FORBIDDEN"},403);
+  }
  }
  let keys:{publicKey:string;privateKey:string};
  try{keys=await getServerVapid()}catch{return respond({error:"PUSH_SETUP_UNAVAILABLE"},503)}
