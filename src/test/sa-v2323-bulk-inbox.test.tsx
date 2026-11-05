@@ -4,7 +4,7 @@ const mock=vi.hoisted(()=>({list:vi.fn(),hide:vi.fn(),purge:vi.fn()}));
 vi.mock("@/lib/store",()=>({getCloudOrganizationId:()=>"org-test"}));
 vi.mock("@/lib/sa-access",()=>({canEdit:()=>true,useSAAccess:()=>({})}));
 vi.mock("@/lib/staff-messages",()=>({
- listStaffInbox:mock.list,hideStaffMessage:mock.hide,purgeOwnStaffMessage:mock.purge,
+ listStaffInbox:mock.list,listStaffParticipants:async()=>[{userId:"admin",name:"Pagrindinis",role:"admin"}],hideStaffMessage:mock.hide,purgeOwnStaffMessage:mock.purge,
  acknowledgeStaffMessage:vi.fn(),replyToStaffMessage:vi.fn(),
 }));
 vi.mock("@/components/app/PushSettings",()=>({PushSettings:()=>null}));
@@ -33,6 +33,8 @@ describe("ŠA V2.3.23 multi-select inbox",()=>{
  it("selecting only two incoming messages moves only those after deliberate confirmation",async()=>{
   render(<StaffInbox/>);
   await screen.findByText("Žinutė 1");
+  expect(screen.getAllByText(/Nuo:/)).toHaveLength(3);
+  expect(screen.getAllByText("Pagrindinis")).toHaveLength(3);
   fireEvent.click(screen.getByRole("checkbox",{name:"Pažymėti Žinutė 1"}));
   fireEvent.click(screen.getByRole("checkbox",{name:"Pažymėti Žinutė 3"}));
   expect(screen.getByRole("button",{name:"Į šiukšlinę (2)"})).toBeEnabled();
