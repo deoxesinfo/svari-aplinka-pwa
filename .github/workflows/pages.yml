@@ -52,7 +52,7 @@ jobs:
             state="$(printf '%s' "$response" | jq -r '.status // empty')"
             echo "Prior Pages state (check $attempt): $state"
             case "$state" in
-              canceled|cancelled|failed|failure|errored|error|succeed|success|inactive)
+              canceled|cancelled|deployment_cancelled|deployment_canceled|failed|failure|deployment_failed|errored|error|succeed|success|inactive)
                 echo "Prior deployment is no longer active."; exit 0;;
               in_progress|queued|pending|updating_pages|requested)
                 code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST \
