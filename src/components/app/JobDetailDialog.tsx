@@ -17,6 +17,7 @@ import { completeR2AssignedJob, verifyR2Gps } from "@/lib/r2-photos";
 import { currentLocation } from "@/lib/location-permission";
 import { JOB_TYPE_LABEL, type Job } from "@/lib/types";
 import { currentAdminOrg } from "@/lib/work-assignments";
+import { canEdit,useSAAccess } from "@/lib/sa-access";
 import { fmtDateTime, fmtLong, overdueLabel, todayISO } from "@/lib/dates";
 
 type Props = { jobId: string; open: boolean; onOpenChange: (open: boolean) => void };
@@ -43,6 +44,8 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
   const [fixOpen, setFixOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const employee=isCloudMode()&&getCloudRole()==="worker";
+  useSAAccess();
+  const canUpload=!isCloudMode()||canEdit("photos");
 
   if (!job) {
     return <div className="p-5">
@@ -148,7 +151,10 @@ function JobDialogContent({ jobId, onClose }: { jobId: string; onClose: () => vo
         <section className="card-surface space-y-3 p-4 sm:p-5">
           <h3 className="flex items-center gap-2 text-base font-bold"><Camera className="size-5 text-primary"/> Nuotraukos · {related.length}/15</h3>
           <p className="text-xs text-muted-foreground">Pasirinkite žymą „Prieš“, „Po“ arba „Problema“. Nuotraukos saugomos privačioje saugykloje (prisijungus) arba tik naršyklėje (DEMO).</p>
-          {address && <PhotoUploader addressId={address.id} jobId={job.id} />}
+          {address&&(canUpload?<PhotoUploader addressId={address.id} jobId={job.id} />:
+            <p className="rounded-lg border p-3 text-sm text-muted-foreground" role="status">
+              Šiai paskyrai suteikta tik nuotraukų peržiūros teisė. Įkelti nuotraukas galima tik gavus atskirą administratoriaus leidimą.
+            </p>)}
           <PhotoGrid photos={related} empty="Nuotraukų dar nėra." />
         </section>
       </div>
