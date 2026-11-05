@@ -148,15 +148,15 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  };
  const setNew=async(e:FormEvent)=>{
    e.preventDefault();
-   if(newPassword.length<12)return toast.error("Naujas slaptažodis turi būti bent 12 simbolių");
-   if(newPassword!==repeatPassword)return toast.error("Nauji slaptažodžiai nesutampa");
-   if(!account?.email)return toast.error("Pirmiausia prisijunkite");
-   if(!recovery&&!inviteSetup&&!oldPassword)return toast.error("Įveskite dabartinį slaptažodį");
+   if(newPassword.length<12){toast.error("Naujas slaptažodis turi būti bent 12 simbolių");return;}
+   if(newPassword!==repeatPassword){toast.error("Nauji slaptažodžiai nesutampa");return;}
+   if(!account?.email){toast.error("Pirmiausia prisijunkite");return;}
+   if(!recovery&&!inviteSetup&&!oldPassword){toast.error("Įveskite dabartinį slaptažodį");return;}
    setBusy(true);
    try{
      if(!recovery&&!inviteSetup){
        const {data:check,error:checkError}=await supabase.auth.signInWithPassword({email:account.email,password:oldPassword});
-       if(checkError||!check.user)return toast.error("Senas slaptažodis neteisingas");
+       if(checkError||!check.user){toast.error("Senas slaptažodis neteisingas");return;}
      }
      const {error}=await supabase.auth.updateUser({password:newPassword});
      if(error)toast.error("Nepavyko pakeisti slaptažodžio: "+error.message);
