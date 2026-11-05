@@ -1,7 +1,8 @@
 import {describe,expect,it,vi} from "vitest";
 import {fireEvent,render,screen,waitFor} from "@testing-library/react";
-const state=vi.hoisted(()=>({outbox:vi.fn()}));
-vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options,useSearch:()=>({})}))}));
+const state=vi.hoisted(()=>({outbox:vi.fn(),read:vi.fn(),search:{} as Record<string,string>}));
+vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options,useSearch:()=>state.search}))}));
+vi.mock("@/lib/sa-message-notifications",()=>({markOpenedMessageReplies:state.read}));
 vi.mock("@/lib/sa-access",()=>({canEdit:()=>true,useSAAccess:()=>({})}));
 vi.mock("@/lib/store",()=>({useAppState:()=>({}),getCloudOrganizationId:()=>"org",isCloudMode:()=>true}));
 vi.mock("@/lib/staff-messages",()=>({
@@ -19,7 +20,7 @@ vi.mock("@/components/app/ui-bits",()=>({
 import {Route} from "@/routes/pranesimai";
 import {beforeEach,afterEach} from "vitest";
 import {cleanup} from "@testing-library/react";
-beforeEach(()=>{state.outbox.mockReset();state.outbox.mockResolvedValue({messages:[],receipts:[]})});
+beforeEach(()=>{state.search={};state.read.mockReset();state.read.mockResolvedValue(0);state.outbox.mockReset();state.outbox.mockResolvedValue({messages:[],receipts:[]})});
 afterEach(()=>cleanup());
 describe("ŠA V2.3.19.1 default route is the inbox",()=>{
  it("shows incoming messages before the send form, and three distinct tabs",()=>{
@@ -58,6 +59,20 @@ describe("ŠA V2.3.19.1 default route is the inbox",()=>{
   const before=state.outbox.mock.calls.length;
   fireEvent(window,new Event("sa-message-updated"));
   await waitFor(()=>expect(state.outbox.mock.calls.length).toBeGreaterThan(before));
+ });
+
+ it("deep link selects the exact sent message and acknowledges only its reply notice",async()=>{
+  state.search={tab:"issiusti",message:"message-1"};
+  state.outbox.mockResolvedValue({messages:[{
+   id:"message-1",organization_id:"org",sender_id:"manager-1",
+   title:"Gautas klausimas",body:"Tekstas",kind:"info",
+   scheduled_for:"2026-11-05T21:32:38Z",created_at:"2026-11-05T21:32:38Z"
+  }],receipts:[]});
+  render(<Route.options.component/>);
+  expect(await screen.findByText("Gautas klausimas")).toBeInTheDocument();
+  expect(screen.getByRole("tab",{name:"Išsiųsti"})).toHaveAttribute("aria-selected","true");
+  expect(document.getElementById("sa-message-message-1")).toHaveClass("ring-2");
+  await waitFor(()=>expect(state.read).toHaveBeenCalledWith("org","message-1"));
  });
 
 });
