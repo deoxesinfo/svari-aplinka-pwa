@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase-client";
 import { SA_MODULES, type SAAccess, type SAPermissionMap } from "@/lib/sa-access";
+import { accountDeletionConfirmed, accountStateLabel } from "@/lib/account-lifecycle";
 
 type ManagedAccount = {
   userId:string;email:string;displayName:string;role:"admin"|"manager"|"worker";
@@ -88,7 +89,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   const deleteAccount=async()=>{
     const target=deleteTarget;
     if(!target)return;
-    if(deleteConfirmation.trim().toLowerCase()!==target.email.trim().toLowerCase()){
+    if(!accountDeletionConfirmed(target.email,deleteConfirmation)){
       toast.error("Patvirtinimui įrašykite tikslų paskyros el. paštą.");
       return;
     }
@@ -146,7 +147,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{a.displayName||a.email}</span>
                 {a.displayName&&<span className="block truncate text-xs text-muted-foreground">{a.email}</span>}
-                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {a.active?(a.confirmed?"Aktyvi":"Laukia aktyvavimo"):"Sustabdyta"}</span>
+                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {accountStateLabel(a.active,a.confirmed)}</span>
               </span>
             </span>
             {expanded===a.userId?<ChevronUp className="size-5 shrink-0"/>:<ChevronDown className="size-5 shrink-0"/>}
@@ -196,7 +197,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
         </div>
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={()=>{setDeleteTarget(null);setDeleteConfirmation("");}} disabled={busy}>Atšaukti</Button>
-          <Button variant="destructive" disabled={busy||!deleteTarget||deleteConfirmation.trim().toLowerCase()!==deleteTarget.email.trim().toLowerCase()}
+          <Button variant="destructive" disabled={busy||!deleteTarget||!accountDeletionConfirmed(deleteTarget.email,deleteConfirmation)}
             onClick={()=>void deleteAccount()}>
             <Trash2 className="size-4"/> Visam laikui ištrinti
           </Button>
