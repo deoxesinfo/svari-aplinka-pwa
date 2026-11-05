@@ -6,7 +6,7 @@ import {PageHeader,inputCls,textareaCls} from "@/components/app/ui-bits";
 import {StaffInbox} from "@/components/app/StaffInbox";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {getCloudOrganizationId,isCloudMode,useAppState} from "@/lib/store";
-import {listSentStaffMessages,listStaffRecipients,sendStaffMessage,
+import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaffMessage,
  type StaffRecipient,type StaffMessage,type MessageReceipt,type MessageKind} from "@/lib/staff-messages";
 
 export const Route=createFileRoute("/pranesimai")({component:MessagesPage});
@@ -19,6 +19,7 @@ function MessagesPage(){
  useSAAccess();
  const canSend=isCloudMode()&&canEdit("messages");
  const [recipients,setRecipients]=useState<StaffRecipient[]>([]);
+ const [participants,setParticipants]=useState<StaffRecipient[]>([]);
  const [selected,setSelected]=useState<string[]>([]);
  const [title,setTitle]=useState("");
  const [body,setBody]=useState("");
@@ -31,15 +32,31 @@ function MessagesPage(){
  const [messages,setMessages]=useState<StaffMessage[]>([]);
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
  const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">("gauti");
- const labels=useMemo(()=>new Map(recipients.map(p=>[p.userId,p.name])),[recipients]);
+ const labels=useMemo(()=>new Map([...participants,...recipients].map(p=>[p.userId,p.name])),[participants,recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!canSend)return;
   try{
-   const [people,outbox]=await Promise.all([listStaffRecipients(org),listSentStaffMessages(org)]);
-   setRecipients(people);setMessages(outbox.messages);setReceipts(outbox.receipts);setError("");
+   const [people,outbox,historyNames]=await Promise.all([listStaffRecipients(org),listSentStaffMessages(org),listStaffParticipants(org).catch(()=>[])]);
+   setRecipients(people);setParticipants(historyNames);setMessages(outbox.messages);setReceipts(outbox.receipts);setError("");
   }catch(e){setError(e instanceof Error?e.message:"Duomenų nepavyko atnaujinti")}
  },[org,canSend]);
  useEffect(()=>{void refresh();},[refresh]);
+ // A reply updates an existing receipt rather than creating a new sent message:
+ // refresh the sender's view while visible, without discarding any compose form edits.
+ useEffect(()=>{
+  if(tab!=="issiusti"||!canSend)return;
+  const update=()=>{if(document.visibilityState==="visible")void refresh()};
+  const timer=window.setInterval(update,15000);
+  window.addEventListener("focus",update);
+  window.addEventListener("sa-message-updated",update);
+  document.addEventListener("visibilitychange",update);
+  return ()=>{
+   window.clearInterval(timer);
+   window.removeEventListener("focus",update);
+   window.removeEventListener("sa-message-updated",update);
+   document.removeEventListener("visibilitychange",update);
+  };
+ },[tab,canSend,refresh]);
  const send=async(e:FormEvent)=>{
   e.preventDefault();
   if(!org||!canSend||sending)return;
@@ -126,7 +143,7 @@ function MessagesPage(){
     </form>
    </section>}
    {tab==="issiusti"&&<section className="space-y-3">
-    <h2 className="flex items-center gap-2 text-lg font-bold"><MessageSquare className="size-5"/> Išsiųsti ir suplanuoti</h2>
+    <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="flex items-center gap-2 text-lg font-bold"><MessageSquare className="size-5"/> Išsiųsti ir suplanuoti</h2><span role="status" className="text-xs text-muted-foreground">Atsakymai atnaujinami automatiškai</span></div>
     {messages.length===0?<p className="rounded-xl border p-4 text-sm text-muted-foreground">Pranešimų istorija tuščia.</p>:
      messages.map(m=>{
       const own=receipts.filter(r=>r.message_id===m.id);
@@ -136,13 +153,15 @@ function MessagesPage(){
         <strong>{m.title}</strong>
         <span className="rounded-full bg-muted px-2 py-1 text-xs">{delivered?"Išsiųsta programėlėje":"Suplanuota"}</span>
        </div>
-       <p className="mt-1 whitespace-pre-wrap break-words text-sm">{m.body}</p>
+       <p className="mt-2 text-xs text-muted-foreground">Nuo: <strong>{labels.get(m.sender_id)||"Paskyra "+m.sender_id.slice(0,8)}</strong></p>
+       <p className="mt-1 text-xs text-muted-foreground">Kam: <strong>{own.map(r=>labels.get(r.recipient_id)||"Paskyra "+r.recipient_id.slice(0,8)).join(", ")||"Gavėjų įrašų nėra"}</strong></p>
+       <p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.body}</p>
        <p className="mt-2 text-xs text-muted-foreground">Laikas: {new Date(m.scheduled_for).toLocaleString("lt-LT")}</p>
        <div className="mt-3 space-y-1">
         {own.map(r=><p key={r.id} className="text-sm">
          {labels.get(r.recipient_id)||"Gavėjas"}: <strong>{r.response?r.response==="sutinku"?"Sutiko":"Nesutiko":r.read_at?"Perskaitė":delivered?"Neperskaitė":"Laukia siuntimo"}</strong>
          {r.responded_at?" · "+new Date(r.responded_at).toLocaleString("lt-LT"):r.read_at?" · "+new Date(r.read_at).toLocaleString("lt-LT"):""}
-         {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2">Atsakymas: {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
+         {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2"><strong>Gautas atsakymas iš {labels.get(r.recipient_id)||"paskyros "+r.recipient_id.slice(0,8)}:</strong> {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
         </p>)}
        </div>
       </article>;
