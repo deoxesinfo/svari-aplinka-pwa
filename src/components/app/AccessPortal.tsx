@@ -96,7 +96,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
    if(!targetEmail.trim()){toast.error("Pirmiausia įrašykite el. paštą");return}
    setBusy(true);
    try{
-     const redirectTo=window.location.origin+window.location.pathname+"?sa_auth=recovery";
+     const redirectTo=window.location.origin+import.meta.env.BASE_URL+"?sa_auth=recovery";
      const {error}=await supabase.auth.resetPasswordForEmail(targetEmail.trim(),{redirectTo});
      if(error)toast.error("Nepavyko išsiųsti slaptažodžio atkūrimo laiško.");
      else toast.success("Jei toks el. paštas egzistuoja, gausite slaptažodžio atkūrimo nuorodą.");
