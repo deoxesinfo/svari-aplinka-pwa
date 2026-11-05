@@ -17,7 +17,7 @@ export const SA_MODULES = [
   { key:"settings",name:"Nustatymai",path:"/nustatymai" },
 ] as const;
 export type SAModule = typeof SA_MODULES[number]["key"];
-export type SAAccess = "none"|"view"|"edit";
+export type SAAccess = "none"|"view"|"edit"|"delete";
 export type SARole = "admin"|"manager"|"worker";
 export type SAPermissionMap = Partial<Record<SAModule,SAAccess>>;
 
@@ -41,7 +41,8 @@ export function permissionFor(module:SAModule):SAAccess{
  return state.permissions[module]||"none"; // fail-closed for unconfigured users
 }
 export function canView(module:SAModule):boolean{return permissionFor(module)!=="none"}
-export function canEdit(module:SAModule):boolean{return permissionFor(module)==="edit"}
+export function canEdit(module:SAModule):boolean{return ["edit","delete"].includes(permissionFor(module))}
+export function canDelete(module:SAModule):boolean{return permissionFor(module)==="delete"||state.role==="admin"}
 export function moduleForPath(path:string):SAModule|null{
  if(path==="/")return "overview";
  const item=SA_MODULES.find(m=>m.path!=="/"&&(path===m.path||path.startsWith(m.path+"/")));
