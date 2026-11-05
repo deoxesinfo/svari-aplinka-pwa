@@ -118,6 +118,8 @@ begin
      left(new.title,120),left(coalesce(new.body,''),512),
      case when new.kind='staff_reply' and new.related_message_id is not null
        then '/#/pranesimai?tab=issiusti&message='||new.related_message_id::text
+         ||case when new.related_receipt_id is not null
+              then '&receipt='||new.related_receipt_id::text else '' end
        when new.related_job_id is not null
        then '/#/darbai/'||new.related_job_id::text
        else '/#/pranesimai' end)
