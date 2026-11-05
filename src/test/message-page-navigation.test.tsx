@@ -54,7 +54,7 @@ describe("ŠA V2.3.19.1 default route is the inbox",()=>{
   expect(await screen.findByText("Aaa")).toBeInTheDocument();
   expect(screen.getByText("Pagrindinis")).toBeInTheDocument();
   expect(screen.getAllByText("Administratorius (testas)")).not.toHaveLength(0);
-  expect(screen.getByText(/Gautas atsakymas iš/)).toHaveTextContent("Aaaaa");
+  expect(screen.getByText(/Gautas atsakymas iš/).parentElement).toHaveTextContent("Aaaaa");
   const before=state.outbox.mock.calls.length;
   fireEvent(window,new Event("sa-message-updated"));
   await waitFor(()=>expect(state.outbox.mock.calls.length).toBeGreaterThan(before));
