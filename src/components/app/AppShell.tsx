@@ -160,10 +160,13 @@ export function AppShell({ children }: { children: ReactNode }) {
             <p className="text-sm text-muted-foreground">Administratorius gali pakeisti tavo paskyros leidimus. Šis puslapis ir jo duomenys nepasiekiami.</p>
             {firstAllowed&&<Link className="text-primary underline" to={firstAllowed.path}>Atidaryti leidžiamą skiltį</Link>}
           </section> : state.loaded ? (
-            readOnly ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
+            readOnly && module!=="photos" && module!=="messages" ? <fieldset disabled aria-label="Tik peržiūra" className="m-0 min-w-0 border-0 p-0">
               <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – redagavimo veiksmai šioje skiltyje išjungti.</p>
               {children}
-            </fieldset> : children
+            </fieldset> : readOnly ? <div className="min-w-0">
+              <p className="mb-3 text-sm font-medium text-muted-foreground">Tik peržiūra – keitimo veiksmai šioje skiltyje negalimi.</p>
+              {children}
+            </div> : children
           ) : <AppLoading message="Kraunami duomenys…" minHeight="50vh"/>}
         </main>
         {/* Mobile bottom nav */}
