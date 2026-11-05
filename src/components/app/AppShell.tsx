@@ -140,7 +140,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           {collapsed ? <PanelLeftOpen className="size-4" /> : <><PanelLeftClose className="size-4" /> Suskleisti</>}
         </button>
         {!collapsed&&<p className="mt-1 shrink-0 text-center text-[10px] text-sidebar-foreground/50" title="Publikuotos PWA versijos identifikatorius">
-          Versija {import.meta.env.VITE_SA_BUILD_SHA?.slice(0,7)||"vietinė"}
+          Versija {import.meta.env["VITE_SA_BUILD_SHA"]?.slice(0,7)||"vietinė"}
         </p>}
       </aside>
 

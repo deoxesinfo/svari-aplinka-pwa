@@ -5,13 +5,14 @@ import {Confirm} from "@/components/app/ui-bits";
 import {getCloudOrganizationId} from "@/lib/store";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {PushSettings} from "@/components/app/PushSettings";
-import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
+import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,listStaffParticipants,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
 
 export function StaffInbox(){
  const org=getCloudOrganizationId();
  useSAAccess();
  const canModify=canEdit("messages");
  const [items,setItems]=useState<InboxMessage[]>([]);
+ const [participantNames,setParticipantNames]=useState<Map<string,string>>(new Map());
  const [view,setView]=useState<"gauti"|"trash">("gauti");
  const [marked,setMarked]=useState<string[]>([]);
  const [selectedReceived,setSelectedReceived]=useState<string[]>([]);
@@ -27,7 +28,15 @@ export function StaffInbox(){
  const touch=useRef<{id:string;x:number;y:number}|null>(null);
  const load=useCallback(async()=>{
   if(!org)return;
-  try{setItems(await listStaffInbox(org,view));setError("")}
+  try{
+   const [inbox,participants]=await Promise.all([
+    listStaffInbox(org,view),
+    // Inbox must remain usable if an older database has not yet received the name lookup.
+    listStaffParticipants(org).catch(()=>[]),
+   ]);
+   setItems(inbox);setParticipantNames(new Map(participants.map(p=>[p.userId,p.name])));
+   setError("");
+  }
   catch(e){setError(e instanceof Error?e.message:"Pranešimų nepavyko įkelti")}
  },[org,view]);
  useEffect(()=>{
@@ -136,10 +145,24 @@ export function StaffInbox(){
         <h3 className="font-semibold">{item.message.title}</h3>
         <span className="text-xs text-muted-foreground">{item.receipt.read_at?"Perskaityta":"Nauja"}</span>
       </div>
+      <p className="mt-2 text-xs text-muted-foreground">Nuo: <strong>{participantNames.get(item.message.sender_id)||"Paskyra "+item.message.sender_id.slice(0,8)}</strong> · Kam: man</p>
       <p className="mt-2 whitespace-pre-wrap break-words text-sm">{item.message.body}</p>
       <p className="mt-2 text-xs text-muted-foreground">{new Date(item.message.scheduled_for).toLocaleString("lt-LT")}</p>
       {!item.receipt.read_at&&<Button type="button" size="sm" variant="outline" className="mt-3"
         disabled={!!busy} onClick={()=>void ack(item)}><Check className="size-4"/> Perskaičiau</Button>}
+      {item.message.kind==="response"&&!item.receipt.response&&<div className="mt-3 flex flex-wrap gap-2">
+       <Button type="button" size="sm" disabled={!!busy} onClick={()=>void ack(item,"sutinku")}>Sutinku</Button>
+       <Button type="button" size="sm" variant="outline" disabled={!!busy} onClick={()=>void ack(item,"nesutinku")}>Nesutinku</Button>
+      </div>}
+      {!item.receipt.reply_text&&<Button type="button" size="sm" variant="outline" className="mt-3" disabled={!!busy}
+        onClick={()=>setReplyOpen(replyOpen===item.receipt.id?null:item.receipt.id)}><MessageCircle className="size-4"/> Atsakyti</Button>}
+      {replyOpen===item.receipt.id&&!item.receipt.reply_text&&<div className="mt-3 space-y-2">
+       <label className="block text-sm font-medium" htmlFor={"sa-reply-"+item.receipt.id}>Atsakymas (iki 300 simbolių)</label>
+       <textarea id={"sa-reply-"+item.receipt.id} value={replyTexts[item.receipt.id]||""} maxLength={300} rows={2}
+        className="w-full rounded-lg border bg-card p-3 text-base" onChange={e=>setReplyTexts(p=>({...p,[item.receipt.id]:e.target.value}))}/>
+       <Button type="button" size="sm" disabled={!!busy||!(replyTexts[item.receipt.id]||"").trim()} onClick={()=>void reply(item)}>Siųsti atsakymą</Button>
+      </div>}
+      {item.receipt.reply_text&&<p className="mt-3 rounded-lg bg-muted/40 p-3 text-sm"><strong>Mano atsakymas:</strong> {item.receipt.reply_text}</p>}
    </article>)}
  </section>;
  return <section className="space-y-3">
@@ -207,6 +230,7 @@ export function StaffInbox(){
        {receipt.response?receipt.response==="sutinku"?"Sutiko":"Nesutiko":receipt.read_at?"Perskaityta":"Nauja"}
       </span>
      </div>
+     <p className="mt-2 text-xs text-muted-foreground">Nuo: <strong>{participantNames.get(message.sender_id)||"Paskyra "+message.sender_id.slice(0,8)}</strong> · Kam: man</p>
      <p className="mt-2 whitespace-pre-wrap break-words text-sm">{message.body}</p>
      <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
       <Clock3 className="size-3"/>{new Date(message.scheduled_for).toLocaleString("lt-LT")}

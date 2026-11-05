@@ -117,6 +117,7 @@ export function NotificationBell(){
       {notice.body&&<p className="mt-1 text-xs text-muted-foreground">{notice.body}</p>}
       <p className="mt-1 text-xs text-muted-foreground">{new Date(notice.created_at).toLocaleString("lt-LT")}</p>
       <div className="mt-2 flex flex-wrap gap-3">
+       {notice.kind==="staff_reply"&&<Link to="/pranesimai" onClick={()=>{void markRead(notice);setExpanded(false)}} className="text-xs font-medium text-primary underline">Atidaryti pranešimus (Išsiųsti)</Link>}
        {notice.related_job_id&&<Link to="/darbai/$jobId" params={{jobId:notice.related_job_id}}
          onClick={()=>{void markRead(notice);setExpanded(false)}} className="text-xs font-medium text-primary underline">Atidaryti darbą</Link>}
        {!notice.read_at&&<button className="flex items-center gap-1 text-xs text-primary" onClick={()=>void markRead(notice)}><Check className="size-3"/>Pažymėti perskaitytu</button>}
