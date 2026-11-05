@@ -35,8 +35,9 @@ export function NotificationBell(){
    const previous=seenRef.current;
    if(previous?.identity===identity){
      const fresh=inbox.filter(item=>!item.receipt.read_at&&!previous.ids.has(item.receipt.id));
-     if(fresh.length && document.visibilityState==="visible"){
-       const newest=fresh[0].message;
+     const latest=fresh[0];
+     if(latest && document.visibilityState==="visible"){
+       const newest=latest.message;
        toast.info(fresh.length===1?"Nauja žinutė: "+newest.title:
          "Gauta naujų žinučių: "+fresh.length,{
          description:newest.body.slice(0,160),
