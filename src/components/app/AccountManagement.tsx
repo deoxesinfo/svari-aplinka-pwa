@@ -158,13 +158,13 @@ export function AccountManagement({organizationId}:{organizationId:string}){
                   <label htmlFor={a.userId+"-"+m.key} className="text-sm font-medium">{m.name}</label>
                   <select id={a.userId+"-"+m.key} value={drafts[a.userId]?.[m.key]||"none"}
                     onChange={e=>setDrafts(d=>({...d,[a.userId]:{...(d[a.userId]||{}),[m.key]:e.target.value as SAAccess}}))}
-                    className="min-w-0 rounded-lg border bg-background px-2 py-2 text-sm" disabled={busy||!a.active}>
+                    className="min-w-0 rounded-lg border bg-background px-2 py-2 text-sm" disabled={busy}>
                     {LEVELS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>)}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={()=>void save(a)} disabled={busy||!a.active}><Check className="size-4"/> Išsaugoti teises</Button>
+                <Button onClick={()=>void save(a)} disabled={busy}><Check className="size-4"/> Išsaugoti teises</Button>
                 <Button variant="outline" disabled={busy} onClick={()=>void toggle(a)}>
                   {a.active?<Lock className="size-4"/>:<Unlock className="size-4"/>}
                   {a.active?"Sustabdyti paskyrą":"Atblokuoti paskyrą"}
