@@ -6,7 +6,7 @@ import {getCloudOrganizationId} from "@/lib/store";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,listStaffParticipants,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
 
-export function StaffInbox({targetMessageId}:{targetMessageId?:string}={}){
+export function StaffInbox({targetMessageId}:{targetMessageId?:string|undefined}={}){
  const org=getCloudOrganizationId();
  useSAAccess();
  const canModify=canEdit("messages");
