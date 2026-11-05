@@ -1,9 +1,10 @@
 import {createFileRoute} from "@tanstack/react-router";
-import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {Send,Clock,MessageSquare,RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {PageHeader,inputCls,textareaCls} from "@/components/app/ui-bits";
 import {StaffInbox} from "@/components/app/StaffInbox";
+import {markOpenedMessageReplies} from "@/lib/sa-message-notifications";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {getCloudOrganizationId,isCloudMode,useAppState} from "@/lib/store";
 import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaffMessage,
@@ -40,12 +41,18 @@ function MessagesPage(){
  const [messages,setMessages]=useState<StaffMessage[]>([]);
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
  const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">(search.tab||"gauti");
+ const markedReplyTarget=useRef<string|null>(null);
  useEffect(()=>{if(search.tab)setTab(search.tab)},[search.tab,search.message]);
  // Deep links only select items already visible through existing RLS policies.
  useEffect(()=>{
   if(tab!=="issiusti"||!search.message||!messages.some(m=>m.id===search.message))return;
   document.getElementById("sa-message-"+search.message)?.scrollIntoView?.({block:"center",behavior:"smooth"});
- },[tab,search.message,messages]);
+  if(org&&markedReplyTarget.current!==search.message){
+   markedReplyTarget.current=search.message;
+   void markOpenedMessageReplies(org,search.message)
+     .catch(e=>setError(e instanceof Error?e.message:"Nepavyko atnaujinti atsakymo būsenos"));
+  }
+ },[tab,org,search.message,messages]);
  const labels=useMemo(()=>new Map([...participants,...recipients].map(p=>[p.userId,p.name])),[participants,recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!canSend)return;
