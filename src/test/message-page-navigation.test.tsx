@@ -1,7 +1,7 @@
 import {describe,expect,it,vi} from "vitest";
 import {fireEvent,render,screen,waitFor} from "@testing-library/react";
 const state=vi.hoisted(()=>({outbox:vi.fn()}));
-vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options}))}));
+vi.mock("@tanstack/react-router",()=>({createFileRoute:()=>((options:unknown)=>({options,useSearch:()=>({})}))}));
 vi.mock("@/lib/sa-access",()=>({canEdit:()=>true,useSAAccess:()=>({})}));
 vi.mock("@/lib/store",()=>({useAppState:()=>({}),getCloudOrganizationId:()=>"org",isCloudMode:()=>true}));
 vi.mock("@/lib/staff-messages",()=>({
