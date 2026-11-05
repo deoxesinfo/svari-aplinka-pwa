@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Check, ChevronDown, ChevronUp, MailPlus, RefreshCcw, ShieldCheck, UserRound } from "lucide-react";
+import { Check, ChevronDown, ChevronUp, MailPlus, RefreshCcw, ShieldCheck, UserRound, Lock, Unlock, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/lib/supabase-client";
 import { SA_MODULES, type SAAccess, type SAPermissionMap } from "@/lib/sa-access";
 
 type ManagedAccount = {
   userId:string;email:string;displayName:string;role:"admin"|"manager"|"worker";
-  active:boolean;confirmed:boolean;createdAt:string;invitedAt:string|null;
+  active:boolean;confirmed:boolean;createdAt:string;invitedAt:string|null;suspendedAt?:string|null;
   permissions:SAPermissionMap;
 };
 type ApiResponse = {ok:boolean;error?:string;accounts?:ManagedAccount[]};
@@ -29,6 +30,8 @@ export function AccountManagement({organizationId}:{organizationId:string}){
   const [displayName,setDisplayName]=useState("");
   const [role,setRole]=useState<"manager"|"worker">("manager");
   const [drafts,setDrafts]=useState<Record<string,SAPermissionMap>>({});
+  const [deleteTarget,setDeleteTarget]=useState<ManagedAccount|null>(null);
+  const [deleteConfirmation,setDeleteConfirmation]=useState("");
   const invoke=useCallback(async(action:string,extra:Record<string,unknown>={}):Promise<ApiResponse>=>{
     const {data,error}=await supabase.functions.invoke<ApiResponse>("sa-account-admin",{
       body:{action,organizationId,...extra}
@@ -69,13 +72,32 @@ export function AccountManagement({organizationId}:{organizationId:string}){
     finally{setBusy(false)}
   };
   const toggle=async(account:ManagedAccount)=>{
-    if(!window.confirm(account.active?"Išjungti šią paskyrą?":"Vėl įjungti šią paskyrą?"))return;
+    const message=account.active
+      ? "Laikinai sustabdyti paskyrą? Žmogus nebegalės prisijungti ir neteks prieigos prie įmonės duomenų, bet vėliau galėsite ją atblokuoti."
+      : "Atblokuoti paskyrą? Grįš anksčiau jai suteiktos funkcijų teisės.";
+    if(!window.confirm(message))return;
     setBusy(true);
     try{
-      await invoke("set_active",{userId:account.userId,active:!account.active});
-      toast.success(account.active?"Paskyra išjungta":"Paskyra įjungta");
+      await invoke(account.active?"suspend":"restore",{userId:account.userId});
+      toast.success(account.active?"Paskyra laikinai sustabdyta":"Paskyra vėl aktyvi");
       await reload();
     }catch(err){toast.error(err instanceof Error?err.message:"Nepavyko pakeisti paskyros būsenos")}
+    finally{setBusy(false)}
+  };
+
+  const deleteAccount=async()=>{
+    const target=deleteTarget;
+    if(!target)return;
+    if(deleteConfirmation.trim().toLowerCase()!==target.email.trim().toLowerCase()){
+      toast.error("Patvirtinimui įrašykite tikslų paskyros el. paštą.");
+      return;
+    }
+    setBusy(true);
+    try{
+      await invoke("delete",{userId:target.userId,confirmation:deleteConfirmation});
+      toast.success("Prisijungimo paskyra negrįžtamai pašalinta. Darbų ir adresų istorija išsaugota.");
+      setDeleteTarget(null);setDeleteConfirmation("");setExpanded("");await reload();
+    }catch(err){toast.error(err instanceof Error?err.message:"Nepavyko ištrinti paskyros")}
     finally{setBusy(false)}
   };
 
@@ -113,7 +135,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
           <RefreshCcw className="size-4"/> Atnaujinti
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">„Nėra prieigos“ paslepia punktą iš meniu ir neleidžia atverti puslapio. „Peržiūrėti“ yra be redagavimo. Archyvavimas, trynimas ir paskyrų valdymas lieka administratoriui.</p>
+      <p className="text-sm text-muted-foreground">Leidimus galite bet kada papildyti arba sumažinti. „Nėra prieigos“ visiškai paslepia funkciją. Paskyrą galima laikinai sustabdyti arba pašalinti negrįžtamai. Darbų archyvavimas ir trynimas lieka administratoriui.</p>
       {loading?<p className="text-muted-foreground">Kraunamos paskyros…</p>:accounts.length===0?
         <p className="text-muted-foreground">Paskyrų nerasta.</p>:
         <div className="space-y-3">{accounts.map(a=><div key={a.userId} className="rounded-lg border">
@@ -124,7 +146,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{a.displayName||a.email}</span>
                 {a.displayName&&<span className="block truncate text-xs text-muted-foreground">{a.email}</span>}
-                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {a.active?(a.confirmed?"Aktyvi":"Laukia aktyvavimo"):"Išjungta"}</span>
+                <span className="block text-xs text-muted-foreground">{ROLE_LABEL[a.role]} · {a.active?(a.confirmed?"Aktyvi":"Laukia aktyvavimo"):"Sustabdyta"}</span>
               </span>
             </span>
             {expanded===a.userId?<ChevronUp className="size-5 shrink-0"/>:<ChevronDown className="size-5 shrink-0"/>}
@@ -144,12 +166,42 @@ export function AccountManagement({organizationId}:{organizationId:string}){
               <div className="flex flex-wrap items-center gap-2">
                 <Button onClick={()=>void save(a)} disabled={busy||!a.active}><Check className="size-4"/> Išsaugoti teises</Button>
                 <Button variant="outline" disabled={busy} onClick={()=>void toggle(a)}>
-                  {a.active?"Išjungti paskyrą":"Įjungti paskyrą"}
+                  {a.active?<Lock className="size-4"/>:<Unlock className="size-4"/>}
+                  {a.active?"Sustabdyti paskyrą":"Atblokuoti paskyrą"}
+                </Button>
+                <Button variant="destructive" disabled={busy} onClick={()=>{setDeleteTarget(a);setDeleteConfirmation("");}}>
+                  <Trash2 className="size-4"/> Ištrinti paskyrą
                 </Button>
               </div>
             </>}
           </div>}
         </div>)}</div>}
     </section>
+
+    <Dialog open={Boolean(deleteTarget)} onOpenChange={open=>{if(!open&&!busy){setDeleteTarget(null);setDeleteConfirmation("");}}}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Negrįžtamai ištrinti paskyrą?</DialogTitle>
+          <DialogDescription>
+            Pašalinamas Supabase Auth prisijungimas ir visos prieigos teisės. Šios paskyros nebus galima atblokuoti.
+            Istoriniai darbo, adreso ir nuotraukų įrašai nebus ištrinti.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <p className="text-sm">Norėdami patvirtinti, įveskite visą el. pašto adresą: <strong>{deleteTarget?.email}</strong></p>
+          <input type="email" autoComplete="off" aria-label="Patvirtinti ištrinimą el. paštu"
+            value={deleteConfirmation} onChange={e=>setDeleteConfirmation(e.target.value)}
+            className="w-full rounded-lg border border-input bg-background p-3" placeholder="Įveskite el. paštą"/>
+          <p className="text-xs text-muted-foreground">Jeigu žmogui tik laikinai nereikia prieigos, rinkitės „Sustabdyti paskyrą“.</p>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={()=>{setDeleteTarget(null);setDeleteConfirmation("");}} disabled={busy}>Atšaukti</Button>
+          <Button variant="destructive" disabled={busy||!deleteTarget||deleteConfirmation.trim().toLowerCase()!==deleteTarget.email.trim().toLowerCase()}
+            onClick={()=>void deleteAccount()}>
+            <Trash2 className="size-4"/> Visam laikui ištrinti
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>;
 }
