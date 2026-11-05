@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase-client";
 import {getCloudOrganizationId} from "@/lib/store";
 import {listStaffInbox,listStaffParticipants,type InboxMessage} from "@/lib/staff-messages";
 
-type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;related_message_id:string|null;actor_user_id:string|null;read_at:string|null;created_at:string};
+type Notice={id:string;title:string;body:string|null;kind:string;related_job_id:string|null;related_message_id:string|null;related_receipt_id:string|null;actor_user_id:string|null;read_at:string|null;created_at:string};
 export function NotificationBell(){
  const [notices,setNotices]=useState<Notice[]>([]);
  const [expanded,setExpanded]=useState(false);
@@ -25,7 +25,7 @@ export function NotificationBell(){
   if(!org){setNotices([]);setManualMessages([]);return}
   // A failure to fetch general notifications must not hide staff inbox messages.
   const {data,error:queryError}=await supabase.from("sa_notifications")
-   .select("id,title,body,kind,related_job_id,related_message_id,actor_user_id,read_at,created_at")
+   .select("id,title,body,kind,related_job_id,related_message_id,related_receipt_id,actor_user_id,read_at,created_at")
    .eq("organization_id",org).eq("recipient_id",auth.user.id).order("created_at",{ascending:false}).limit(30);
   if(queryError)setError("Nepavyko atnaujinti sistemos pranešimų");
   else {setError("");setNotices((data||[]) as Notice[]);}
@@ -135,7 +135,7 @@ export function NotificationBell(){
       {notice.body&&<p className="mt-1 text-xs text-muted-foreground">{notice.body}</p>}
       <p className="mt-1 text-xs text-muted-foreground">{new Date(notice.created_at).toLocaleString("lt-LT")}</p>
       <div className="mt-2 flex flex-wrap gap-3">
-       {notice.kind==="staff_reply"&&<Link to="/pranesimai" search={{tab:"issiusti",...(notice.related_message_id?{message:notice.related_message_id}:{})}}
+       {notice.kind==="staff_reply"&&<Link to="/pranesimai" search={{tab:"issiusti",...(notice.related_message_id?{message:notice.related_message_id}:{}),...(notice.related_message_id&&notice.related_receipt_id?{receipt:notice.related_receipt_id}:{})}}
         onClick={()=>{void markRead(notice);setExpanded(false)}} className="text-xs font-medium text-primary underline">
          {notice.related_message_id?"Atidaryti pokalbį":"Atidaryti išsiųstus pranešimus"}</Link>}
        {notice.related_job_id&&<Link to="/darbai/$jobId" params={{jobId:notice.related_job_id}}
