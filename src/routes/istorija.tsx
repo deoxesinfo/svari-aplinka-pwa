@@ -36,8 +36,8 @@ function HistoryPage(){
     const {data:auth,error:authError}=await supabase.auth.getUser();
     if(authError||!auth.user)throw new Error("Neprisijungta");
     const {data:member,error:mError}=await supabase.from("sa_memberships")
-     .select("organization_id").eq("user_id",auth.user.id).eq("role","admin").eq("active",true).single();
-    if(mError||!member)throw new Error("Istorija prieinama tik administratoriui");
+     .select("organization_id").eq("user_id",auth.user.id).eq("active",true).single();
+    if(mError||!member)throw new Error("Istorija prieinama tik turintiems leidimą");
     let q=supabase.from("sa_activity_log").select("id,entity_type,event_type,created_at,actor_user_id,entity_id,details")
      .eq("organization_id",member.organization_id);
     if(from)q=q.gte("created_at",from+"T00:00:00");

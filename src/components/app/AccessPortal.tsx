@@ -3,9 +3,10 @@ import { Link } from "@tanstack/react-router";
 import { LogIn, LogOut, LockKeyhole, ShieldCheck, UserCircle, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { supabase, AUTH_ENFORCED } from "@/lib/supabase-client";
+import { supabase, AUTH_ENFORCED, SA_AUTH_LINK_INVITE,SA_AUTH_LINK_RECOVERY } from "@/lib/supabase-client";
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
 import {AppLoading} from "@/components/app/AppLoading";
+import {AccountManagement} from "@/components/app/AccountManagement";
 import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
 type Member={organization_id:string;role:"admin"|"manager"|"worker";active:boolean};
@@ -35,10 +36,15 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
  const [password,setPassword]=useState("");
  const [recovery,setRecovery]=useState(false);
  const [newPassword,setNewPassword]=useState("");
+ const [oldPassword,setOldPassword]=useState("");
+ const [repeatPassword,setRepeatPassword]=useState("");
+ const [tab,setTab]=useState<"mine"|"manage">("mine");
+ const [inviteSetup,setInviteSetup]=useState(false);
  const [workspaceReady,setWorkspaceReady]=useState(false);
  const [workspaceError,setWorkspaceError]=useState("");
  useEffect(()=>{
-   if(new URLSearchParams(window.location.search).get("sa_auth")==="recovery")setRecovery(true);
+   if(SA_AUTH_LINK_INVITE)setInviteSetup(true);
+   if(SA_AUTH_LINK_RECOVERY)setRecovery(true);
    let alive=true;
    const read=async()=>{
      const {data:auth,error:authError}=await supabase.auth.getUser();
@@ -86,38 +92,60 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      else {setPassword("");toast.success("Prisijungta");}
    }finally{setBusy(false)}
  };
- const reset=async()=>{
-   if(!email.trim()){toast.error("Pirmiausia įrašykite el. paštą");return}
+ const sendReset=async(targetEmail:string)=>{
+   if(!targetEmail.trim()){toast.error("Pirmiausia įrašykite el. paštą");return}
    setBusy(true);
    try{
-     const redirectTo=window.location.origin+window.location.pathname+"?sa_auth=recovery";
-     const {error}=await supabase.auth.resetPasswordForEmail(email.trim(),{redirectTo});
+     const redirectTo=window.location.origin+import.meta.env.BASE_URL+"?sa_auth=recovery";
+     const {error}=await supabase.auth.resetPasswordForEmail(targetEmail.trim(),{redirectTo});
      if(error)toast.error("Nepavyko išsiųsti slaptažodžio atkūrimo laiško.");
-     else toast.success("Jei toks el. paštas egzistuoja, gausite atkūrimo laišką.");
+     else toast.success("Jei toks el. paštas egzistuoja, gausite slaptažodžio atkūrimo nuorodą.");
    }finally{setBusy(false)}
  };
  const setNew=async(e:FormEvent)=>{
    e.preventDefault();
-   if(newPassword.length<12){toast.error("Naujas slaptažodis turi būti bent 12 simbolių");return}
+   if(newPassword.length<12)return toast.error("Naujas slaptažodis turi būti bent 12 simbolių");
+   if(newPassword!==repeatPassword)return toast.error("Nauji slaptažodžiai nesutampa");
+   if(!account?.email)return toast.error("Pirmiausia prisijunkite");
+   if(!recovery&&!inviteSetup&&!oldPassword)return toast.error("Įveskite dabartinį slaptažodį");
    setBusy(true);
    try{
+     if(!recovery&&!inviteSetup){
+       const {data:check,error:checkError}=await supabase.auth.signInWithPassword({email:account.email,password:oldPassword});
+       if(checkError||!check.user)return toast.error("Senas slaptažodis neteisingas");
+     }
      const {error}=await supabase.auth.updateUser({password:newPassword});
-     if(error)toast.error("Nepavyko pakeisti slaptažodžio");
-     else {toast.success("Slaptažodis pakeistas");setNewPassword("");setRecovery(false)}
+     if(error)toast.error("Nepavyko pakeisti slaptažodžio: "+error.message);
+     else{
+       toast.success("Slaptažodis pakeistas");
+       setNewPassword("");setRepeatPassword("");setOldPassword("");
+       setRecovery(false);setInviteSetup(false);
+       window.history.replaceState(null,"",window.location.pathname);
+     }
    }finally{setBusy(false)}
  };
  const passwordForm=(heading:string)=><form onSubmit={setNew} className="card-surface space-y-3 p-4">
    <h2 className="text-sm font-semibold">{heading}</h2>
+   {!recovery&&!inviteSetup&&<label className="block text-sm font-medium">Senas slaptažodis
+     <PasswordInput value={oldPassword} onChange={setOldPassword} autoComplete="current-password"/>
+   </label>}
    <label className="block text-sm font-medium">Naujas slaptažodis
      <PasswordInput value={newPassword} onChange={setNewPassword} autoComplete="new-password" minLength={12}/>
    </label>
+   <label className="block text-sm font-medium">Pakartokite naują slaptažodį
+     <PasswordInput value={repeatPassword} onChange={setRepeatPassword} autoComplete="new-password" minLength={12}/>
+   </label>
    <p className="text-xs text-muted-foreground">Bent 12 simbolių. Slaptažodžio niekam nesiųskite.</p>
+   {!recovery&&!inviteSetup&&<button type="button" disabled={busy}
+     onClick={()=>void sendReset(account?.email||"")} className="text-sm text-primary underline">
+     Pamiršau seną slaptažodį – gauti atkūrimo nuorodą el. paštu
+   </button>}
    <Button disabled={busy} type="submit">Išsaugoti slaptažodį</Button>
  </form>;
  if(mode==="gate"&&!AUTH_ENFORCED)return <>{children}</>;
  if(loading)return <AppLoading message="Tikrinama paskyra…"/>;
- if(recovery)return <section className="mx-auto max-w-md space-y-4 py-10">
-   <h1 className="text-xl font-bold">Slaptažodžio atkūrimas</h1>
+ if(recovery||inviteSetup)return <section className="mx-auto max-w-md space-y-4 py-10">
+   <h1 className="text-xl font-bold">{inviteSetup?"Paskyros aktyvavimas":"Slaptažodžio atkūrimas"}</h1>
    {account?passwordForm("Nustatyti naują slaptažodį"):
      <p className="text-sm text-muted-foreground">Atidarykite patvirtintą slaptažodžio atkūrimo nuorodą iš savo el. pašto.</p>}
  </section>;
@@ -131,28 +159,34 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      if(!workspaceReady)return <AppLoading message="Kraunami įmonės duomenys…" minHeight="100dvh"/>;
      return <>{children}</>;
    }
-   return <section className="mx-auto max-w-xl space-y-4 py-5">
-     <h1 className="flex items-center gap-2 text-xl font-bold"><ShieldCheck className="size-6 text-primary"/> Mano paskyra</h1>
-     <div className="card-surface space-y-3 p-5">
-       <p className="text-sm"><strong>El. paštas:</strong> {account.email}</p>
-       <p className="text-sm"><strong>Rolė:</strong> {NAMES[account.membership.role]}</p>
-       <p className="text-xs text-muted-foreground">Šiame etape paruošti saugūs prisijungimai ir RLS. DEMO duomenys dar nėra perkeliami į bendrą duomenų bazę; sinchronizacija bus įjungta atskirai.</p>
-       <CloudReadStatus organizationId={account.membership.organization_id}/>
-       <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm font-medium">Pakeisti slaptažodį</summary>
-         <div className="mt-3">{passwordForm("Naujas paskyros slaptažodis")}</div>
-       </details>
-       <div className="flex flex-wrap gap-2">
-         <Button variant="outline" asChild><Link to="/">Grįžti į apžvalgą</Link></Button>
-         <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
-       </div>
-     </div>
+   return <section className="mx-auto max-w-5xl space-y-4 py-5">
+     <h1 className="flex items-center gap-2 text-xl font-bold"><ShieldCheck className="size-6 text-primary"/> Paskyra</h1>
+     {account.membership.role==="admin"&&<div className="flex flex-wrap gap-2 border-b pb-3" role="tablist">
+       <Button role="tab" aria-selected={tab==="mine"} variant={tab==="mine"?"default":"outline"} onClick={()=>setTab("mine")}>Mano paskyra</Button>
+       <Button role="tab" aria-selected={tab==="manage"} variant={tab==="manage"?"default":"outline"} onClick={()=>setTab("manage")}>Paskyrų valdymas</Button>
+     </div>}
+     {tab==="manage"&&account.membership.role==="admin"?
+       <AccountManagement organizationId={account.membership.organization_id}/>:
+       <div className="card-surface space-y-3 p-5">
+         <p className="text-sm"><strong>El. paštas:</strong> {account.email}</p>
+         <p className="text-sm"><strong>Rolė:</strong> {NAMES[account.membership.role]}</p>
+         <p className="text-xs text-muted-foreground">Duomenys naudojami per saugų Supabase ryšį. Kiekviena paskyra turi individualias įmonės funkcijų teises.</p>
+         {account.membership.role==="admin"&&<CloudReadStatus organizationId={account.membership.organization_id}/>}
+         <details className="rounded-lg border p-3"><summary className="cursor-pointer text-sm font-medium">Pakeisti slaptažodį</summary>
+           <div className="mt-3">{passwordForm("Pakeisti paskyros slaptažodį")}</div>
+         </details>
+         <div className="flex flex-wrap gap-2">
+           <Button variant="outline" asChild><Link to="/">Grįžti į apžvalgą</Link></Button>
+           <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
+         </div>
+       </div>}
    </section>;
  }
  if(account&&!account.membership){
    return <section className="mx-auto max-w-md space-y-4 py-10">
      <h1 className="flex items-center gap-2 text-lg font-bold"><LockKeyhole className="size-5"/> Paskyrai nepriskirtos teisės</h1>
      <p className="text-sm text-muted-foreground">Prisijungta kaip {account.email}, tačiau paskyra dar nepriskirta „Švari Aplinka“ įmonei. Pakviestam administratoriui narystė priskiriama tik patvirtinus el. paštą.</p>
-     {passwordForm("Susikurkite slaptažodį priėmę kvietimą")}
+     <p className="text-sm">Jei gavote aktyvavimo laišką, atidarykite jame pateiktą nuorodą.</p>
      <Button onClick={()=>void supabase.auth.signOut()} variant="outline"><LogOut className="size-4"/>Atsijungti</Button>
    </section>;
  }
@@ -165,7 +199,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
      <label className="block text-sm font-medium">Slaptažodis
        <PasswordInput value={password} onChange={setPassword} autoComplete="current-password"/></label>
      <Button type="submit" disabled={busy} className="w-full"><LogIn className="size-4"/>Prisijungti</Button>
-     <button type="button" disabled={busy} onClick={()=>void reset()} className="text-sm text-primary underline">Pamiršau slaptažodį</button>
+     <button type="button" disabled={busy} onClick={()=>void sendReset(email)} className="text-sm text-primary underline">Pamiršau slaptažodį</button>
    </form>
    <p className="text-center text-xs text-muted-foreground">Supabase autentifikacija. Duomenys prieinami tik paskyroms, turinčioms įmonės narystę.</p>
  </section>;

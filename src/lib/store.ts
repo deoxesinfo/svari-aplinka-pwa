@@ -9,6 +9,7 @@ import { loadCloudState,cloudMutations,saveCloudMutations,resetCloudRole } from 
 import { gpsResult,validGpsForCompletion } from "./gps";
 import type { GpsRadius } from "./gps";
 import { hasConfirmedPin } from "./address-gps";
+import { MODULE_FOR_TABLE,canEdit } from "./sa-access";
 import { isAvailableJobAddress } from "./job-address";
 import { applyInspection, reopenWhenMadeUrgent } from "./job-followup";
 
@@ -95,6 +96,10 @@ function set(fn: (s: AppState) => Partial<AppState>) {
     let changes;
     try {changes=cloudMutations(before,after,org)}catch(err){
       toast.error(err instanceof Error?err.message:"Netinkami duomenys");return;
+    }
+    if(changes.some(change=>!canEdit(MODULE_FOR_TABLE[change.table]||"settings"))){
+      toast.error("Šiai funkcijai suteikta tik peržiūros teisė. Pakeitimas neįrašytas.");
+      return;
     }
     if(changes.length){
       saveQueue=saveQueue.then(()=>saveCloudMutations(org,changes)).catch(err=>{
