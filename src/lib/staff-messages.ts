@@ -1,4 +1,5 @@
 import {supabase} from "./supabase-client";
+import {getCloudRole} from "./cloud-sync";
 
 export type MessageKind="info"|"read"|"response";
 export type StaffMessage={
@@ -19,16 +20,10 @@ function assert<T>(data:T|null,error:{message:string}|null,description:string):T
  return data;
 }
 export async function listStaffRecipients(org:string):Promise<StaffRecipient[]>{
- const [membership,persons]=await Promise.all([
-  supabase.from("sa_memberships").select("user_id,role").eq("organization_id",org).eq("active",true),
-  supabase.from("sa_people").select("auth_user_id,data").eq("organization_id",org).not("auth_user_id","is",null)
- ]);
- const users=assert(membership.data,membership.error,"Nepavyko nuskaityti narių");
- const people=assert(persons.data,persons.error,"Nepavyko nuskaityti darbuotojų");
- const names=new Map(people.map(p=>[p.auth_user_id,String((p.data as {name?:unknown})?.name||"Darbuotojas")]));
- return users.filter(m=>["worker","admin"].includes(m.role)).map(m=>({
-  userId:m.user_id,role:m.role,
-  name:names.get(m.user_id)||(m.role==="admin"?"Administratorius (testas)":"Darbuotojas"),
+ const {data,error}=await supabase.rpc("sa_list_message_recipients",{p_org:org});
+ const users=assert(data,error,"Nepavyko gauti įmonės aktyvių paskyrų");
+ return (users as {user_id:string;display_name:string;account_role:string}[]).map(row=>({
+   userId:row.user_id,name:row.display_name,role:row.account_role
  }));
 }
 export async function sendStaffMessage(org:string,params:{
@@ -55,8 +50,10 @@ export async function listSentStaffMessages(org:string):Promise<{messages:StaffM
  const query=await supabase.from("sa_staff_message_receipts").select("*")
   .eq("organization_id",org).in("message_id",messages.map(m=>m.id)).limit(5000);
  const receipts=assert(query.data,query.error,"Nepavyko gauti gavėjų būsenų") as MessageReceipt[];
- const deleted=await supabase.from("sa_staff_message_purge_audit")
-  .select("*").eq("organization_id",org).in("message_id",messages.map(m=>m.id)).limit(5000);
+ const deleted=getCloudRole()==="admin"?
+   await supabase.from("sa_staff_message_purge_audit")
+     .select("*").eq("organization_id",org).in("message_id",messages.map(m=>m.id)).limit(5000)
+   :{data:[],error:null};
  const audits=assert(deleted.data,deleted.error,"Nepavyko gauti pašalintų gavėjų audito") as {
   id:string;organization_id:string;message_id:string;recipient_id:string;
   read_at:string|null;response:"sutinku"|"nesutinku"|null;responded_at:string|null;
