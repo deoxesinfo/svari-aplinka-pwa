@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+vi.mock("@/lib/staff-messages",()=>({listStaffInbox:async()=>[],listStaffParticipants:async()=>[]}));
 import { NotificationBell } from "@/components/app/NotificationBell";
 
 let pathname = "/darbai";

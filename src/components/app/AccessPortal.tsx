@@ -7,6 +7,8 @@ import { supabase, AUTH_ENFORCED, SA_AUTH_LINK_INVITE,SA_AUTH_LINK_RECOVERY } fr
 import { CloudReadStatus } from "@/components/app/CloudReadStatus";
 import {AppLoading} from "@/components/app/AppLoading";
 import {AccountManagement} from "@/components/app/AccountManagement";
+import {PushSettings} from "@/components/app/PushSettings";
+import {canView} from "@/lib/sa-access";
 import { SA_ACCOUNT_TAB_KEY } from "@/lib/navigation-persistence";
 import { enterCloudWorkspace,leaveCloudWorkspace,refreshCloudWorkspace } from "@/lib/store";
 
@@ -267,6 +269,7 @@ export function AccessPortal({children,mode}:{children?:ReactNode;mode:"gate"|"a
            <Button variant="outline" onClick={()=>void supabase.auth.signOut()}><LogOut className="size-4"/>Atsijungti</Button>
          </div>
        </div>}
+     {tab==="mine"&&!canView("settings")&&<PushSettings/>}
    </section>;
  }
  if(account&&!account.membership){
