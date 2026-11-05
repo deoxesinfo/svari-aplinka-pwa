@@ -166,7 +166,11 @@ Deno.serve(async(req)=>{
         if(auditError)throw Error("Paskyros būsena pakeista, bet nepavyko įrašyti veiksmų audito.");
         return response({ok:true,action:effectiveAction,previousActive:beforeActive},200,origin);
       }
-      if(!target.active)return bad("Paskyra išjungta",400,origin);
+      // Admins may prepare access rights while a membership is suspended.
+      // Deleted Auth accounts stay permanently blocked from any changes.
+      const {data:deletedProfile}=await service.from("sa_account_directory")
+        .select("deleted_at").eq("organization_id",organizationId).eq("user_id",userId).maybeSingle();
+      if(deletedProfile?.deleted_at)return bad("Ištrintai paskyrai teisės nekeičiamos",409,origin);
       const input=payload.permissions;
       if(!input||typeof input!=="object"||Array.isArray(input))return bad("Neteisingos teisės",400,origin);
       const values=input as Record<string,unknown>;
