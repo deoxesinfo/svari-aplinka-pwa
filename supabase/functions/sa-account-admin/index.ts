@@ -18,7 +18,7 @@ function normalizeInvitePermissions(role:"manager"|"worker",input:unknown){
   if(Object.keys(values).some(k=>!MODULE_SET.has(k)))throw Error("Nežinomas leidimų modulis");
   return MODULES.filter(module=>module!=="account").map(module=>{
     const level=values[module]??"none";
-    if(!["none","view","edit"].includes(String(level)))throw Error("Neteisingas leidimas: "+module);
+    if(!["none","view","edit","delete"].includes(String(level)) || (String(level)==="delete"&&!["jobs","addresses"].includes(module)))throw Error("Neteisingas leidimas: "+module);
     return {module,access:level as Access};
   });
 }
@@ -221,7 +221,7 @@ Deno.serve(async(req)=>{
       if(Object.keys(values).some(k=>!MODULE_SET.has(k)))return bad("Nežinomas leidimų modulis",400,origin);
       const entries=MODULES.map(module=>{
         const level=values[module]??"none";
-        if(!["none","view","edit"].includes(String(level)))throw Error("Neteisingas leidimas: "+module);
+        if(!["none","view","edit","delete"].includes(String(level)) || (String(level)==="delete"&&!["jobs","addresses"].includes(module)))throw Error("Neteisingas leidimas: "+module);
         return {organization_id:organizationId,user_id:userId,module,access:module==="account"?"view":level as Access,
           updated_at:new Date().toISOString()};
       });

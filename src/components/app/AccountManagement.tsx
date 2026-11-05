@@ -17,7 +17,8 @@ type ApiResponse = {ok:boolean;error?:string;accounts?:ManagedAccount[];manualLi
 const LEVELS:{value:SAAccess;label:string}[]=[
   {value:"none",label:"Nėra prieigos"},
   {value:"view",label:"Peržiūrėti"},
-  {value:"edit",label:"Redaguoti"}
+  {value:"edit",label:"Redaguoti"},
+  {value:"delete",label:"Redaguoti ir ištrinti"}
 ];
 const ROLE_LABEL:{[key:string]:string}={
   admin:"Administratorius",manager:"Vadybininkas",worker:"Darbuotojas"
@@ -190,7 +191,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
                 <select id={"invite-"+module.key} className="min-w-0 rounded-lg border bg-background px-2 py-2 text-sm"
                   value={invitePermissions[module.key]||"none"} disabled={busy}
                   onChange={event=>setInvitePermissions(p=>({...p,[module.key]:event.target.value as SAAccess}))}>
-                  {LEVELS.map(level=><option key={level.value} value={level.value}>{level.label}</option>)}
+                  {LEVELS.filter(level=>level.value!=="delete"||["jobs","addresses"].includes(module.key)).map(level=><option key={level.value} value={level.value}>{level.label}</option>)}
                 </select>
               </div>
             )}
@@ -259,7 +260,7 @@ export function AccountManagement({organizationId}:{organizationId:string}){
                   <select id={a.userId+"-"+m.key} value={drafts[a.userId]?.[m.key]||"none"}
                     onChange={e=>setDrafts(d=>({...d,[a.userId]:{...(d[a.userId]||{}),[m.key]:e.target.value as SAAccess}}))}
                     className="min-w-0 rounded-lg border bg-background px-2 py-2 text-sm" disabled={busy}>
-                    {LEVELS.map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
+                    {LEVELS.filter(level=>level.value!=="delete"||["jobs","addresses"].includes(m.key)).map(p=><option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>)}
               </div>

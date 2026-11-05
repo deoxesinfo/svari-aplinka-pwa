@@ -86,7 +86,7 @@ export function NotificationBell(){
        {!notice.read_at&&<button className="flex items-center gap-1 text-xs text-primary" onClick={()=>void markRead(notice)}><Check className="size-3"/>Pažymėti perskaitytu</button>}
       </div>
      </article>):<p className="text-sm text-muted-foreground">Pranešimų kol kas nėra.</p>}
-    <p className="mt-3 text-xs text-muted-foreground">Pranešimai saugomi Supabase paskyroje. Telefonų Push dar neįjungti.</p>
+    <p className="mt-3 text-xs text-muted-foreground">Pranešimai saugomi Supabase. Push priklauso nuo įrenginio leidimo ir aktyvios prenumeratos.</p>
   </div>}
  </div>;
 }

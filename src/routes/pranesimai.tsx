@@ -4,9 +4,9 @@ import {Send,Clock,MessageSquare} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {PageHeader,inputCls,textareaCls} from "@/components/app/ui-bits";
 import {StaffInbox} from "@/components/app/StaffInbox";
-import {getCloudRole} from "@/lib/cloud-sync";
+import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {getCloudOrganizationId,isCloudMode,useAppState} from "@/lib/store";
-import {listSentStaffMessages,listStaffRecipients,sendStaffMessage,
+import {listSentStaffMessages,listStaffRecipients,sendStaffMessage,remindStaffMessage,
  type StaffRecipient,type StaffMessage,type MessageReceipt,type MessageKind} from "@/lib/staff-messages";
 
 export const Route=createFileRoute("/pranesimai")({component:MessagesPage});
@@ -16,7 +16,8 @@ const KINDS:Record<MessageKind,string>={
 function MessagesPage(){
  useAppState();
  const org=getCloudOrganizationId();
- const admin=isCloudMode()&&getCloudRole()==="admin";
+ useSAAccess();
+ const canSend=isCloudMode()&&canEdit("messages");
  const [recipients,setRecipients]=useState<StaffRecipient[]>([]);
  const [selected,setSelected]=useState<string[]>([]);
  const [title,setTitle]=useState("");
@@ -31,17 +32,25 @@ function MessagesPage(){
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
  const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">("gauti");
  const labels=useMemo(()=>new Map(recipients.map(p=>[p.userId,p.name])),[recipients]);
+ const remind=async(messageId:string,recipientId:string)=>{
+   if(!org||!canSend)return;
+   try{
+     await remindStaffMessage(org,messageId,recipientId);
+     setError("");setSuccess("Priminimas įtrauktas į Push eilę. Pristatymas priklauso nuo įrenginio.");
+     await refresh();
+   }catch(err){setError(err instanceof Error?err.message:"Priminimo nepavyko išsiųsti")}
+ };
  const refresh=useCallback(async()=>{
-  if(!org||!admin)return;
+  if(!org||!canSend)return;
   try{
    const [people,outbox]=await Promise.all([listStaffRecipients(org),listSentStaffMessages(org)]);
    setRecipients(people);setMessages(outbox.messages);setReceipts(outbox.receipts);setError("");
   }catch(e){setError(e instanceof Error?e.message:"Duomenų nepavyko atnaujinti")}
- },[org,admin]);
+ },[org,canSend]);
  useEffect(()=>{void refresh();},[refresh]);
  const send=async(e:FormEvent)=>{
   e.preventDefault();
-  if(!org||!admin||sending)return;
+  if(!org||!canSend||sending)return;
   let sendAt:string|undefined;
   if(scheduled){
    const parsed=new Date(schedule);
@@ -62,8 +71,8 @@ function MessagesPage(){
  };
  if(!isCloudMode()||!org)return <div className="p-4">Pranešimai prieinami tik prisijungus prie įmonės paskyros.</div>;
  return <div className="space-y-6">
-  <PageHeader title="Pranešimai" subtitle={admin?"Asmeninės žinutės, planavimas ir gavėjų būsenos":"Gauti įmonės pranešimai"}/>
-  {admin&&<>
+  <PageHeader title="Pranešimai" subtitle={canSend?"Asmeninės žinutės, planavimas ir gavėjų būsenos":"Gauti įmonės pranešimai"}/>
+  {canSend&&<>
    <div className="grid grid-cols-3 gap-2" role="tablist" aria-label="Pranešimų skiltys">
     {([["gauti","Gauti"],["kurti","Kurti"],["issiusti","Išsiųsti"]] as const).map(([key,label])=><button
      key={key} type="button" role="tab" aria-selected={tab===key} onClick={()=>{setTab(key);if(key==="issiusti")void refresh()}}
@@ -111,11 +120,13 @@ function MessagesPage(){
       {scheduled?<Clock className="size-4"/>:<Send className="size-4"/>}
       {sending?"Siunčiama…":scheduled?"Suplanuoti":"Išsiųsti"}
      </Button>
-     <p className="text-xs text-muted-foreground">Kol Push neįjungtas, gavėjai žinutę matys programėlėje. Suplanuota žinutė iki nurodyto laiko jiems nerodoma.</p>
+     <p className="text-xs text-muted-foreground">Gavėjai žinutę matys PWA, o įjungusiems Push ją bandysime pristatyti į telefoną. Suplanuota žinutė iki nustatyto laiko nerodoma.</p>
     </form>
    </section>}
    {tab==="issiusti"&&<section className="space-y-3">
     <h2 className="flex items-center gap-2 text-lg font-bold"><MessageSquare className="size-5"/> Išsiųsti ir suplanuoti</h2>
+    {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+    {success&&<p role="status" className="text-sm text-primary">{success}</p>}
     {messages.length===0?<p className="rounded-xl border p-4 text-sm text-muted-foreground">Pranešimų istorija tuščia.</p>:
      messages.map(m=>{
       const own=receipts.filter(r=>r.message_id===m.id);
@@ -132,12 +143,15 @@ function MessagesPage(){
          {labels.get(r.recipient_id)||"Gavėjas"}: <strong>{r.response?r.response==="sutinku"?"Sutiko":"Nesutiko":r.read_at?"Perskaitė":delivered?"Neperskaitė":"Laukia siuntimo"}</strong>
          {r.responded_at?" · "+new Date(r.responded_at).toLocaleString("lt-LT"):r.read_at?" · "+new Date(r.read_at).toLocaleString("lt-LT"):""}
          {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2">Atsakymas: {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
+         {!r.read_at&&delivered&&<Button type="button" size="sm" variant="outline"
+           className="ml-2 h-8" title="Priminti neperskaičiusiam gavėjui (ne dažniau kaip kas 30 min.)"
+           onClick={()=>void remind(m.id,r.recipient_id)}>Priminti per Push</Button>}
         </p>)}
        </div>
       </article>;
      })}
    </section>}
   </>}
-  {!admin&&<StaffInbox/>}
+  {!canSend&&<StaffInbox/>}
  </div>;
 }

@@ -40,7 +40,10 @@ export function Thumb({ photo, onClick }: { photo: PhotoMeta; onClick: () => voi
 
 function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; gallery: PhotoMeta[]; onNavigate: (id: string) => void; onClose: () => void }) {
   const { addresses, jobs, photos } = useAppState();
-  const [zoom, setZoom] = useState(false);
+  const [zoom,setZoom]=useState(1);
+  const viewer=useRef<HTMLDivElement>(null);
+  const drag=useRef<{x:number;y:number;left:number;top:number}|null>(null);
+  const increase=(n:number)=>setZoom(x=>Math.round(Math.max(1,Math.min(4,x+n))*100)/100);
   const [confirm, setConfirm] = useState(false);
   const full = usePhotoUrl(photo.id, "full",getCloudOrganizationId());
   const index = gallery.findIndex(p => p.id === photo.id);
@@ -49,9 +52,21 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
   const current = photos.find((p) => p.id === photo.id) ?? photo;
   const adr = addresses.find((a) => a.id === photo.addressId);
   const job = jobs.find((j) => j.id === photo.jobId);
+  useEffect(()=>{
+    const keydown=(event:KeyboardEvent)=>{
+      if(event.altKey||event.ctrlKey||event.metaKey)return;
+      if((event.target as HTMLElement)?.closest("input,textarea,select"))return;
+      if(event.key==="ArrowLeft"&&previous){event.preventDefault();onNavigate(previous.id);}
+      if(event.key==="ArrowRight"&&next){event.preventDefault();onNavigate(next.id);}
+      if(event.key==="+"||event.key==="="){event.preventDefault();increase(0.25);}
+      if(event.key==="-"){event.preventDefault();increase(-0.25);}
+    };
+    window.addEventListener("keydown",keydown);
+    return()=>window.removeEventListener("keydown",keydown);
+  },[previous?.id,next?.id,onNavigate]);
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-4xl gap-3 p-3 sm:p-4">
+      <DialogContent className="max-w-[min(96vw,1200px)] gap-3 p-3 sm:p-4">
         <DialogTitle className="pr-8 text-base">{adr?.street ?? "Nuotrauka"}</DialogTitle>
         <DialogDescription className="-mt-2 text-xs">
           Įkelta: {fmtDateTime(photo.createdAt)} · {(photo.size / 1024).toFixed(0)} KB {photo.width ? `· ${photo.width}×${photo.height}` : ""}
@@ -62,13 +77,31 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
             : "Administratoriaus GPS išimtis"}
           {photo.gpsVerifiedAt&&` · ${fmtDateTime(photo.gpsVerifiedAt)}`}
         </p>}
-        <div className={cn("max-h-[70vh] overflow-auto rounded-md bg-muted", zoom ? "cursor-zoom-out" : "cursor-zoom-in")} onClick={() => setZoom((z) => !z)}>
+        <div ref={viewer} className={cn("max-h-[68vh] min-h-56 overflow-auto rounded-md bg-muted",zoom>1?"cursor-grab active:cursor-grabbing":"cursor-zoom-in")}
+          aria-label="Pilnos raiškos nuotraukos peržiūra"
+          onWheel={e=>{if(full.url&&!e.ctrlKey)increase(e.deltaY<0?0.25:-0.25);}}
+          onPointerDown={e=>{
+            if(e.pointerType!=="mouse"||e.button!==0||zoom<=1||!viewer.current)return;
+            drag.current={x:e.clientX,y:e.clientY,left:viewer.current.scrollLeft,top:viewer.current.scrollTop};
+            e.currentTarget.setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={e=>{
+            if(!drag.current||!viewer.current)return;
+            viewer.current.scrollLeft=drag.current.left-(e.clientX-drag.current.x);
+            viewer.current.scrollTop=drag.current.top-(e.clientY-drag.current.y);
+          }}
+          onPointerUp={()=>{drag.current=null;}}
+          onPointerCancel={()=>{drag.current=null;}}
+          onDoubleClick={()=>setZoom(z=>z===1?2:1)}>
           {full.url ? (
-            <img src={full.url} alt="Darbo nuotrauka" className={cn("mx-auto", zoom ? "max-w-none w-[200%]" : "max-h-[70vh] w-auto object-contain")} />
+            <img src={full.url} alt="Darbo nuotrauka pilna raiška" draggable={false}
+              className="mx-auto select-none object-contain"
+              style={{width:zoom>1?String(zoom*100)+"%":"auto",maxWidth:zoom>1?"none":"100%",maxHeight:zoom>1?"none":"68vh"}}/>
           ) : (
             <div className="grid h-64 place-items-center text-sm text-muted-foreground">{full.missing ? (isCloudMode()?"Nepavyko įkelti nuotraukos iš saugyklos":"Nuotrauka nerasta šiame įrenginyje") : "Kraunama…"}</div>
           )}
         </div>
+        <p className="text-center text-xs text-muted-foreground">Pelės ratuku didinti, dukart spustelėjus keisti mastelį, priartinus stumdyti pele.</p>
         {gallery.length > 1 && <nav aria-label="Nuotraukų navigacija" className="flex items-center justify-center gap-3 rounded-lg border bg-background p-2">
           <Button type="button" variant="outline" size="sm" aria-label="Ankstesnė nuotrauka" disabled={!previous} onClick={() => previous && onNavigate(previous.id)}>
             <ChevronLeft className="size-4" /> Ankstesnė
@@ -90,9 +123,10 @@ function Lightbox({ photo, gallery, onNavigate, onClose }: { photo: PhotoMeta; g
                 {Object.entries(PHOTO_TAG_LABEL).map(([key, label]) => <option value={key} key={key}>{label}</option>)}
               </select>
             </label>
-            <Button variant="outline" size="sm" onClick={() => setZoom((z) => !z)}>
-              {zoom ? <ZoomOut /> : <ZoomIn />} {zoom ? "Sumažinti" : "Padidinti"}
-            </Button>
+            <Button variant="outline" size="sm" disabled={zoom<=1} onClick={()=>increase(-0.25)}><ZoomOut className="size-4"/> Mažinti</Button>
+            <span className="self-center text-xs font-semibold tabular-nums">{Math.round(zoom*100)}%</span>
+            <Button variant="outline" size="sm" disabled={zoom>=4} onClick={()=>increase(0.25)}><ZoomIn className="size-4"/> Didinti</Button>
+            <Button variant="outline" size="sm" disabled={zoom===1} onClick={()=>setZoom(1)}>Atstatyti</Button>
             <Button variant="destructive" size="sm" disabled={isCloudMode()} title={isCloudMode()?"R2 trynimas išjungtas iki saugios serverinės politikos patvirtinimo":undefined} onClick={() => setConfirm(true)}><Trash2 /> Ištrinti</Button>
           </div>
         </div>
