@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { ADDRESS_TYPE_LABEL, JOB_TYPE_LABEL, PRIORITY_LABEL, STATUS_LABEL, OBJEC
 import { Field, inputCls, textareaCls } from "./ui-bits";
 import { AddressLocationPicker } from "./AddressLocationPicker";
 import { hasConfirmedPin } from "@/lib/address-gps";
+import { isAvailableJobAddress, selectDefaultJobAddressId } from "@/lib/job-address";
 
 const emptyAddress: AddressInput = { street: "", city: "", gpsProtectionEnabled:false, type: "abu", status: "aktyvus", isPriority: false, entrances: 1, stairwellVisitsPerWeek: 1, territoryVisitsPerWeek: 1, instructions: "", accessCode: "", notes: "" };
 
@@ -117,11 +119,12 @@ export function JobFormDialog({
   open: boolean; onOpenChange: (o: boolean) => void; job?: Job; defaultAddressId?: string; defaultDate?: string; defaultType?: JobInput["type"]; onSaved?: (j: Job) => void;
 }) {
   const { addresses, people } = useAppState();
+  const availableAddresses = addresses.filter(isAvailableJobAddress);
   const workerChoices=people.filter(p=>p.role==="darbuotojas" && p.status!=="nebedirba" && p.status!=="kandidatas").map(p=>p.name);
   if(job?.worker && !workerChoices.includes(job.worker)) workerChoices.push(job.worker);
   const managers=people.filter(p=>p.role==="vadybininkas" && p.status!=="nebedirba");
   const blank = (): JobInput => ({
-    addressId: defaultAddressId ?? addresses[0]?.id ?? "",
+    addressId: selectDefaultJobAddressId(addresses, defaultAddressId),
     type: defaultType ?? "laiptine",
     worker: workerChoices[0] ?? "",
     managerId: "",
@@ -142,9 +145,10 @@ export function JobFormDialog({
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!v.addressId) return toast.error("Pirmiausia sukurkite adresą");
-    if (!v.date) return toast.error("Pasirinkite datą");
+    if (!v.addressId) return toast.error("Pirmiausia pridėkite aktyvų adresą");
     const location=addresses.find(a=>a.id===v.addressId);
+    if (!isAvailableJobAddress(location)) return toast.error("Pasirinktas adresas pašalintas arba archyvuotas. Pridėkite aktyvų adresą.");
+    if (!v.date) return toast.error("Pasirinkite datą");
     if(v.gpsRequired&&(!Number.isFinite(location?.latitude)||!Number.isFinite(location?.longitude)))
       return toast.error("Įjunkite GPS tik objektui, kuriam nurodytos koordinatės");
     if((v.gpsRequired||location?.gpsProtectionEnabled)&&!hasConfirmedPin(location)){
@@ -158,6 +162,7 @@ export function JobFormDialog({
       onSaved?.({ ...job, ...v });
     } else {
       const j = addJob(savedJob);
+      if (!j) return; // Never show success when the store rejects the address.
       toast.success("Darbas sukurtas");
       onSaved?.(j);
     }
@@ -173,11 +178,17 @@ export function JobFormDialog({
         </DialogHeader>
         <form onSubmit={submit} className="grid min-w-0 w-full max-w-full grid-cols-1 gap-4">
           <Field label="Adresas">
-            <select className={inputCls} value={v.addressId} onChange={(e) => up("addressId", e.target.value)}>
-              {addresses.length === 0 && <option value="">Nėra adresų</option>}
-              {addresses.map((a) => <option key={a.id} value={a.id}>{a.street}, {a.city}</option>)}
+            <select className={inputCls} value={v.addressId} required onChange={(e) => up("addressId", e.target.value)}>
+              {availableAddresses.length === 0 && <option value="">Nėra aktyvių adresų</option>}
+              {job && v.addressId && !isAvailableJobAddress(addresses.find(a=>a.id===v.addressId)) &&
+                <option value={v.addressId} disabled>Šio darbo adresas archyvuotas arba pašalintas</option>}
+              {availableAddresses.map((a) => <option key={a.id} value={a.id}>{a.street}, {a.city}</option>)}
             </select>
           </Field>
+          {availableAddresses.length===0 && <div role="alert" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <p>Nėra aktyvių adresų. Darbą galėsite sukurti tik pridėję aktyvų adresą. Pašalinti adresai ir jų darbų istorija lieka išsaugoti.</p>
+            <Link className="mt-2 inline-block font-semibold underline" to="/adresai" onClick={()=>onOpenChange(false)}>Eiti į adresus ir pridėti naują</Link>
+          </div>
           <div className="grid min-w-0 w-full grid-cols-1 gap-4 sm:grid-cols-2">
             <Field label="Tipas">
               <select className={inputCls} value={v.type} onChange={(e) => up("type", e.target.value as JobInput["type"])}>
@@ -230,7 +241,7 @@ export function JobFormDialog({
           <Field label="Pastabos"><textarea className={textareaCls} value={v.notes} onChange={(e) => up("notes", e.target.value)} /></Field>
           <DialogFooter className="mt-3 border-t pt-5 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:gap-3">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Atšaukti</Button>
-            <Button type="submit">Išsaugoti</Button>
+            <Button type="submit" disabled={availableAddresses.length===0}>Išsaugoti</Button>
           </DialogFooter>
         </form>
       </DialogContent>
