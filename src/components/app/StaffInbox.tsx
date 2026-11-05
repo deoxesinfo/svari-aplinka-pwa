@@ -3,11 +3,14 @@ import {Check,Clock3,RefreshCw,Trash2,Undo2,MessageCircle,Inbox} from "lucide-re
 import {Button} from "@/components/ui/button";
 import {Confirm} from "@/components/app/ui-bits";
 import {getCloudOrganizationId} from "@/lib/store";
+import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {PushSettings} from "@/components/app/PushSettings";
 import {acknowledgeStaffMessage,hideStaffMessage,listStaffInbox,purgeOwnStaffMessage,replyToStaffMessage,type InboxMessage} from "@/lib/staff-messages";
 
 export function StaffInbox(){
  const org=getCloudOrganizationId();
+ useSAAccess();
+ const canModify=canEdit("messages");
  const [items,setItems]=useState<InboxMessage[]>([]);
  const [view,setView]=useState<"gauti"|"trash">("gauti");
  const [marked,setMarked]=useState<string[]>([]);
@@ -112,6 +115,24 @@ export function StaffInbox(){
   const dx=point.clientX-t.x,dy=point.clientY-t.y;
   if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.3)setSwiped(dx<0?id:null);
  };
+ if(!canModify)return <section className="space-y-3">
+  <div className="flex items-center justify-between gap-2">
+   <h2 className="text-lg font-bold">Gauti pranešimai</h2>
+   <Button type="button" size="sm" variant="outline" onClick={()=>void load()}><RefreshCw className="size-4"/> Atnaujinti</Button>
+  </div>
+  {error&&<p role="alert" className="text-sm text-destructive">{error}</p>}
+  {items.length===0?<p className="rounded-xl border p-6 text-sm text-muted-foreground">Šiuo metu pranešimų nėra.</p>
+   :items.filter(({receipt})=>!receipt.hidden_at).map(item=><article key={item.receipt.id} className="rounded-xl border bg-card p-4">
+      <div className="flex flex-wrap justify-between gap-2">
+        <h3 className="font-semibold">{item.message.title}</h3>
+        <span className="text-xs text-muted-foreground">{item.receipt.read_at?"Perskaityta":"Nauja"}</span>
+      </div>
+      <p className="mt-2 whitespace-pre-wrap break-words text-sm">{item.message.body}</p>
+      <p className="mt-2 text-xs text-muted-foreground">{new Date(item.message.scheduled_for).toLocaleString("lt-LT")}</p>
+      {!item.receipt.read_at&&<Button type="button" size="sm" variant="outline" className="mt-3"
+        disabled={!!busy} onClick={()=>void ack(item)}><Check className="size-4"/> Perskaičiau</Button>}
+   </article>)}
+ </section>;
  return <section className="space-y-3">
   <PushSettings/>
   <div className="flex items-center justify-between gap-2">
