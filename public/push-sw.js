@@ -1,6 +1,7 @@
 /* Švari Aplinka Web Push service worker. Scope: /svari-aplinka-pwa/ */
 const UUID="[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
-const INBOX_PATH=new RegExp("^\\/#\\/pranesimai\\?tab=gauti&message="+UUID+"$","i");\nconst SENT_PATH=new RegExp("^\\/#\\/pranesimai\\?tab=issiusti&message="+UUID+"(?:&receipt="+UUID+")?$","i");
+const INBOX_PATH=new RegExp("^\\/#\\/pranesimai\\?tab=gauti&message="+UUID+"$","i");
+const SENT_PATH=new RegExp("^\\/#\\/pranesimai\\?tab=issiusti&message="+UUID+"(?:&receipt="+UUID+")?$","i");
 const JOB_PATH=new RegExp("^\\/#\\/darbai\\/"+UUID+"$","i");
 function safePath(value){
  if(typeof value!=="string")return "/#/pranesimai";
