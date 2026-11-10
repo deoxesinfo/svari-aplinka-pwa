@@ -1,21 +1,34 @@
 import {createFileRoute} from "@tanstack/react-router";
-import {useCallback,useEffect,useMemo,useState,type FormEvent} from "react";
+import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {Send,Clock,MessageSquare,RefreshCw} from "lucide-react";
 import {Button} from "@/components/ui/button";
 import {PageHeader,inputCls,textareaCls} from "@/components/app/ui-bits";
 import {StaffInbox} from "@/components/app/StaffInbox";
+import {markOpenedMessageReplies} from "@/lib/sa-message-notifications";
 import {canEdit,useSAAccess} from "@/lib/sa-access";
 import {getCloudOrganizationId,isCloudMode,useAppState} from "@/lib/store";
 import {listSentStaffMessages,listStaffRecipients,listStaffParticipants,sendStaffMessage,
  type StaffRecipient,type StaffMessage,type MessageReceipt,type MessageKind} from "@/lib/staff-messages";
 
-export const Route=createFileRoute("/pranesimai")({component:MessagesPage});
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const Route=createFileRoute("/pranesimai")({
+ validateSearch:(raw:Record<string,unknown>)=>{
+  const tab=raw["tab"],message=raw["message"],receipt=raw["receipt"];
+  return {
+   ...(tab==="issiusti"||tab==="gauti"?{tab:tab as "issiusti"|"gauti"}:{}),
+   ...(typeof message==="string"&&uuid.test(message)?{message}:{}),
+   ...(typeof receipt==="string"&&uuid.test(receipt)?{receipt}:{}),
+  };
+ },
+ component:MessagesPage,
+});
 const KINDS:Record<MessageKind,string>={
  info:"Informuoti",read:"Reikia patvirtinti, kad perskaitė",response:"Reikia atsakymo",
 };
 function MessagesPage(){
  useAppState();
  const org=getCloudOrganizationId();
+ const search=Route.useSearch();
  useSAAccess();
  const canSend=isCloudMode()&&canEdit("messages");
  const [recipients,setRecipients]=useState<StaffRecipient[]>([]);
@@ -31,7 +44,26 @@ function MessagesPage(){
  const [success,setSuccess]=useState("");
  const [messages,setMessages]=useState<StaffMessage[]>([]);
  const [receipts,setReceipts]=useState<MessageReceipt[]>([]);
- const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">("gauti");
+ const [tab,setTab]=useState<"gauti"|"kurti"|"issiusti">(search.tab||"gauti");
+ const markedReplyTarget=useRef<string|null>(null);
+ useEffect(()=>{if(search.tab)setTab(search.tab)},[search.tab,search.message]);
+ // Deep links only select items already visible through existing RLS policies.
+ useEffect(()=>{
+  if(tab!=="issiusti"||!search.message||!messages.some(m=>m.id===search.message))return;
+  const target=search.receipt
+    ?receipts.find(r=>r.id===search.receipt&&r.message_id===search.message)
+    :null;
+  if(search.receipt&&!target)return; // Never mark a receipt not belonging to this visible message.
+  const item=(target&&document.getElementById("sa-reply-"+target.id))
+    ||document.getElementById("sa-message-"+search.message);
+  item?.scrollIntoView?.({block:"center",behavior:"smooth"});
+  const key=search.message+":"+(search.receipt||"");
+  if(org&&markedReplyTarget.current!==key){
+   markedReplyTarget.current=key;
+   void markOpenedMessageReplies(org,search.message,search.receipt)
+     .catch(e=>setError(e instanceof Error?e.message:"Nepavyko atnaujinti atsakymo būsenos"));
+  }
+ },[tab,org,search.message,search.receipt,messages,receipts]);
  const labels=useMemo(()=>new Map([...participants,...recipients].map(p=>[p.userId,p.name])),[participants,recipients]);
  const refresh=useCallback(async()=>{
   if(!org||!canSend)return;
@@ -88,7 +120,7 @@ function MessagesPage(){
      key={key} type="button" role="tab" aria-selected={tab===key} onClick={()=>{setTab(key);if(key==="issiusti")void refresh()}}
      className={"min-h-11 rounded-lg border px-2 text-sm font-semibold "+(tab===key?"border-primary bg-primary text-primary-foreground":"bg-card")}>{label}</button>)}
    </div>
-   {tab==="gauti"&&<StaffInbox/>}
+   {tab==="gauti"&&<StaffInbox targetMessageId={search.tab==="gauti"?search.message:undefined}/>}
    {tab==="kurti"&&<section className="rounded-xl border bg-card p-4 sm:p-6">
     <h2 className="mb-4 flex items-center gap-2 text-lg font-bold"><Send className="size-5"/> Naujas pranešimas</h2>
     <form className="space-y-4" onSubmit={e=>void send(e)}>
@@ -139,7 +171,7 @@ function MessagesPage(){
       {scheduled?<Clock className="size-4"/>:<Send className="size-4"/>}
       {sending?"Siunčiama…":scheduled?"Suplanuoti":"Išsiųsti"}
      </Button>
-     <p className="text-xs text-muted-foreground">Gavėjas žinutę matys savo PWA skiltyje ir prie varpelio. Telefono užrakinimo ekrano pranešimus įjungsime sutvarkę Push. Suplanuotos žinutės iki nustatyto laiko nerodomos.</p>
+     <p className="text-xs text-muted-foreground">Gavėjas žinutę matys savo PWA skiltyje ir prie varpelio. Telefono Push veikia tik kai įrenginys turi pranešimų leidimą (įjungiamas Nustatymuose). Suplanuotos žinutės iki nustatyto laiko nerodomos.</p>
     </form>
    </section>}
    {tab==="issiusti"&&<section className="space-y-3">
@@ -148,7 +180,8 @@ function MessagesPage(){
      messages.map(m=>{
       const own=receipts.filter(r=>r.message_id===m.id);
       const delivered=new Date(m.scheduled_for).getTime()<=Date.now();
-      return <article key={m.id} className="rounded-xl border bg-card p-4">
+      return <article key={m.id} id={"sa-message-"+m.id}
+       className={"rounded-xl border bg-card p-4 "+(search.message===m.id?"ring-2 ring-primary/50":"")}>
        <div className="flex flex-wrap items-start justify-between gap-2">
         <strong>{m.title}</strong>
         <span className="rounded-full bg-muted px-2 py-1 text-xs">{delivered?"Išsiųsta programėlėje":"Suplanuota"}</span>
@@ -158,7 +191,8 @@ function MessagesPage(){
        <p className="mt-2 whitespace-pre-wrap break-words text-sm">{m.body}</p>
        <p className="mt-2 text-xs text-muted-foreground">Laikas: {new Date(m.scheduled_for).toLocaleString("lt-LT")}</p>
        <div className="mt-3 space-y-1">
-        {own.map(r=><p key={r.id} className="text-sm">
+        {own.map(r=><p key={r.id} id={"sa-reply-"+r.id}
+          className={"text-sm "+(search.receipt===r.id?"rounded-md bg-primary/5 p-2 ring-2 ring-primary/40":"")}>
          {labels.get(r.recipient_id)||"Gavėjas"}: <strong>{r.response?r.response==="sutinku"?"Sutiko":"Nesutiko":r.read_at?"Perskaitė":delivered?"Neperskaitė":"Laukia siuntimo"}</strong>
          {r.responded_at?" · "+new Date(r.responded_at).toLocaleString("lt-LT"):r.read_at?" · "+new Date(r.read_at).toLocaleString("lt-LT"):""}
          {r.reply_text&&<span className="mt-1 block whitespace-pre-wrap break-words rounded-md bg-muted/50 p-2"><strong>Gautas atsakymas iš {labels.get(r.recipient_id)||"paskyros "+r.recipient_id.slice(0,8)}:</strong> {r.reply_text}{r.replied_at&&" · "+new Date(r.replied_at).toLocaleString("lt-LT")}</span>}
@@ -168,6 +202,6 @@ function MessagesPage(){
      })}
    </section>}
   </>}
-  {!canSend&&<StaffInbox/>}
+  {!canSend&&<StaffInbox targetMessageId={search.tab==="gauti"?search.message:undefined}/>}
  </div>;
 }
