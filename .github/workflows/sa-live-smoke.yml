@@ -42,5 +42,15 @@ jobs:
           const storage=await request(base+'/v1/storage/usage',{headers:{'x-organization-id':org}});
           assert.ok([401,404].includes(storage.status),'Storage endpoint must never expose data anonymously');
           console.log('STORAGE_ENDPOINT',storage.status,storage.status===401?'DEPLOYED':'PENDING_WORKER_DEPLOY');
-          console.log('READ_ONLY_PROBES_COMPLETE: no logins, GPS samples, photos, metadata writes or deletes.');
+          const orgHeaders={'x-organization-id':org};
+          const unauthGps=await request(base+'/v1/gps/verify',{method:'POST',
+            headers:{...orgHeaders,'content-type':'application/json'},
+            body:JSON.stringify({jobId:placeholder,addressId:placeholder,latitude:0,longitude:0,accuracy:1})});
+          assert.ok([401,503].includes(unauthGps.status),'Unauthenticated GPS verify must be denied');
+          console.log('GPS_VERIFY_RUNTIME',unauthGps.status,unauthGps.status===401?'ON':'DISABLED');
+          const noAuthUpload=await request(base+'/v1/photos',{method:'POST',
+            headers:{...orgHeaders,'content-type':'application/json'},body:'{}'});
+          assert.ok([401,503].includes(noAuthUpload.status),'Unauthenticated upload must be denied');
+          console.log('PHOTO_UPLOAD_RUNTIME',noAuthUpload.status,noAuthUpload.status===401?'ON':'DISABLED');
+          console.log('READ_ONLY_PROBES_COMPLETE: no logins, files, metadata writes or deletes.');
           NODE
